@@ -12,8 +12,8 @@ module vga_out #(
     )(
     input clk, rst,
     input [3:0] in_r, in_b, in_g,
-    output [3:0] pix_r, pix_g, pix_b,
-    output hsync, vsync
+    output [3:0] VGA_R, VGA_G, VGA_B,
+    output VGA_HS, VGA_VS
     );
 
   logic [10:0] hcount; logic [9:0] vcount;
@@ -34,15 +34,15 @@ module vga_out #(
     end
   end
 
-  assign hsync = (hcount > H_SYNC_END);
-  assign vsync = (vcount > V_SYNC_END);
+  assign VGA_HS = (hcount > H_SYNC_END);
+  assign VGA_VS= (vcount > V_SYNC_END);
 
   assign in_screen = 
       (hcount >= H_ACTIVE_START && hcount <= H_ACTIVE_END) &&
       (vcount >= V_ACTIVE_START && vcount <= V_ACTIVE_END);
 
-  assign pix_r = (in_screen) ? in_r : '0;
-  assign pix_g = (in_screen) ? in_g : '0;
-  assign pix_b = (in_screen) ? in_b : '0;
+  assign VGA_R = (in_screen) ? in_r : '0;
+  assign VGA_G = (in_screen) ? in_g : '0;
+  assign VGA_B = (in_screen) ? in_b : '0;
 
 endmodule

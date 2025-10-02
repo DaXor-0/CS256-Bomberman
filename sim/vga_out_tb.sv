@@ -12,11 +12,11 @@ module vga_out_tb();
     .in_r(in_r),
     .in_g(in_g),
     .in_b(in_b),
-    .pix_r(pix_r),
-    .pix_g(pix_g),
-    .pix_b(pix_b),
-    .hsync(hsync),
-    .vsync(vsync)
+    .VGA_R(pix_r),
+    .VGA_G(pix_g),
+    .VGA_B(pix_b),
+    .VGA_HS(hsync),
+    .VGA_VS(vsync)
   );
 
   always #5 clk = ~clk;
@@ -24,9 +24,7 @@ module vga_out_tb();
   initial begin
     clk = 0;
     rst = 1;
-    in_r = 4'hF;
-    in_g = 4'hF;
-    in_b = 4'hF;
+    {in_r, in_g, in_b} = 12'hF00;
     #15 rst = 0;
     #200000 $finish;
   end
