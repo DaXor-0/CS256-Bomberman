@@ -1,8 +1,9 @@
 `timescale 1ns/1ps
 
 /**
-* Module: vga_timing
-* Description: Generates VGA timing signals and pixel coordinates based on standard VGA timing parameters.
+* Module: vga_out
+* Description: Main output module for VGA signals. Generates VGA timing signals,
+* tracks current pixel coordinates, and outputs RGB color values based on input color and active video area.
 *
 * Parameters:
 * - H_TOTAL: Total number of horizontal pixels (including sync, back porch, active, front porch)
@@ -13,24 +14,21 @@
 * - H_ACTIVE_END: End of active horizontal video (last visible pixel column)
 * - V_ACTIVE_START: Start of active vertical video (first visible row)
 * - V_ACTIVE_END: End of active vertical video (last visible row)
+* - BG_R, BG_G, BG_B: Background color when not in active area (default black)
+*
 * Inputs:
 * - clk84mhz: 83.46 MHz clock input
 * - rst: Reset signal
+* - r_in, g_in, b_in: 4-bit per channel RGB input color
+*
 * Outputs:
 * - VGA_HS: Horizontal sync output
 * - VGA_VS: Vertical sync output
-* - pix_x_out: Current pixel x-coordinate (0 to WIDTH-1)
-* - pix_y_out: Current pixel y-coordinate (0 to HEIGHT-1)
-* - sof_out: Start-of-frame (high for one clock at top-left)
-* - eol_out: End-of-line (high for one clock at last pixel of each line)
-* - in_screen_out: High when within active video area
-*
-* Functionality:
-* - Generates horizontal and vertical sync signals based on timing parameters.
-* - Tracks current pixel position and indicates when within the active video area.
-* - Provides start-of-frame and end-of-line pulses for synchronization.
+* - curr_x: Current pixel x-coordinate (0 to WIDTH-1)
+* - curr_y: Current pixel y-coordinate (0 to HEIGHT-1)
+* - VGA_R, VGA_G, VGA_B: 4-bit per channel VGA color output
 * */
-module vga_timing #(
+module vga_out #(
     parameter int H_TOTAL         = 1680,
     parameter int V_TOTAL         = 828,
     parameter int H_SYNC_END      = 135,
@@ -38,19 +36,24 @@ module vga_timing #(
     parameter int H_ACTIVE_START  = 336,   // first visible pixel column
     parameter int H_ACTIVE_END    = 1615,  // last  visible pixel column
     parameter int V_ACTIVE_START  = 27,    // first visible row
-    parameter int V_ACTIVE_END    = 826    // last  visible row
+    parameter int V_ACTIVE_END    = 826,   // last  visible row
+    // Background color when not in active area
+    parameter logic [3:0] BG_R = 4'h0,
+    parameter logic [3:0] BG_G = 4'h0,
+    parameter logic [3:0] BG_B = 4'h0
 )(
     input  logic        clk84mhz, rst,
+    input  logic [3:0]  r_in, g_in, b_in,
 
-    output logic        VGA_HS, VGA_VS,     // horizontal and vertical sync
-    output logic [10:0] pix_x_out,          // 0 .. (WIDTH-1)
-    output logic [9:0]  pix_y_out,          // 0 .. (HEIGHT-1)
-    output logic        sof_out, eol_out,   // start of frame and end of line
-    output logic        in_screen_out       // in active screen 
+    output logic [3:0]  VGA_R, VGA_G, VGA_B, // VGA color output
+    output logic        VGA_HS, VGA_VS,      // horizontal and vertical sync
+    output logic [10:0] curr_x,              // 0 .. (WIDTH-1)
+    output logic [9:0]  curr_y               // 0 .. (HEIGHT-1)
 );
 
   logic [10:0] hcount;
   logic [9:0]  vcount;
+  logic active_screen;
 
   always_ff @(posedge clk84mhz) begin
     if (rst) begin
@@ -70,23 +73,22 @@ module vga_timing #(
   assign VGA_HS = (hcount > H_SYNC_END);
   assign VGA_VS = (vcount > V_SYNC_END);
 
-  assign in_screen_out  = (hcount >= H_ACTIVE_START && hcount <= H_ACTIVE_END) &&
-                          (vcount >= V_ACTIVE_START && vcount <= V_ACTIVE_END);
+  assign active_screen = (hcount >= H_ACTIVE_START && hcount <= H_ACTIVE_END) &&
+                         (vcount >= V_ACTIVE_START && vcount <= V_ACTIVE_END);
 
   // Map to 0..WIDTH-1 / 0..HEIGHT-1 during active; hold last valid otherwise
   always_ff @(posedge clk84mhz) begin
     if (rst) begin
-      pix_x_out <= '0;
-      pix_y_out <= '0;
+      curr_x <= '0;
+      curr_y <= '0;
     end else begin
-      if (in_screen_out) begin
-        pix_x_out <= hcount - H_ACTIVE_START;
-        pix_y_out <= vcount - V_ACTIVE_START;
+      if (active_screen) begin
+        curr_x <= hcount - H_ACTIVE_START;
+        curr_y <= vcount - V_ACTIVE_START;
       end
     end
   end
 
-  assign sof_out = (hcount == 0) && (vcount == 0);
-  assign eol_out = (hcount == H_TOTAL-1);
+  assign { VGA_R, VGA_G, VGA_B } = active_screen ? { r_in, g_in, b_in } : { BG_R, BG_G, BG_B };
 
 endmodule
