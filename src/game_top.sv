@@ -18,10 +18,10 @@ module game_top (
   // Get the VGA timing signals
   logic [10:0] curr_x;
   logic [9:0]  curr_y;
-  logic [3:0] r_in, g_in, b_in;
+  logic [3:0]  r, g, b;
   vga_out vga_out_u (
     .clk84mhz (pixclk), .rst    (rst),
-    .r_in     (r_in),   .g_in   (g_in),   .b_in  (b_in),  // white background
+    .r_in     (r),      .g_in   (g),      .b_in  (b),  // white background
     .VGA_R    (VGA_R),  .VGA_G  (VGA_G),  .VGA_B (VGA_B), // VGA color output
     .VGA_HS   (VGA_HS), .VGA_VS (VGA_VS),                  // horizontal and vertical sync
     .curr_x   (curr_x), .curr_y (curr_y)                   // what pixel are we on
@@ -38,12 +38,22 @@ module game_top (
   localparam int SCREEN_H = 800;
 
   always_ff @(posedge pixclk) begin
-    if (rst)                              { r_in, g_in, b_in } <= C_BLACK;
+    if (rst)                              { r, g, b } <= C_BLACK;
     else begin
-      if (curr_x < (SCREEN_W/3))          { r_in, g_in, b_in } <= C_GREEN;
-      else if (curr_x < (2*(SCREEN_W/3))) { r_in, g_in, b_in } <= C_WHITE;
-      else                                { r_in, g_in, b_in } <= C_RED;
+      if (curr_x < (SCREEN_W/3))          { r, g, b } <= C_GREEN;
+      else if (curr_x < (2*(SCREEN_W/3))) { r, g, b } <= C_WHITE;
+      else                                { r, g, b } <= C_RED;
     end
   end
+
+  // TODO: TO be tested later
+  // logic [10:0] blkpos_x = 11'd200;
+  // logic [9:0]  blkpos_y = 10'd120;
+  //
+  // drawcon drawcon_i (
+  //   .blkpos_x(blkpos_x), .blkpos_y(blkpos_y),
+  //   .draw_x(curr_x),     .draw_y(curr_y),
+  //   .r(r), .g(g), .b(b)
+  // );
 
 endmodule
