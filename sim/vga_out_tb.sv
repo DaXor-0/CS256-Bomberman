@@ -9,11 +9,11 @@ module vga_out_tb();
   logic [9:0]  curr_y;
 
   vga_out uut (
-    .clk84mhz(clk),   .rst(rst),
-    .r_in(r_in),      .g_in(g_in),    .b_in(b_in),
-    .VGA_R(pix_r),    .VGA_G(pix_g),  .VGA_B(pix_b),
-    .VGA_HS(hsync),   .VGA_VS(vsync),
-    .curr_x(curr_x),  .curr_y(curr_y)
+    .i_clk(clk),   .i_rst(rst),
+    .i_r(r_in),      .i_g(g_in),    .i_b(b_in),
+    .o_pix_r(pix_r),    .o_pix_g(pix_g),  .o_pix_b(pix_b),
+    .o_hsync(hsync),   .o_vsync(vsync),
+    .o_curr_x(curr_x),  .o_curr_y(curr_y)
   );
 
   always #5 clk = ~clk;

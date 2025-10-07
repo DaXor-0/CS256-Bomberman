@@ -17,16 +17,16 @@
 * - BG_R, BG_G, BG_B: Background color when not in active area (default black)
 *
 * Inputs:
-* - clk84mhz: 83.46 MHz clock input
-* - rst: Reset signal
-* - r_in, g_in, b_in: 4-bit per channel RGB input color
+* - i_clk: 83.46 MHz clock input
+* - i_rst: Reset signal
+* - i_r, i_g, i_b: 4-bit per channel RGB input color
 *
 * Outputs:
-* - VGA_HS: Horizontal sync output
-* - VGA_VS: Vertical sync output
-* - curr_x: Current pixel x-coordinate (0 to WIDTH-1)
-* - curr_y: Current pixel y-coordinate (0 to HEIGHT-1)
-* - VGA_R, VGA_G, VGA_B: 4-bit per channel VGA color output
+* - o_hsync: o_Horizontal sync output
+* - o_vsync: Vertical sync output
+* - o_curr_x: Current pixel x-coordinate (0 to WIDTH-1)
+* - o_curr_y: Current pixel y-coordinate (0 to HEIGHT-1)
+* - o_pix_r, o_pix_g, o_pix_b: 4-bit per channel VGA color output
 * */
 module vga_out #(
     parameter int H_TOTAL         = 1680,
@@ -42,21 +42,21 @@ module vga_out #(
     parameter logic [3:0] BG_G = 4'h0,
     parameter logic [3:0] BG_B = 4'h0
 )(
-    input  logic        clk84mhz, rst,
-    input  logic [3:0]  r_in, g_in, b_in,
+    input  logic        i_clk, i_rst,
+    input  logic [3:0]  i_r, i_g, i_b,
 
-    output logic [3:0]  VGA_R, VGA_G, VGA_B, // VGA color output
-    output logic        VGA_HS, VGA_VS,      // horizontal and vertical sync
-    output logic [10:0] curr_x,              // 0 .. (WIDTH-1)
-    output logic [9:0]  curr_y               // 0 .. (HEIGHT-1)
+    output logic [3:0]  o_pix_r, o_pix_g, o_pix_b, // VGA color output
+    output logic        o_hsync, o_vsync,      // horizontal and vertical sync
+    output logic [10:0] o_curr_x,              // 0 .. (WIDTH-1)
+    output logic [9:0]  o_curr_y               // 0 .. (HEIGHT-1)
 );
 
   logic [10:0] hcount;
   logic [9:0]  vcount;
   logic active_screen;
 
-  always_ff @(posedge clk84mhz) begin
-    if (rst) begin
+  always_ff @(posedge i_clk) begin
+    if (i_rst) begin
       hcount <= '0;
       vcount <= '0;
     end else begin
@@ -70,25 +70,25 @@ module vga_out #(
     end
   end
 
-  assign VGA_HS = (hcount > H_SYNC_END);
-  assign VGA_VS = (vcount > V_SYNC_END);
+  assign o_hsync = (hcount > H_SYNC_END);
+  assign o_vsync = (vcount > V_SYNC_END)o_;
 
   assign active_screen = (hcount >= H_ACTIVE_START && hcount <= H_ACTIVE_END) &&
                          (vcount >= V_ACTIVE_START && vcount <= V_ACTIVE_END);
 
   // Map to 0..WIDTH-1 / 0..HEIGHT-1 during active; hold last valid otherwise
-  always_ff @(posedge clk84mhz) begin
+  always_ff @(posedge i_clk) begin
     if (rst) begin
-      curr_x <= '0;
-      curr_y <= '0;
+      o_curr_x <= '0;
+      o_curr_y <= '0;
     end else begin
       if (active_screen) begin
-        curr_x <= hcount - H_ACTIVE_START;
-        curr_y <= vcount - V_ACTIVE_START;
+        o_curr_x <= hcount - H_ACTIVE_START;
+        o_curr_y <= vcount - V_ACTIVE_START;
       end
     end
   end
 
-  assign { VGA_R, VGA_G, VGA_B } = active_screen ? { r_in, g_in, b_in } : { BG_R, BG_G, BG_B };
+  assign { o_pix_r, o_pix_g, o_pix_b } = active_screen ? { i_r, i_g, i_b } : { BG_R, BG_G, BG_B };
 
 endmodule

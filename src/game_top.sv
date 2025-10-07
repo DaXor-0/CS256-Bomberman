@@ -3,8 +3,8 @@
 module game_top (
     input  logic        CLK100MHZ,
     input  logic        CPU_RESETN,
-    output logic [3:0]  VGA_R, VGA_G, VGA_B,
-    output logic        VGA_HS, VGA_VS
+    output logic [3:0]  o_pix_r, o_pix_g, o_pix_b,
+    output logic        o_vsync, o_vsync
 );
 
   wire pixclk, rst;
@@ -20,11 +20,11 @@ module game_top (
   logic [9:0]  curr_y;
   logic [3:0]  r, g, b;
   vga_out vga_out_u (
-    .clk84mhz (pixclk), .rst    (rst),
-    .r_in     (r),      .g_in   (g),      .b_in  (b),  // white background
-    .VGA_R    (VGA_R),  .VGA_G  (VGA_G),  .VGA_B (VGA_B), // VGA color output
-    .VGA_HS   (VGA_HS), .VGA_VS (VGA_VS),                  // horizontal and vertical sync
-    .curr_x   (curr_x), .curr_y (curr_y)                   // what pixel are we on
+    .i_clk (pixclk), .i_rst    (rst),
+    .i_r     (r),      .i_g   (g),      .i_b  (b),  // white background
+    .o_pix_r    (o_pix_r),  .o_pix_g  (o_pix_g),  .o_pix_b (o_pix_b), // VGA color output
+    .o_vsync   (o_vsync), .o_vsync (o_vsync),                  // horizontal and vertical sync
+    .o_curr_x   (curr_x), .o_curr_y (curr_y)                   // what pixel are we on
   );
 
   localparam logic [11:0] 
@@ -52,7 +52,7 @@ module game_top (
   //
   // drawcon drawcon_i (
   //   .blkpos_x(blkpos_x), .blkpos_y(blkpos_y),
-  //   .draw_x(curr_x),     .draw_y(curr_y),
+  //   .draw_x(o_curr_x),     .draw_y(o_curr_y),
   //   .r(r), .g(g), .b(b)
   // );
 
