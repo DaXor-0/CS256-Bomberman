@@ -4,7 +4,7 @@ module game_top (
     input  logic        CLK100MHZ,
     input  logic        CPU_RESETN,
     output logic [3:0]  o_pix_r, o_pix_g, o_pix_b,
-    output logic        o_vsync, o_vsync
+    output logic        o_hsync, o_vsync
 );
 
   wire pixclk, rst;
@@ -23,7 +23,7 @@ module game_top (
     .i_clk (pixclk), .i_rst    (rst),
     .i_r     (r),      .i_g   (g),      .i_b  (b),  // white background
     .o_pix_r    (o_pix_r),  .o_pix_g  (o_pix_g),  .o_pix_b (o_pix_b), // VGA color output
-    .o_vsync   (o_vsync), .o_vsync (o_vsync),                  // horizontal and vertical sync
+    .o_hsync   (o_hsync), .o_vsync (o_vsync),                  // horizontal and vertical sync
     .o_curr_x   (curr_x), .o_curr_y (curr_y)                   // what pixel are we on
   );
 

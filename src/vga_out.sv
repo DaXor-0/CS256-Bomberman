@@ -71,14 +71,14 @@ module vga_out #(
   end
 
   assign o_hsync = (hcount > H_SYNC_END);
-  assign o_vsync = (vcount > V_SYNC_END)o_;
+  assign o_vsync = (vcount > V_SYNC_END);
 
   assign active_screen = (hcount >= H_ACTIVE_START && hcount <= H_ACTIVE_END) &&
                          (vcount >= V_ACTIVE_START && vcount <= V_ACTIVE_END);
 
   // Map to 0..WIDTH-1 / 0..HEIGHT-1 during active; hold last valid otherwise
   always_ff @(posedge i_clk) begin
-    if (rst) begin
+    if (i_rst) begin
       o_curr_x <= '0;
       o_curr_y <= '0;
     end else begin
