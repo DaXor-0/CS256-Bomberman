@@ -85,6 +85,10 @@ module vga_out #(
       if (active_screen) begin
         o_curr_x <= hcount - H_ACTIVE_START;
         o_curr_y <= vcount - V_ACTIVE_START;
+      end 
+      else begin
+        o_curr_x <= 0;
+        o_curr_y <= 0;
       end
     end
   end
