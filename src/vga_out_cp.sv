@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 /**
-* Module: vga_out
+* Module: vga_out_cp
 * Description: Main output module for VGA signals. Generates VGA timing signals,
 * tracks current pixel coordinates, and outputs RGB color values based on input color and active video area.
 *
@@ -28,7 +28,7 @@
 * - o_curr_y: Current pixel y-coordinate (0 to HEIGHT-1)
 * - o_pix_r, o_pix_g, o_pix_b: 4-bit per channel VGA color output
 * */
-module vga_out #(
+module vga_out_cp #(
     parameter int H_TOTAL         = 1680,
     parameter int V_TOTAL         = 828,
     parameter int H_SYNC_END      = 135,
