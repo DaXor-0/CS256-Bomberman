@@ -3,6 +3,7 @@
 module game_top (
     input  logic        CLK100MHZ,
     input  logic        CPU_RESETN,
+    input  logic        up, down, left, right,      // movement control
     output logic [3:0]  o_pix_r, o_pix_g, o_pix_b,
     output logic        o_hsync, o_vsync
 );
@@ -37,23 +38,24 @@ module game_top (
   localparam int SCREEN_W = 1280;
   localparam int SCREEN_H = 800;
 
-  always_ff @(posedge pixclk) begin
-    if (rst)                              { r, g, b } <= C_BLACK;
-    else begin
-      if (curr_x < (SCREEN_W/3))          { r, g, b } <= C_GREEN;
-      else if (curr_x < (2*(SCREEN_W/3))) { r, g, b } <= C_WHITE;
-      else                                { r, g, b } <= C_RED;
-    end
-  end
+//  always_ff @(posedge pixclk) begin
+//    if (rst)                              { r, g, b } <= C_BLACK;
+//    else begin
+//      if (curr_x < (SCREEN_W/3))          { r, g, b } <= C_GREEN;
+//      else if (curr_x < (2*(SCREEN_W/3))) { r, g, b } <= C_WHITE;
+//      else if (curr_x < (SCREEN_W))       { r, g, b } <= C_RED;
+//      else                                { r, g, b } <= C_BLACK;
+//    end
+//  end
 
   // TODO: TO be tested later
-  // logic [10:0] blkpos_x = 11'd200;
-  // logic [9:0]  blkpos_y = 10'd120;
-  //
-  // drawcon drawcon_i (
-  //   .blkpos_x(blkpos_x), .blkpos_y(blkpos_y),
-  //   .draw_x(o_curr_x),     .draw_y(o_curr_y),
-  //   .r(r), .g(g), .b(b)
-  // );
+   logic [10:0] blkpos_x = 11'd200;
+   logic [9:0]  blkpos_y = 10'd120;
+  
+   drawcon drawcon_i (
+     .blkpos_x(blkpos_x), .blkpos_y(blkpos_y),
+     .draw_x(curr_x),     .draw_y(curr_y),
+     .r(r), .g(g), .b(b)
+   );
 
 endmodule
