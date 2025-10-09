@@ -59,8 +59,8 @@ module game_top (
    .INPUT_FREQ_HZ(6_000_000),
    .OUTPUT_FREQ_HZ(60)
    ) clk_div_6Mhz_60hz (
-   .clk_in(clk_6Mhz),
-   .clk_out(clk_60hz)
+   .clk_in(clk6Mhz),
+   .clk_out(clk60hz)
    );
 
    
