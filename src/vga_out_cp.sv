@@ -77,25 +77,35 @@ module vga_out #(
                          (vcount >= V_ACTIVE_START && vcount <= V_ACTIVE_END);
 
   // Map to 0..WIDTH-1 / 0..HEIGHT-1 during active; hold last valid otherwise
-//  always_ff @(posedge i_clk) begin
-//    if (i_rst) begin
-//      o_curr_x <= '0;
-//      o_curr_y <= '0;
-//    end else begin
-//      if (active_screen) begin
-//        o_curr_x <= hcount - H_ACTIVE_START;
-//        o_curr_y <= vcount - V_ACTIVE_START;
-//      end 
-//      else begin
-//        o_curr_x <= 0;
-//      end
-//    end
-//  end
-  always_comb begin
-    o_curr_x <= hcount - H_ACTIVE_START;
-    o_curr_y <= vcount - V_ACTIVE_START;
+  always_ff @(posedge i_clk) begin
+    if (i_rst) begin
+      o_curr_x <= '0;
+      o_curr_y <= '0;
+    end else begin
+      if (active_screen) begin
+        o_curr_x <= hcount - H_ACTIVE_START;
+        o_curr_y <= vcount - V_ACTIVE_START;
+      end 
+      else begin
+        o_curr_x <= 0;
+        o_curr_y <= 0;
+      end
+    end
   end
 
-  assign { o_pix_r, o_pix_g, o_pix_b } = active_screen ? { i_r, i_g, i_b } : { BG_R, BG_G, BG_B };
+  // Delay the active_screen and color signals by one clock cycle to align with pixel output timing
+  logic active_screen_d;
+  logic [3:0] i_r_d, i_g_d, i_b_d;
+  always_ff @(posedge i_clk) begin
+    if (i_rst) begin
+      active_screen_d <= 1'b0;
+      { i_r_d, i_g_d, i_b_d } <= { BG_R, BG_G, BG_B };
+    end else begin
+      active_screen_d <= active_screen;
+      { i_r_d, i_g_d, i_b_d } <= { i_r, i_g, i_b };
+    end
+  end
+
+  assign { o_pix_r, o_pix_g, o_pix_b } = active_screen_d ? { i_r_d, i_g_d, i_b_d } : { BG_R, BG_G, BG_B };
 
 endmodule
