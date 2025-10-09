@@ -8,12 +8,13 @@ module game_top (
     output logic        o_hsync, o_vsync
 );
 
-  wire pixclk, rst;
+  wire pixclk, rst, clk6Mhz, clk60hz;
   assign rst = ~CPU_RESETN; // the reset button is reversed (lost too much time on that :( )
 
   clk_wiz_0 pixclk_i ( // Set pixclk to 84MHz
     .clk_in1  (CLK100MHZ),
-    .clk_out1 (pixclk)
+    .clk_out1 (pixclk),
+    .clk_out2 (clk6Mhz) // clk_out2 outputs a 6Mhz clock, which will be divided to 60Hz using a counter
   );
 
   // Get the VGA timing signals
@@ -49,13 +50,36 @@ module game_top (
 //  end
 
   // TODO: TO be tested later
-   logic [10:0] blkpos_x = 11'd200;
-   logic [9:0]  blkpos_y = 10'd120;
-  
-   drawcon drawcon_i (
+   logic obstacle;
+   logic [10:0] blkpos_x;
+   logic [9:0]  blkpos_y;
+   
+   // clk divider 6Mhz -> 60hz
+  clk_divider #(
+   .INPUT_FREQ_HZ(6_000_000),
+   .OUTPUT_FREQ_HZ(60)
+   ) clk_div_6Mhz_60hz (
+   .clk_in(clk_6Mhz),
+   .clk_out(clk_60hz)
+   );
+
+   
+   always_ff @(posedge clk60hz) begin
+     if (rst) begin blkpos_x <= 800; blkpos_y <= 400; end
+     else begin 
+      if (up) blkpos_y <= blkpos_y - 4;
+      else if (down) blkpos_y <= blkpos_y + 4;
+      if (left) blkpos_x <= blkpos_x - 4;
+      else if (right) blkpos_x <= blkpos_x + 4;
+     end
+   end
+   
+   parameter BLK_W = 32, BLK_H = 32;
+   drawcon #(.BLK_W(BLK_W), .BLK_H(BLK_H)) drawcon_i (
      .blkpos_x(blkpos_x), .blkpos_y(blkpos_y),
      .draw_x(curr_x),     .draw_y(curr_y),
-     .r(r), .g(g), .b(b)
+     .r(r), .g(g), .b(b),
+     .obstacle(obstacle)
    );
 
 endmodule
