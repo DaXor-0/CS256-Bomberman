@@ -93,6 +93,19 @@ module vga_out #(
     end
   end
 
-  assign { o_pix_r, o_pix_g, o_pix_b } = active_screen ? { i_r, i_g, i_b } : { BG_R, BG_G, BG_B };
+  // Delay the active_screen and color signals by one clock cycle to align with pixel output timing
+  logic active_screen_d;
+  logic [3:0] i_r_d, i_g_d, i_b_d;
+  always_ff @(posedge i_clk) begin
+    if (i_rst) begin
+      active_screen_d <= 1'b0;
+      { i_r_d, i_g_d, i_b_d } <= { BG_R, BG_G, BG_B };
+    end else begin
+      active_screen_d <= active_screen;
+      { i_r_d, i_g_d, i_b_d } <= { i_r, i_g, i_b };
+    end
+  end
+
+  assign { o_pix_r, o_pix_g, o_pix_b } = active_screen_d ? { i_r_d, i_g_d, i_b_d } : { BG_R, BG_G, BG_B };
 
 endmodule

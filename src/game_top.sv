@@ -19,12 +19,19 @@ module game_top (
   logic [10:0] curr_x;
   logic [9:0]  curr_y;
   logic [3:0]  r, g, b;
-  vga_out vga_out_u (
-    .i_clk (pixclk), .i_rst    (rst),
-    .i_r     (r),      .i_g   (g),      .i_b  (b),  // white background
-    .o_pix_r    (o_pix_r),  .o_pix_g  (o_pix_g),  .o_pix_b (o_pix_b), // VGA color output
-    .o_hsync   (o_hsync), .o_vsync (o_vsync),                  // horizontal and vertical sync
-    .o_curr_x   (curr_x), .o_curr_y (curr_y)                   // what pixel are we on
+  // vga_out vga_out_u (
+  //   .i_clk    (pixclk),   .i_rst    (rst),
+  //   .i_r      (r),        .i_g      (g),        .i_b  (b),          // white background
+  //   .o_pix_r  (o_pix_r),  .o_pix_g  (o_pix_g),  .o_pix_b (o_pix_b), // VGA color output
+  //   .o_hsync  (o_hsync),  .o_vsync  (o_vsync),                      // horizontal and vertical sync
+  //   .o_curr_x (curr_x),   .o_curr_y (curr_y)                        // what pixel are we on
+  // );
+  vga_out_cp vga_out_cp_u (
+    .i_clk    (pixclk),   .i_rst    (rst),
+    .i_r      (r),        .i_g      (g),        .i_b  (b),          // white background
+    .o_pix_r  (o_pix_r),  .o_pix_g  (o_pix_g),  .o_pix_b (o_pix_b), // VGA color output
+    .o_hsync  (o_hsync),  .o_vsync  (o_vsync),                      // horizontal and vertical sync
+    .o_curr_x (curr_x),   .o_curr_y (curr_y)                        // what pixel are we on
   );
 
   localparam logic [11:0] 
