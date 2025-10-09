@@ -49,12 +49,14 @@ module game_top (
 //    end
 //  end
 
-  // TODO: TO be tested later
-   logic obstacle;
+   // Logic for positioning rectangle control.
+   logic obstacle_right, obstacle_left, obstacle_down, obstacle_up;
    logic [10:0] blkpos_x;
    logic [9:0]  blkpos_y;
    
    // clk divider 6Mhz -> 60hz
+   // TO DO: clk divider has an issue which causes minor glitching. Ali suggested dividng from 100MHz immediately, and using 20-bit counter, assigning to 20th bit.
+   // will try this trick when free insha'Allah.
   clk_divider #(
    .INPUT_FREQ_HZ(6_000_000),
    .OUTPUT_FREQ_HZ(60)
@@ -63,14 +65,14 @@ module game_top (
    .clk_out(clk60hz)
    );
 
-   
+   // Should be put in its own module (positioning logic / game logic)
    always_ff @(posedge clk60hz) begin
      if (rst) begin blkpos_x <= 800; blkpos_y <= 400; end
      else begin 
-      if (up) blkpos_y <= blkpos_y - 4;
-      else if (down) blkpos_y <= blkpos_y + 4;
-      if (left) blkpos_x <= blkpos_x - 4;
-      else if (right) blkpos_x <= blkpos_x + 4;
+      if (up & ~obstacle_up) blkpos_y <= blkpos_y - 4;
+      else if (down & ~obstacle_down) blkpos_y <= blkpos_y + 4;
+      if (left & ~obstacle_left) blkpos_x <= blkpos_x - 4;
+      else if (right & ~obstacle_right) blkpos_x <= blkpos_x + 4;
      end
    end
    
@@ -79,7 +81,7 @@ module game_top (
      .blkpos_x(blkpos_x), .blkpos_y(blkpos_y),
      .draw_x(curr_x),     .draw_y(curr_y),
      .r(r), .g(g), .b(b),
-     .obstacle(obstacle)
+     .obstacle_right(obstacle_right), .obstacle_left(obstacle_left), .obstacle_up(obstacle_up),.obstacle_down(obstacle_down)
    );
 
 endmodule

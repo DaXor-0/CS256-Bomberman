@@ -40,7 +40,7 @@ module drawcon #(
     input  logic [10:0] draw_x,
     input  logic [9:0]  draw_y,
     output logic [3:0]  r, g, b,
-    output logic obstacle
+    output logic obstacle_right, obstacle_left, obstacle_down, obstacle_up // Variable names are very verbose..
 );
 
   logic is_border, is_blk;
@@ -49,8 +49,10 @@ module drawcon #(
                   (draw_y < BRD_SIZE) || (draw_y >= SCREEN_H - BRD_SIZE);
       is_blk = (draw_x >= blkpos_x) && (draw_x < blkpos_x + BLK_W) &&
                (draw_y >= blkpos_y) && (draw_y < blkpos_y + BLK_H);
-      obstacle = (blkpos_x + BLK_W >= SCREEN_W - BRD_SIZE) || (blkpos_x <= BRD_SIZE) ||
-                 (blkpos_y + BLK_H >= SCREEN_H - BRD_SIZE) || (blkpos_y <= BRD_SIZE);
+      obstacle_right = (blkpos_x + BLK_W >= SCREEN_W - BRD_SIZE);
+      obstacle_left =  (blkpos_x <= BRD_SIZE);
+      obstacle_down = (blkpos_y + BLK_H >= SCREEN_H - BRD_SIZE);
+      obstacle_up = (blkpos_y <= BRD_SIZE);
   end
 
   always_comb begin
