@@ -8,12 +8,13 @@ module game_top (
     output logic        o_hsync, o_vsync
 );
 
-  wire pixclk, rst;
+  wire pixclk, rst, clk6Mhz, clk60hz;
   assign rst = ~CPU_RESETN; // the reset button is reversed (lost too much time on that :( )
 
   clk_wiz_0 pixclk_i ( // Set pixclk to 84MHz
     .clk_in1  (CLK100MHZ),
-    .clk_out1 (pixclk)
+    .clk_out1 (pixclk),
+    .clk_out2 (clk6Mhz) // clk_out2 outputs a 6Mhz clock, which will be divided to 60Hz using a counter
   );
 
   // Get the VGA timing signals
@@ -48,14 +49,39 @@ module game_top (
 //    end
 //  end
 
-  // TODO: TO be tested later
-   logic [10:0] blkpos_x = 11'd200;
-   logic [9:0]  blkpos_y = 10'd120;
-  
-   drawcon drawcon_i (
+   // Logic for positioning rectangle control.
+   logic obstacle_right, obstacle_left, obstacle_down, obstacle_up;
+   logic [10:0] blkpos_x;
+   logic [9:0]  blkpos_y;
+   
+   // clk divider 6Mhz -> 60hz
+   // TO DO: clk divider has an issue which causes minor glitching. Ali suggested dividng from 100MHz immediately, and using 20-bit counter, assigning to 20th bit.
+   // will try this trick when free insha'Allah.
+  clk_divider #(
+   .INPUT_FREQ_HZ(6_000_000),
+   .OUTPUT_FREQ_HZ(60)
+   ) clk_div_6Mhz_60hz (
+   .clk_in(clk6Mhz),
+   .clk_out(clk60hz)
+   );
+
+   // Should be put in its own module (positioning logic / game logic)
+   always_ff @(posedge clk60hz) begin
+     if (rst) begin blkpos_x <= 800; blkpos_y <= 400; end
+     else begin 
+      if (up & ~obstacle_up) blkpos_y <= blkpos_y - 4;
+      else if (down & ~obstacle_down) blkpos_y <= blkpos_y + 4;
+      if (left & ~obstacle_left) blkpos_x <= blkpos_x - 4;
+      else if (right & ~obstacle_right) blkpos_x <= blkpos_x + 4;
+     end
+   end
+   
+   parameter BLK_W = 32, BLK_H = 32;
+   drawcon #(.BLK_W(BLK_W), .BLK_H(BLK_H)) drawcon_i (
      .blkpos_x(blkpos_x), .blkpos_y(blkpos_y),
      .draw_x(curr_x),     .draw_y(curr_y),
-     .r(r), .g(g), .b(b)
+     .r(r), .g(g), .b(b),
+     .obstacle_right(obstacle_right), .obstacle_left(obstacle_left), .obstacle_up(obstacle_up),.obstacle_down(obstacle_down)
    );
 
 endmodule
