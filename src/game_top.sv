@@ -21,7 +21,7 @@ module game_top (
   logic [10:0] curr_x;
   logic [9:0]  curr_y;
   logic [3:0]  r, g, b;
-  vga_out_cp vga_out_u (
+  vga_out vga_out_u (
     .i_clk    (pixclk),   .i_rst    (rst),
     .i_r      (r),        .i_g      (g),        .i_b  (b),          // white background
     .o_pix_r  (o_pix_r),  .o_pix_g  (o_pix_g),  .o_pix_b (o_pix_b), // VGA color output
