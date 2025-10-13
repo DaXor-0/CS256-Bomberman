@@ -1,6 +1,6 @@
 <h1>Bomberman Game on FPGA using SystemVerilog</h1>
 
-Source map:
+Source map: <br>
 <img width="600" height="395" alt="image" src="https://github.com/user-attachments/assets/6c0356c9-8dca-4066-b6f7-fc473e838543" />
 
 Video size: 1280x800 pixels (WxH)
