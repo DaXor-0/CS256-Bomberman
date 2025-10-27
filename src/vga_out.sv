@@ -46,9 +46,9 @@ module vga_out #(
     input  logic [3:0]  i_r, i_g, i_b,
 
     output logic [3:0]  o_pix_r, o_pix_g, o_pix_b, // VGA color output
-    output logic        o_hsync, o_vsync,          // horizontal and vertical sync
-    output logic [10:0] o_curr_x,                  // 0 .. (WIDTH-1)
-    output logic [9:0]  o_curr_y                   // 0 .. (HEIGHT-1)
+    output logic        o_hsync, o_vsync,      // horizontal and vertical sync
+    output logic [10:0] o_curr_x,              // 0 .. (WIDTH-1)
+    output logic [9:0]  o_curr_y               // 0 .. (HEIGHT-1)
 );
 
   logic [10:0] hcount;
@@ -76,10 +76,9 @@ module vga_out #(
   assign active_screen = (hcount >= H_ACTIVE_START && hcount <= H_ACTIVE_END) &&
                          (vcount >= V_ACTIVE_START && vcount <= V_ACTIVE_END);
 
-  // Map to 0..WIDTH-1 / 0..HEIGHT-1 during active; hold last valid otherwise
   always_comb begin
-    o_curr_x = hcount - H_ACTIVE_START;
-    o_curr_y = vcount - V_ACTIVE_START;
+    o_curr_x <= hcount - H_ACTIVE_START;
+    o_curr_y <= vcount - V_ACTIVE_START;
   end
 
   assign { o_pix_r, o_pix_g, o_pix_b } = active_screen ? { i_r, i_g, i_b } : { BG_R, BG_G, BG_B };

@@ -29,9 +29,6 @@ module drawcon #(
     parameter int BRD_SIZE       = 10,
     parameter int BLK_W          = 32,
     parameter int BLK_H          = 32,
-    parameter logic[3:0] BLK_R   = 4'hF,             // Red block
-    parameter logic[3:0] BLK_G   = 4'h0,
-    parameter logic[3:0] BLK_B   = 4'h0,
     parameter logic[3:0] BRD_R =4'hF, BRD_G=4'hF, BRD_B = 4'hF, // White border
     parameter logic[3:0] BG_R = 4'h0, BG_G = 4'h0,  BG_B  = 4'h0  // Black background
 )(
@@ -39,7 +36,8 @@ module drawcon #(
     input  logic [9:0]  blkpos_y,
     input  logic [10:0] draw_x,
     input  logic [9:0]  draw_y,
-    output logic [3:0]  r, g, b,
+    input logic [3:0] i_r, i_g, i_b,
+    output logic [3:0]  o_r, o_g, o_b,
     output logic obstacle_right, obstacle_left, obstacle_down, obstacle_up // Variable names are very verbose..
 );
 
@@ -56,11 +54,11 @@ module drawcon #(
   end
 
   always_comb begin
-    { r, g, b } = { BG_R, BG_G, BG_B }; // Default to background color
+    { o_r, o_g, o_b } = { BG_R, BG_G, BG_B }; // Default to background color
     if (is_border) begin
-      { r, g, b } = { BRD_R, BRD_G, BRD_B };
+      { o_r, o_g, o_b } = { BRD_R, BRD_G, BRD_B };
     end else if (is_blk) begin
-      { r, g, b } = { BLK_R, BLK_G, BLK_B };
+      { o_r, o_g, o_b } = { i_r, i_g, i_b };
     end
   end
 
