@@ -11,8 +11,7 @@ module drawcon_map_tb();
   logic [3:0]  o_r, o_g, o_b;
   logic obstacle_right, obstacle_left, obstacle_down, obstacle_up;
   logic [7:0] blk_addr;
-  logic map_we;
-
+  
   drawcon uut (
     .clk(clk),
     .rst(rst),
@@ -55,25 +54,27 @@ module drawcon_map_tb();
     #10240000 $finish;
   end
 
-  assign map_we = 1'b0;
-  tile_map_mem #(
-      .NUM_ROW(11),
-      .NUM_COL(19),
-      .DATA_WIDTH(4),
-      .MEM_INIT_FILE("maps/default_map.mem")
-  ) map_mem_i (
-      .clk(clk),
-      .rst(rst),
-      .rd_addr(blk_addr),
-      .rd_data(map_mem_in),
-      .we(map_we),
-      .wr_addr('0),
-      .wr_data('0)
-  );
+  // Test memory with random states
+  logic [3:0] map [0:208];
+  initial
+    $readmemh("./mem.txt", map); 
+  
+  assign map_mem_in = map[blk_addr];
+
+//   // test counter
+//   logic [7:0] test_cnt;
+//   always_ff @(posedge clk)
+//   if (rst) test_cnt <= 0;
+//   else if (draw_x > 32 && draw_y > 96)
+//   begin 
+    
+//   end
 
 always @(posedge clk)
   if (!rst && draw_y < 5 && draw_x < 20)
     $strobe("[%0t] (x=%0d, y=%0d) -> addr=%0d, state=%0h, color=%0h%0h%0h",
              $time, draw_x, draw_y, blk_addr, map_mem_in, o_r, o_g, o_b);
 
+  
+ 
 endmodule
