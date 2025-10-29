@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module game_top_tb();
+module drawcon_map_tb();
   logic clk, rst;
   logic [3:0] map_mem_in;
   logic [10:0] blkpos_x;
@@ -25,7 +25,7 @@ module game_top_tb();
     .obstacle_left(obstacle_left),
     .obstacle_right(obstacle_right),
     .obstacle_up(obstacle_up),
-    .obstacle_down(obstacle_down)
+    .obstacle_down(obstacle_down),
     .blk_addr(blk_addr)
   );
   

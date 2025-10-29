@@ -36,10 +36,10 @@ module drawcon #(
     parameter BLK_W          = 64, // should be power of 2
     parameter BLK_H          = 64, // should be power of 2
     parameter logic[3:0] BRD_R =4'hF, BRD_G=4'hF, BRD_B = 4'hF, // White border
-    parameter logic[3:0] BG_R = 4'h0, BG_G = 4'h0,  BG_B  = 4'h0  // Black background
+    parameter logic[3:0] BG_R = 4'h0, BG_G = 4'h0,  BG_B  = 4'h0,  // Black background
     // localparams should not be modified in module instantiation
-    localparam NUM_BLKS = NUM_COL*NUM_ROW; // 
-    localparam BLK_IND_WIDTH = $clog2(NUM_BLKS); // bit-width of blk_addr output
+    localparam NUM_BLKS = NUM_COL*NUM_ROW, // 
+    localparam BLK_IND_WIDTH = $clog2(NUM_BLKS) // bit-width of blk_addr output
 )(
     input logic clk, rst,
     input logic [MAP_MEM_WIDTH-1:0] map_mem_in, // Map Memory block state input
@@ -49,8 +49,8 @@ module drawcon #(
     input  logic [9:0]  draw_y,
     input logic [3:0] i_r, i_g, i_b,
     output logic [3:0]  o_r, o_g, o_b,
-    output logic obstacle_right, obstacle_left, obstacle_down, obstacle_up // Variable names are very verbose..
-    output logic [BLK_IND_WIDTH-1:0] blk_addr;
+    output logic obstacle_right, obstacle_left, obstacle_down, obstacle_up, // Variable names are very verbose..
+    output logic [BLK_IND_WIDTH-1:0] blk_addr
 );
 
   logic is_blk, out_of_map;
@@ -81,7 +81,7 @@ module drawcon #(
   
   always_ff @(posedge clk)
     if (rst || out_of_map) st <= border;
-    else st <= map_mem_in;
+    else st <= map_state'(map_mem_in);
   
   // change drawing inputs based on the map_mem_in.
   // initially: will multiplex different colors.
@@ -111,11 +111,12 @@ module drawcon #(
   // accounting for the border offset so that indexing is done correctly.
   assign map_x = draw_x - BRD_H;
   assign map_y = draw_y - BRD_TOP;
-
+  
+  logic [4:0] row, col;
   always_comb 
   begin
-    col = map_x >> BLOCK_W_LOG2;
-    row = map_y >> BLOCK_H_LOG2;
+    col = map_x >> BLK_W_LOG2;
+    row = map_y >> BLK_H_LOG2;
     blk_addr = (row << 4) + (row << 1) + row + col; // (row << 4) + (row << 1) + row == row*16+row*2+row == row*19 --> hard-coded for 19 blocks. It's okay, since we will not change number of blocks.
   end
 
