@@ -42,6 +42,7 @@ module drawcon_map_tb();
         else
         draw_y <= draw_y + 1;
       end
+      else draw_x <= draw_x + 1;
 
   always #5 clk = ~clk;
 
@@ -56,7 +57,7 @@ module drawcon_map_tb();
   // Test memory with random states
   logic [3:0] map [0:208];
   initial
-    $readmemh("mem.txt", map); 
+    $readmemh("/home/sharifms/mem.txt", map); 
   
   assign map_mem_in = map[blk_addr];
 
@@ -69,6 +70,10 @@ module drawcon_map_tb();
     
 //   end
 
+always @(posedge clk)
+  if (!rst && draw_y < 5 && draw_x < 20)
+    $strobe("[%0t] (x=%0d, y=%0d) -> addr=%0d, state=%0h, color=%0h%0h%0h",
+             $time, draw_x, draw_y, blk_addr, map_mem_in, o_r, o_g, o_b);
 
   
  
