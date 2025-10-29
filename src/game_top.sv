@@ -15,7 +15,6 @@ module game_top (
     .clk_in1  (CLK100MHZ),
     .clk_out1 (pixclk)
   );
-  
 
   // Get the VGA timing signals
   logic [10:0] curr_x;
@@ -23,11 +22,11 @@ module game_top (
   logic [3:0]  drawcon_i_r, drawcon_i_g, drawcon_i_b;
   logic [3:0]  drawcon_o_r, drawcon_o_g, drawcon_o_b;
   vga_out vga_out_u (
-    .i_clk (pixclk), .i_rst    (rst),
-    .i_r     (drawcon_o_r),      .i_g   (drawcon_o_g),      .i_b  (drawcon_o_b),
-    .o_pix_r    (o_pix_r),  .o_pix_g  (o_pix_g),  .o_pix_b (o_pix_b), // VGA color output
-    .o_hsync   (o_hsync), .o_vsync (o_vsync),                  // horizontal and vertical sync
-    .o_curr_x   (curr_x), .o_curr_y (curr_y)                   // what pixel are we on
+    .i_clk    (pixclk),      .i_rst    (rst),
+    .i_r      (drawcon_o_r), .i_g      (drawcon_o_g), .i_b  (drawcon_o_b),
+    .o_pix_r  (o_pix_r),     .o_pix_g  (o_pix_g),     .o_pix_b (o_pix_b), // VGA color output
+    .o_hsync  (o_hsync),     .o_vsync  (o_vsync),                         // horizontal and vertical sync
+    .o_curr_x (curr_x),      .o_curr_y (curr_y)                           // what pixel are we on
   );
 
   localparam logic [11:0] 
@@ -39,52 +38,112 @@ module game_top (
 
   localparam int SCREEN_W = 1280;
   localparam int SCREEN_H = 800;
+  localparam int MAP_NUM_ROW = 11;
+  localparam int MAP_NUM_COL = 19;
+  localparam int MAP_DEPTH = MAP_NUM_ROW * MAP_NUM_COL;
+  localparam int MAP_ADDR_WIDTH = $clog2(MAP_DEPTH);
 
-   // Logic for positioning rectangle control.
-   logic obstacle_right, obstacle_left, obstacle_down, obstacle_up;
-   logic [10:0] blkpos_x;
-   logic [9:0]  blkpos_y;
-   
+  // Logic for positioning rectangle control.
+  logic obstacle_right, obstacle_left, obstacle_down, obstacle_up;
+  logic [10:0] blkpos_x;
+  logic [9:0]  blkpos_y;
+  logic [MAP_ADDR_WIDTH-1:0] map_addr;
+  logic [3:0] map_tile_state;
+
+  // one-cycle pulse, synchronous to pixclk
   logic clk_strb;
   always_ff @(posedge pixclk)
-    clk_strb <= (curr_x == 0) && (curr_y == 0);
+    clk_strb <= (curr_x == 0 && curr_y == 0);
 
-   // Single Sprite mem for Bomberman_walking
-   logic [11:0] addr_down_1, dout_down_1;
-   bomberman_down_1 down_1 (.clka(pixclk), .addra(addr_down_1), .douta(dout_down_1));
+  // Single Sprite mem for Bomberman_walking
+  localparam int SPRITE_W = 32;
+  localparam int SPRITE_H = 64;
+  localparam int SPRITE_ADDR_WIDTH = $clog2(SPRITE_W * SPRITE_H);
+  logic [SPRITE_ADDR_WIDTH-1:0] sprite_addr;
+  logic [11:0] sprite_rgb_raw;
+  logic sprite_active, pixel_active;
+  logic [$clog2(SPRITE_W)-1:0] sprite_local_x;
+  logic [$clog2(SPRITE_H)-1:0] sprite_local_y;
 
-   // Should be put in its own module (positioning logic / game logic)
-   always_ff @(posedge pixclk) begin
-     if (rst) begin blkpos_x <= 800; blkpos_y <= 400; end
-     else begin
-     if (clk_strb)
-     begin
-      if (up & ~obstacle_up) blkpos_y <= blkpos_y - 4;
-      else if (down & ~obstacle_down) blkpos_y <= blkpos_y + 4;
-      if (left & ~obstacle_left) blkpos_x <= blkpos_x - 4;
-      else if (right & ~obstacle_right) blkpos_x <= blkpos_x + 4;
-     end
-     end
-   end
-   
-   assign {drawcon_i_r, drawcon_i_g, drawcon_i_b} = dout_down_1;
-     
-  
-  // Memory module HERE : map_mem . v (dimensions of memory)
+  sprite_rom #(
+      .SPRITE_W(SPRITE_W),
+      .SPRITE_H(SPRITE_H),
+      .DATA_WIDTH(12),
+      .MEM_INIT_FILE("sprites/walk/mem/down_1.mem") // for now just use the down sprite
+  ) bomberman_sprite_i (
+      .addr(sprite_addr),
+      .data(sprite_rgb_raw)
+  );
 
+  player_controller #(
+      .INIT_X(800),
+      .INIT_Y(400),
+      .STEP_SIZE(4)
+  ) player_ctrl_i (
+      .clk(pixclk),
+      .rst(rst),
+      .tick(clk_strb),
+      .up(up),
+      .down(down),
+      .left(left),
+      .right(right),
+      .obstacle_up(obstacle_up),
+      .obstacle_down(obstacle_down),
+      .obstacle_left(obstacle_left),
+      .obstacle_right(obstacle_right),
+      .blkpos_x(blkpos_x),
+      .blkpos_y(blkpos_y)
+  );
 
-   assign addr_down_1 = ((curr_y-blkpos_y)<<5)+(curr_x-blkpos_x) + 2; // adding 2 for read latency.
-   
-   parameter BLK_W = 32, BLK_H = 64;
-   drawcon #(.BLK_W(BLK_W), .BLK_H(BLK_H)) drawcon_i ( // drawcon now contains sequential due to map FSM.
-     .clk(pixclk), .rst(rst),
-     // .map_mem_in(), // To be added when map_memory is completed.
-     .blkpos_x(blkpos_x), .blkpos_y(blkpos_y),
-     .draw_x(curr_x),     .draw_y(curr_y),
-     .i_r(drawcon_i_r), .i_g(drawcon_i_g), .i_b(drawcon_i_b),
-     .o_r(drawcon_o_r), .o_g(drawcon_o_g), .o_b(drawcon_o_b),
-     .obstacle_right(obstacle_right), .obstacle_left(obstacle_left), .obstacle_up(obstacle_up),.obstacle_down(obstacle_down)
-     // .blk_addr(map_mem_read_addr) // To be added when map_memory is completed.
-   );
+  assign pixel_active = (curr_x < SCREEN_W) && (curr_y < SCREEN_H);
+
+  always_comb begin
+    sprite_active = 1'b0;
+    sprite_local_x = '0;
+    sprite_local_y = '0;
+    sprite_addr    = '0;
+
+    if (pixel_active &&
+        (curr_x >= blkpos_x) && (curr_x < blkpos_x + SPRITE_W) &&
+        (curr_y >= blkpos_y) && (curr_y < blkpos_y + SPRITE_H)) begin
+      sprite_active = 1'b1;
+      sprite_local_x = curr_x - blkpos_x;
+      sprite_local_y = curr_y - blkpos_y;
+      sprite_addr = {sprite_local_y, sprite_local_x};
+    end
+  end
+
+  assign {drawcon_i_r, drawcon_i_g, drawcon_i_b} = sprite_active ? sprite_rgb_raw : 12'h000;
+
+  // Sprite bounding box matches drawcon block size for now.
+
+  parameter BLK_W = SPRITE_W, BLK_H = SPRITE_H;
+  tile_map_mem #(
+      .NUM_ROW(MAP_NUM_ROW),
+      .NUM_COL(MAP_NUM_COL),
+      .DATA_WIDTH(4),
+      .MEM_INIT_FILE("maps/default_map.mem")
+  ) map_mem_i (
+      .clk(pixclk),
+      .rst(rst),
+      .rd_addr(map_addr),
+      .rd_data(map_tile_state),
+      .we(1'b0),
+      .wr_addr('0),
+      .wr_data('0)
+  );
+
+  // drawcon now contains sequential due to map FSM.
+  drawcon #(.BLK_W(BLK_W), .BLK_H(BLK_H)) drawcon_i (
+    .clk(pixclk), .rst(rst),
+    .map_mem_in(map_tile_state),
+    .blkpos_x(blkpos_x), .blkpos_y(blkpos_y),
+    .draw_x(curr_x),     .draw_y(curr_y),
+    .i_r(drawcon_i_r), .i_g(drawcon_i_g), .i_b(drawcon_i_b),
+    .o_r(drawcon_o_r), .o_g(drawcon_o_g), .o_b(drawcon_o_b),
+    .obstacle_right(obstacle_right), .obstacle_left(obstacle_left),
+    .obstacle_up(obstacle_up),       .obstacle_down(obstacle_down),
+    .blk_addr(map_addr)
+  );
 
 endmodule

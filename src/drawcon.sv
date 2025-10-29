@@ -53,41 +53,30 @@ module drawcon #(
     output logic [BLK_IND_WIDTH-1:0] blk_addr
 );
 
-  logic is_blk, out_of_map;
+  logic out_of_map;
   always_comb begin
-      out_of_map = (draw_x < BRD_H) || (draw_x >= SCREEN_W - BRD_H) ||
-                  (draw_y < BRD_TOP) || (draw_y >= SCREEN_H - BRD_BOT);
-      // is_blk = (draw_x >= blkpos_x) && (draw_x < blkpos_x + BLK_W) &&
-      //          (draw_y >= blkpos_y) && (draw_y < blkpos_y + BLK_H);
-      obstacle_right = (blkpos_x + BLK_W >= SCREEN_W - BRD_H);
-      obstacle_left =  (blkpos_x <= BRD_H);
-      obstacle_down = (blkpos_y + BLK_H >= SCREEN_H - BRD_BOT);
-      obstacle_up = (blkpos_y <= BRD_TOP);
+    out_of_map = (draw_x < BRD_H) || (draw_x >= SCREEN_W - BRD_H) ||
+                 (draw_y < BRD_TOP) || (draw_y >= SCREEN_H - BRD_BOT);
+    obstacle_right = (blkpos_x + BLK_W >= SCREEN_W - BRD_H);
+    obstacle_left = (blkpos_x <= BRD_H);
+    obstacle_down = (blkpos_y + BLK_H >= SCREEN_H - BRD_BOT);
+    obstacle_up = (blkpos_y <= BRD_TOP);
   end
-
-  // always_comb begin
-  //   { o_r, o_g, o_b } = { BG_R, BG_G, BG_B }; // Default to background color
-  //   if (is_border) begin
-  //     { o_r, o_g, o_b } = { BRD_R, BRD_G, BRD_B };
-  //   end else if (is_blk) begin
-  //     { o_r, o_g, o_b } = { i_r, i_g, i_b };
-  //   end
-  // end
 
   // Map state-machine (0,1,2,...), with next-state obtained from the map_memory
   typedef enum { no_blk, perm_blk, destroyable_blk, player, enemy, bomb, explosion, power_up, border } map_state;
 
   map_state st;
-  
-  always_ff @(posedge clk)
+
+  always_ff @(posedge clk) begin
     if (rst || out_of_map) st <= border;
     else st <= map_state'(map_mem_in);
-  
+  end
+
   // change drawing inputs based on the map_mem_in.
   // initially: will multiplex different colors.
   // when adding sprites: bring counter and control logic out, multiplexing at the memory and simply receiving pix_rgb as input .. ?
-  always_comb
-  begin
+  always_comb begin
     case (st)
       border:          { o_r, o_g, o_b } = { BRD_R, BRD_G, BRD_B };
       no_blk:          { o_r, o_g, o_b } = { BG_R, BG_G, BG_B };
@@ -111,13 +100,14 @@ module drawcon #(
   // accounting for the border offset so that indexing is done correctly.
   assign map_x = draw_x - BRD_H;
   assign map_y = draw_y - BRD_TOP;
-  
+
   logic [4:0] row, col;
-  always_comb 
-  begin
+  logic [BLK_IND_WIDTH-1:0] addr_next;
+  always_comb begin
     col = map_x >> BLK_W_LOG2;
     row = map_y >> BLK_H_LOG2;
-    blk_addr = (row << 4) + (row << 1) + row + col; // (row << 4) + (row << 1) + row == row*16+row*2+row == row*19 --> hard-coded for 19 blocks. It's okay, since we will not change number of blocks.
+    addr_next = (row << 4) + (row << 1) + row + col; // (row << 4) + (row << 1) + row == row*16+row*2+row == row*19 --> hard-coded for 19 blocks. It's okay, since we will not change number of blocks.
+    blk_addr = out_of_map ? '0 : addr_next;
   end
 
 
