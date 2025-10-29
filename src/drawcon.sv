@@ -4,6 +4,7 @@
 * Module: drawcon
 * Description: Draws a border and a block on the screen.
 *
+* THIS NEEDS TO BE UPDATED. TO BE DONE ONCE MODULE IS TESTED AND FUNCTIONS CORRECTLY.
 * Parameters:
 * - SCREEN_W: Width of the screen in pixels.
 * - SCREEN_H: Height of the screen in pixels.
@@ -24,14 +25,24 @@
 * - r, g, b: Color values for the current pixel (4-bit each).
 */
 module drawcon #(
+    parameter int MAP_MEM_WIDTH   = 4, // this is $clog2(number of map states).
+    parameter int NUM_ROW     = 11,
+    parameter int NUM_COL     = 19,
     parameter int SCREEN_W       = 1280,
     parameter int SCREEN_H       = 800,
-    parameter int BRD_SIZE       = 10,
-    parameter int BLK_W          = 32,
-    parameter int BLK_H          = 32,
+    parameter int BRD_H       = 32, // BRD_SIZE_H
+    parameter int BRD_TOP     = 96,
+    parameter int BRD_BOT     = 0,
+    parameter int BLK_W          = 64, // should be power of 2
+    parameter int BLK_H          = 64, // should be power of 2
     parameter logic[3:0] BRD_R =4'hF, BRD_G=4'hF, BRD_B = 4'hF, // White border
     parameter logic[3:0] BG_R = 4'h0, BG_G = 4'h0,  BG_B  = 4'h0  // Black background
+    // localparams should not be modified in module instantiation
+    localparam int NUM_BLKS = NUM_COL*NUM_ROW; // 
+    localparam int BLK_IND_WIDTH = $clog2(NUM_BLKS); // bit-width of blk_addr output
 )(
+    input logic clk, rst,
+    input logic [MAP_MEM_WIDTH-1:0] map_mem_in, // Map Memory block state input
     input  logic [10:0] blkpos_x,
     input  logic [9:0]  blkpos_y,
     input  logic [10:0] draw_x,
@@ -39,27 +50,74 @@ module drawcon #(
     input logic [3:0] i_r, i_g, i_b,
     output logic [3:0]  o_r, o_g, o_b,
     output logic obstacle_right, obstacle_left, obstacle_down, obstacle_up // Variable names are very verbose..
+    output logic [BLK_IND_WIDTH] blk_addr;
 );
 
-  logic is_border, is_blk;
+  logic is_blk, out_of_map;
   always_comb begin
-      is_border = (draw_x < BRD_SIZE) || (draw_x >= SCREEN_W - BRD_SIZE) ||
-                  (draw_y < BRD_SIZE) || (draw_y >= SCREEN_H - BRD_SIZE);
-      is_blk = (draw_x >= blkpos_x) && (draw_x < blkpos_x + BLK_W) &&
-               (draw_y >= blkpos_y) && (draw_y < blkpos_y + BLK_H);
-      obstacle_right = (blkpos_x + BLK_W >= SCREEN_W - BRD_SIZE);
-      obstacle_left =  (blkpos_x <= BRD_SIZE);
-      obstacle_down = (blkpos_y + BLK_H >= SCREEN_H - BRD_SIZE);
-      obstacle_up = (blkpos_y <= BRD_SIZE);
+      out_of_map = (draw_x < BRD_H) || (draw_x >= SCREEN_W - BRD_H) ||
+                  (draw_y < BRD_TOP) || (draw_y >= SCREEN_H - BRD_BOT);
+      // is_blk = (draw_x >= blkpos_x) && (draw_x < blkpos_x + BLK_W) &&
+      //          (draw_y >= blkpos_y) && (draw_y < blkpos_y + BLK_H);
+      obstacle_right = (blkpos_x + BLK_W >= SCREEN_W - BRD_H);
+      obstacle_left =  (blkpos_x <= BRD_H);
+      obstacle_down = (blkpos_y + BLK_H >= SCREEN_H - BRD_BOT);
+      obstacle_up = (blkpos_y <= BRD_TOP);
   end
 
-  always_comb begin
-    { o_r, o_g, o_b } = { BG_R, BG_G, BG_B }; // Default to background color
-    if (is_border) begin
-      { o_r, o_g, o_b } = { BRD_R, BRD_G, BRD_B };
-    end else if (is_blk) begin
-      { o_r, o_g, o_b } = { i_r, i_g, i_b };
-    end
+  // always_comb begin
+  //   { o_r, o_g, o_b } = { BG_R, BG_G, BG_B }; // Default to background color
+  //   if (is_border) begin
+  //     { o_r, o_g, o_b } = { BRD_R, BRD_G, BRD_B };
+  //   end else if (is_blk) begin
+  //     { o_r, o_g, o_b } = { i_r, i_g, i_b };
+  //   end
+  // end
+
+  // Map state-machine (0,1,2,...), with next-state obtained from the map_memory
+  typedef enum { border, no_blk, perm_blk, destroyable_blk, player, enemy, bomb, explosion, power_up } map_state;
+
+  map_state st;
+  
+  always_ff @(posedge clk)
+    if (rst || out_of_map) st <= border;
+    else st <= map_mem_in;
+  
+  // change drawing inputs based on the map_mem_in.
+  // initially: will multiplex different colors.
+  // when adding sprites: bring counter and control logic out, multiplexing at the memory and simply receiving pix_rgb as input .. ?
+  always_comb
+  begin
+    case (st)
+      border:          { o_r, o_g, o_b } = { BRD_R, BRD_G, BRD_B };
+      no_blk:          { o_r, o_g, o_b } = { BG_R, BG_G, BG_B };
+      perm_blk:        { o_r, o_g, o_b } = 12'hFFF;
+      destroyable_blk: { o_r, o_g, o_b } = 12'h00F;
+      player:          { o_r, o_g, o_b } = { i_r, i_g, i_b };
+      enemy:           { o_r, o_g, o_b } = 12'hF33;
+      bomb:            { o_r, o_g, o_b } = 12'h333;
+      explosion:       { o_r, o_g, o_b } = 12'hF00;
+      power_up:        { o_r, o_g, o_b } = 12'h0F0;
+      default:         { o_r, o_g, o_b } = 12'hFF0; // bug state; if a block is yellow then there is something wrong.
+    endcase
   end
+
+  // Indexing the block address
+  localparam int BLK_H_LOG2 = $clog2(BLK_H);
+  localparam int BLK_W_LOG2 = $clog2(BLK_W);
+  logic [10:0] map_x;
+  logic [9:0] map_y;
+
+  // accounting for the border offset so that indexing is done correctly.
+  assign map_x = draw_x - BRD_H;
+  assign map_y = draw_y - BRD_TOP;
+
+  always_comb 
+  begin
+    col = map_x >> BLOCK_W_LOG2;
+    row = map_y >> BLOCK_H_LOG2;
+    blk_addr = (row << 4) + (row << 1) + row + col; // (row << 4) + (row << 1) + row == row*16+row*2+row == row*19 --> hard-coded for 19 blocks. It's okay, since we will not change number of blocks.
+  end
+
 
 endmodule

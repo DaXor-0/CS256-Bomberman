@@ -40,15 +40,6 @@ module game_top (
   localparam int SCREEN_W = 1280;
   localparam int SCREEN_H = 800;
 
-//  always_ff @(posedge pixclk) begin
-//    if (rst)                              { r, g, b } <= C_BLACK;
-//    else begin
-//      if (curr_x < (SCREEN_W/3))          { r, g, b } <= C_GREEN;
-//      else if (curr_x < (2*(SCREEN_W/3))) { r, g, b } <= C_WHITE;
-//      else if (curr_x < (SCREEN_W))       { r, g, b } <= C_RED;
-//      else                                { r, g, b } <= C_BLACK;
-//    end
-//  en
    // Logic for positioning rectangle control.
    logic obstacle_right, obstacle_left, obstacle_down, obstacle_up;
    logic [10:0] blkpos_x;
@@ -78,16 +69,22 @@ module game_top (
    
    assign {drawcon_i_r, drawcon_i_g, drawcon_i_b} = dout_down_1;
      
-   
+  
+  // Memory module HERE : map_mem . v (dimensions of memory)
+
+
    assign addr_down_1 = ((curr_y-blkpos_y)<<5)+(curr_x-blkpos_x) + 2; // adding 2 for read latency.
    
    parameter BLK_W = 32, BLK_H = 64;
-   drawcon #(.BLK_W(BLK_W), .BLK_H(BLK_H)) drawcon_i ( // drawcon is fully combinational (for now) -- conditions that determine what needs to be drawn
+   drawcon #(.BLK_W(BLK_W), .BLK_H(BLK_H)) drawcon_i ( // drawcon now contains sequential due to map FSM.
+     .clk(pixclk), .rst(rst),
+     // .map_mem_in(), // To be added when map_memory is completed.
      .blkpos_x(blkpos_x), .blkpos_y(blkpos_y),
      .draw_x(curr_x),     .draw_y(curr_y),
      .i_r(drawcon_i_r), .i_g(drawcon_i_g), .i_b(drawcon_i_b),
      .o_r(drawcon_o_r), .o_g(drawcon_o_g), .o_b(drawcon_o_b),
      .obstacle_right(obstacle_right), .obstacle_left(obstacle_left), .obstacle_up(obstacle_up),.obstacle_down(obstacle_down)
+     // .blk_addr(map_mem_read_addr) // To be added when map_memory is completed.
    );
 
 endmodule
