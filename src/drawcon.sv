@@ -25,21 +25,21 @@
 * - r, g, b: Color values for the current pixel (4-bit each).
 */
 module drawcon #(
-    parameter int MAP_MEM_WIDTH   = 4, // this is $clog2(number of map states).
-    parameter int NUM_ROW     = 11,
-    parameter int NUM_COL     = 19,
-    parameter int SCREEN_W       = 1280,
-    parameter int SCREEN_H       = 800,
-    parameter int BRD_H       = 32, // BRD_SIZE_H
-    parameter int BRD_TOP     = 96,
-    parameter int BRD_BOT     = 0,
-    parameter int BLK_W          = 64, // should be power of 2
-    parameter int BLK_H          = 64, // should be power of 2
+    parameter MAP_MEM_WIDTH   = 4, // this is $clog2(number of map states).
+    parameter NUM_ROW     = 11,
+    parameter NUM_COL     = 19,
+    parameter SCREEN_W       = 1280,
+    parameter SCREEN_H       = 800,
+    parameter BRD_H       = 32, // BRD_SIZE_H
+    parameter BRD_TOP     = 96,
+    parameter BRD_BOT     = 0,
+    parameter BLK_W          = 64, // should be power of 2
+    parameter BLK_H          = 64, // should be power of 2
     parameter logic[3:0] BRD_R =4'hF, BRD_G=4'hF, BRD_B = 4'hF, // White border
     parameter logic[3:0] BG_R = 4'h0, BG_G = 4'h0,  BG_B  = 4'h0  // Black background
     // localparams should not be modified in module instantiation
-    localparam int NUM_BLKS = NUM_COL*NUM_ROW; // 
-    localparam int BLK_IND_WIDTH = $clog2(NUM_BLKS); // bit-width of blk_addr output
+    localparam NUM_BLKS = NUM_COL*NUM_ROW; // 
+    localparam BLK_IND_WIDTH = $clog2(NUM_BLKS); // bit-width of blk_addr output
 )(
     input logic clk, rst,
     input logic [MAP_MEM_WIDTH-1:0] map_mem_in, // Map Memory block state input
@@ -50,7 +50,7 @@ module drawcon #(
     input logic [3:0] i_r, i_g, i_b,
     output logic [3:0]  o_r, o_g, o_b,
     output logic obstacle_right, obstacle_left, obstacle_down, obstacle_up // Variable names are very verbose..
-    output logic [BLK_IND_WIDTH] blk_addr;
+    output logic [BLK_IND_WIDTH-1:0] blk_addr;
 );
 
   logic is_blk, out_of_map;
@@ -75,7 +75,7 @@ module drawcon #(
   // end
 
   // Map state-machine (0,1,2,...), with next-state obtained from the map_memory
-  typedef enum { border, no_blk, perm_blk, destroyable_blk, player, enemy, bomb, explosion, power_up } map_state;
+  typedef enum { no_blk, perm_blk, destroyable_blk, player, enemy, bomb, explosion, power_up, border } map_state;
 
   map_state st;
   
@@ -103,8 +103,8 @@ module drawcon #(
   end
 
   // Indexing the block address
-  localparam int BLK_H_LOG2 = $clog2(BLK_H);
-  localparam int BLK_W_LOG2 = $clog2(BLK_W);
+  localparam BLK_H_LOG2 = $clog2(BLK_H);
+  localparam BLK_W_LOG2 = $clog2(BLK_W);
   logic [10:0] map_x;
   logic [9:0] map_y;
 
