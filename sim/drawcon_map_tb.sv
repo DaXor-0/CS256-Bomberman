@@ -31,6 +31,12 @@ module drawcon_map_tb();
   
   assign {i_r, i_g, i_b} = 12'hF2F;
 
+  // Dump waveform for debugging
+  initial begin
+    $dumpfile("drawcon_map_tb.vcd");
+    $dumpvars(0, drawcon_map_tb);
+  end
+
   // counters for draw_x and draw_y
   always_ff @(posedge clk)
     if (rst) begin draw_x <= 0; draw_y <= 0; end
@@ -57,7 +63,7 @@ module drawcon_map_tb();
   // Test memory with random states
   logic [3:0] map [0:208];
   initial
-    $readmemh("./mem.txt", map); 
+    $readmemh("./sim/mem.txt", map); 
   
   assign map_mem_in = map[blk_addr];
 
