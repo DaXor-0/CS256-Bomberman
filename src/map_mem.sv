@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 /**
-* Module: tile_map_mem
+* Module: map_mem
 * Description: Simple synchronous tile map memory backed by block RAM.
 * Provides a read port for the renderer and a write port for gameplay logic.
 *
@@ -10,7 +10,7 @@
 * - DATA_WIDTH: Width of each tile entry.
 * - MEM_INIT_FILE: Optional hex file used to initialise the memory.
 */
-module tile_map_mem #(
+module map_mem #(
     parameter int NUM_ROW = 11,
     parameter int NUM_COL = 19,
     parameter int DATA_WIDTH = 4,
@@ -18,13 +18,13 @@ module tile_map_mem #(
     localparam int DEPTH = NUM_ROW * NUM_COL,
     localparam int ADDR_WIDTH = $clog2(DEPTH)
 )(
-    input  logic                     clk,
-    input  logic                     rst,
-    input  logic [ADDR_WIDTH-1:0]    rd_addr,
-    output logic [DATA_WIDTH-1:0]    rd_data,
-    input  logic                     we,
-    input  logic [ADDR_WIDTH-1:0]    wr_addr,
-    input  logic [DATA_WIDTH-1:0]    wr_data
+    input  logic                 clk,
+    input  logic                 rst,
+    input  logic[ADDR_WIDTH-1:0] rd_addr,
+    output logic[DATA_WIDTH-1:0] rd_data,
+    input  logic                 we,
+    input  logic[ADDR_WIDTH-1:0] wr_addr,
+    input  logic[DATA_WIDTH-1:0] wr_data
 );
 
   (* ram_style = "block" *)

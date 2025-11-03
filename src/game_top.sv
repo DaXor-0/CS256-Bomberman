@@ -44,7 +44,6 @@ module game_top (
   localparam int MAP_ADDR_WIDTH = $clog2(MAP_DEPTH);
 
   // Logic for positioning rectangle control.
-  logic obstacle_right, obstacle_left, obstacle_down, obstacle_up;
   logic [10:0] blkpos_x;
   logic [9:0]  blkpos_y;
   logic [MAP_ADDR_WIDTH-1:0] map_addr;
@@ -91,6 +90,8 @@ module game_top (
       .data(sprite_rgb_raw)
   );
 
+  logic[3:0] move_dir;
+  assign move_dir = {up, down, left, right};
   player_controller #(
       .INIT_X(800),
       .INIT_Y(400),
@@ -99,10 +100,7 @@ module game_top (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
-      .up(up),
-      .down(down),
-      .left(left),
-      .right(right),
+      .move_dir(move_dir),
       .obstacle_up(obstacle_up),
       .obstacle_down(obstacle_down),
       .obstacle_left(obstacle_left),
@@ -112,12 +110,12 @@ module game_top (
   );
 
 
-  tile_map_mem #(
+  map_mem #(
       .NUM_ROW(MAP_NUM_ROW),
       .NUM_COL(MAP_NUM_COL),
       .DATA_WIDTH(4),
       .MEM_INIT_FILE("maps/default_map.mem")
-  ) map_mem_i (
+  ) mem_i (
       .clk(pixclk),
       .rst(rst),
       .rd_addr(map_addr),

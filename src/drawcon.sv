@@ -64,7 +64,7 @@ module drawcon #(
   end
 
   // Map state-machine (0,1,2,...), with next-state obtained from the map_memory
-  typedef enum { no_blk, perm_blk, destroyable_blk, player, enemy, bomb, explosion, power_up, border } map_state;
+  typedef enum { no_blk, perm_blk, destroyable_blk } map_state;
 
   map_state st;
 

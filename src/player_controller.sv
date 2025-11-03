@@ -12,20 +12,16 @@ module player_controller #(
     input  logic       clk,
     input  logic       rst,
     input  logic       tick,
-    input  logic       up,
-    input  logic       down,
-    input  logic       left,
-    input  logic       right,
+    input  logic[3:0]  move_dir,
+    input  logic[3:0]  obstacles,
     input  logic       obstacle_up,
     input  logic       obstacle_down,
     input  logic       obstacle_left,
     input  logic       obstacle_right,
-    output logic [10:0] blkpos_x,
-    output logic [9:0]  blkpos_y
+    output logic[10:0] blkpos_x,
+    output logic[9:0]  blkpos_y
 );
 
-  logic [3:0] move_dir;
-  assign move_dir = {up, down, left, right};
 
   always_ff @(posedge clk) begin
     if (rst) begin
