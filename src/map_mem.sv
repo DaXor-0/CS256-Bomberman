@@ -13,7 +13,6 @@
 module map_mem #(
     parameter int NUM_ROW = 11,
     parameter int NUM_COL = 19,
-    parameter int DATA_WIDTH = 4,
     parameter string MEM_INIT_FILE = "maps/default_map.mem",
     localparam int DEPTH = NUM_ROW * NUM_COL,
     localparam int ADDR_WIDTH = $clog2(DEPTH)
@@ -28,7 +27,7 @@ module map_mem #(
 );
 
   (* ram_style = "block" *)
-  logic [DATA_WIDTH-1:0] mem [0:DEPTH-1];
+  logic [1:0] mem [0:DEPTH-1]; // 4-bit states for the map
 
   // Initialise the memory if a file is provided.
   initial begin
