@@ -71,6 +71,8 @@ module player_controller #(
   // ---- Obstacle detection in map-space ----
   logic [3:0] obstacles;
   logic [DIST_WIDTH-1:0] obstacle_dist [3:0];
+  logic obstacles_valid;
+
   check_obst #(
     .NUM_ROW (NUM_ROW),
     .NUM_COL (NUM_COL),
@@ -78,37 +80,57 @@ module player_controller #(
     .SPRITE_W(SPRITE_W),
     .SPRITE_H(SPRITE_H)
   ) check_obst_i (
-    .clk        (clk),
-    .rst        (rst),
-    .player_x   (map_player_x),
-    .player_y   (map_player_y),
-    .map_mem_in (map_mem_in),
-    .obstacles  (obstacles),
-    .map_addr   (map_addr),
-    .obstacle_dist(obstacle_dist)
+    .clk            (clk),
+    .rst            (rst),
+    .player_x       (map_player_x),
+    .player_y       (map_player_y),
+    .map_mem_in     (map_mem_in),
+    .obstacles      (obstacles),
+    .map_addr       (map_addr),
+    .obstacle_dist  (obstacle_dist),
+    .obstacles_valid(obstacles_valid)
   );
+
+  // ---- Register obstacles for stable use ----
+  logic [3:0] obstacles_r;
+  logic [DIST_WIDTH-1:0] obstacle_dist_r [3:0];
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      obstacles_r <= '0;
+      obstacle_dist_r[UP]    <= '1;
+      obstacle_dist_r[DOWN]  <= '1;
+      obstacle_dist_r[LEFT]  <= '1;
+      obstacle_dist_r[RIGHT] <= '1;
+    end else if (obstacles_valid) begin
+      obstacles_r     <= obstacles;
+      obstacle_dist_r[UP]    <= obstacle_dist[UP];
+      obstacle_dist_r[DOWN]  <= obstacle_dist[DOWN];
+      obstacle_dist_r[LEFT]  <= obstacle_dist[LEFT];
+      obstacle_dist_r[RIGHT] <= obstacle_dist[RIGHT];
+    end
+  end
 
   // ---- Max movement per direction ---
   logic [DIST_WIDTH-1:0] step [3:0];
   logic [DIST_WIDTH-1:0] step_req;
   assign step_req = (STEP_SIZE > MAX_STEP) ? DIST_WIDTH'(MAX_STEP) : DIST_WIDTH'(STEP_SIZE);
 
-  assign step[UP]    = obstacles[UP]    ? '0 : ((obstacle_dist[UP]    < step_req) ? obstacle_dist[UP]    : step_req);
-  assign step[DOWN]  = obstacles[DOWN]  ? '0 : ((obstacle_dist[DOWN]  < step_req) ? obstacle_dist[DOWN]  : step_req);
-  assign step[LEFT]  = obstacles[LEFT]  ? '0 : ((obstacle_dist[LEFT]  < step_req) ? obstacle_dist[LEFT]  : step_req);
-  assign step[RIGHT] = obstacles[RIGHT] ? '0 : ((obstacle_dist[RIGHT] < step_req) ? obstacle_dist[RIGHT] : step_req);
+  assign step[UP]    = obstacles_r[UP]    ? '0 : ((obstacle_dist_r[UP]    < step_req) ? obstacle_dist_r[UP]    : step_req);
+  assign step[DOWN]  = obstacles_r[DOWN]  ? '0 : ((obstacle_dist_r[DOWN]  < step_req) ? obstacle_dist_r[DOWN]  : step_req);
+  assign step[LEFT]  = obstacles_r[LEFT]  ? '0 : ((obstacle_dist_r[LEFT]  < step_req) ? obstacle_dist_r[LEFT]  : step_req);
+  assign step[RIGHT] = obstacles_r[RIGHT] ? '0 : ((obstacle_dist_r[RIGHT] < step_req) ? obstacle_dist_r[RIGHT] : step_req);
 
-  // ---- Player position update ----
+  // ---- Player position update (only when obstacles are valid) ----
   always_ff @(posedge clk) begin
     if (rst) begin
-      player_x <= INIT_X + HUD_SIDE_PX;
-      player_y <= INIT_Y + HUD_TOP_PX;
-    end else if (tick) begin
+      player_x <= 11'(INIT_X + HUD_SIDE_PX);
+      player_y <= 10'(INIT_Y + HUD_TOP_PX);
+    end else if (tick && obstacles_valid) begin
       case (move_dir)
-        4'b1000: player_y <= player_y - step[UP];    // UP
-        4'b0100: player_y <= player_y + step[DOWN];  // DOWN
-        4'b0010: player_x <= player_x - step[LEFT];  // LEFT
-        4'b0001: player_x <= player_x + step[RIGHT]; // RIGHT
+        4'b1000: player_y <= (player_y >= step[UP])   ? (player_y - step[UP])   : player_y; // UP with saturation
+        4'b0100: player_y <= (player_y <= MAX_MAP_Y)  ? (player_y + step[DOWN]) : player_y; // DOWN with saturation
+        4'b0010: player_x <= (player_x >= step[LEFT]) ? (player_x - step[LEFT]) : player_x; // LEFT with saturation
+        4'b0001: player_x <= (player_x <= MAX_MAP_X)  ? (player_x + step[RIGHT]): player_x; // RIGHT with saturation
       endcase
     end
   end

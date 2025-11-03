@@ -2,6 +2,7 @@
 /*
 * Module: check_obst
 * Description: Check for obstacles around a player sprite in a tile map.
+* Updated: Added obstacles_valid signal for 4-cycle round-robin completion
 * */
 module check_obst #(
   parameter int NUM_ROW   = 11,
@@ -23,7 +24,8 @@ module check_obst #(
 
   output logic [3:0]            obstacles,    // [0]=up,[1]=down,[2]=left,[3]=right
   output logic [ADDR_WIDTH-1:0] map_addr,     // BRAM/ROM address
-  output logic [TILE_SHIFT:0]   obstacle_dist [3:0] // distance (px) to next obstacle or max if none
+  output logic [TILE_SHIFT:0]   obstacle_dist [3:0], // distance (px) to next obstacle or max if none
+  output logic                  obstacles_valid      // HIGH when all 4 directions checked
 );
 
   // Direction indices
@@ -60,7 +62,7 @@ module check_obst #(
   // ==========================================================================
   // Distance to the next tile boundary for each direction (in pixels)
   // ==========================================================================
-  localparam [TILE_SHIFT:0] MAX_DIST = { (TILE_SHIFT+1) {1'b1} };
+  localparam logic [TILE_SHIFT:0] MAX_DIST = '1;
 
   logic [TILE_SHIFT:0] tile_offset_x;
   logic [TILE_SHIFT:0] tile_offset_y;
@@ -68,15 +70,16 @@ module check_obst #(
   logic [TILE_SHIFT:0] bottom_edge_offset;
   assign tile_offset_x = {1'b0, player_x[TILE_SHIFT-1:0]};
   assign tile_offset_y = {1'b0, player_y[TILE_SHIFT-1:0]};
-  assign right_edge_offset = tile_offset_x + SPRITE_W;
-  assign bottom_edge_offset = tile_offset_y + SPRITE_H;
+  // FIX [P0]: Keep SPRITE_W and SPRITE_H at full TILE_SHIFT+1 bits to avoid truncation
+  assign right_edge_offset = tile_offset_x + (TILE_SHIFT+1)'(SPRITE_W);
+  assign bottom_edge_offset = tile_offset_y + (TILE_SHIFT+1)'(SPRITE_H);
 
   logic [TILE_SHIFT:0] dist_next [3:0];
   always_comb begin
     eob[UP]    = (tile_offset_y == 0);
-    eob[DOWN]  = (bottom_edge_offset == TILE_PX);
+    eob[DOWN]  = (bottom_edge_offset >= TILE_PX);
     eob[LEFT]  = (tile_offset_x == 0);
-    eob[RIGHT] = (right_edge_offset == TILE_PX);
+    eob[RIGHT] = (right_edge_offset >= TILE_PX);
 
     dist_next[LEFT]  = tile_offset_x;
     dist_next[UP]    = tile_offset_y;
@@ -93,6 +96,17 @@ module check_obst #(
   always_ff @(posedge clk) begin
     if (rst) dir_cnt <= 2'd0;
     else     dir_cnt <= dir_cnt + 2'd1;
+  end
+
+  // ===========================================================================
+  // Valid signal: HIGH when all 4 directions have been checked
+  // ===========================================================================
+  always_ff @(posedge clk) begin
+    if (rst) 
+      obstacles_valid <= 1'b0;
+    else
+      // Assert when dir_cnt == 0, meaning we just finished writing RIGHT (dir=3)
+      obstacles_valid <= (dir_cnt == 2'b00);
   end
 
   // ===========================================================================
