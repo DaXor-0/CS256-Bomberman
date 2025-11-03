@@ -19,18 +19,15 @@ module sprite_rom_tb;
     $dumpfile("sprite_rom_tb.vcd");
     $dumpvars(0, sprite_rom_tb);
 
-    addr = 0;
-    #5 $display("[%0t] addr=%0d data=%0h", $time, addr, data);
-
-    addr = 11'd97;   // last transparent pixel on first row
-    #5 $display("[%0t] addr=%0d data=%0h", $time, addr, data);
-
-    addr = 11'd98;   // first solid pixel
-    #5 $display("[%0t] addr=%0d data=%0h", $time, addr, data);
-
-    addr = 11'd2025; // interior pixel near bottom
-    #5 $display("[%0t] addr=%0d data=%0h", $time, addr, data);
-
+    // print all the 32x64 sprite data
+    for (int y = 0; y < 64; y++) begin
+      for (int x = 0; x < 32; x++) begin
+      addr = y * 32 + x;
+      #5; // wait for data to stabilize
+      $write("%03h ", data);
+      end
+      $write("\n");
+    end
     #20 $finish;
   end
 

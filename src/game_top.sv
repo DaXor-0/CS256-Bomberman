@@ -61,10 +61,26 @@ module game_top (
   localparam int SPRITE_ADDR_WIDTH = $clog2(SPRITE_W * SPRITE_H);
   logic [SPRITE_ADDR_WIDTH-1:0] sprite_addr;
   logic [11:0] sprite_rgb_raw;
-  logic sprite_active, pixel_active;
+  logic sprite_active;
   logic [$clog2(SPRITE_W)-1:0] sprite_local_x;
   logic [$clog2(SPRITE_H)-1:0] sprite_local_y;
 
+  always_comb begin
+    sprite_active = 1'b0;
+    sprite_local_x = '0;
+    sprite_local_y = '0;
+    sprite_addr    = '0;
+
+    if ((curr_x >= blkpos_x) && (curr_x < blkpos_x + SPRITE_W) &&
+        (curr_y >= blkpos_y) && (curr_y < blkpos_y + SPRITE_H)) begin
+      sprite_active = 1'b1;
+      sprite_local_x = curr_x - blkpos_x;
+      sprite_local_y = curr_y - blkpos_y;
+      sprite_addr = {sprite_local_y, sprite_local_x};
+    end
+  end
+
+  // Simply loads the down walking sprite for now.
   sprite_rom #(
       .SPRITE_W(SPRITE_W),
       .SPRITE_H(SPRITE_H),
@@ -95,29 +111,7 @@ module game_top (
       .blkpos_y(blkpos_y)
   );
 
-  assign pixel_active = (curr_x < SCREEN_W) && (curr_y < SCREEN_H);
 
-  always_comb begin
-    sprite_active = 1'b0;
-    sprite_local_x = '0;
-    sprite_local_y = '0;
-    sprite_addr    = '0;
-
-    if (pixel_active &&
-        (curr_x >= blkpos_x) && (curr_x < blkpos_x + SPRITE_W) &&
-        (curr_y >= blkpos_y) && (curr_y < blkpos_y + SPRITE_H)) begin
-      sprite_active = 1'b1;
-      sprite_local_x = curr_x - blkpos_x;
-      sprite_local_y = curr_y - blkpos_y;
-      sprite_addr = {sprite_local_y, sprite_local_x};
-    end
-  end
-
-  assign {drawcon_i_r, drawcon_i_g, drawcon_i_b} = sprite_active ? sprite_rgb_raw : 12'h000;
-
-  // Sprite bounding box matches drawcon block size for now.
-
-  parameter BLK_W = SPRITE_W, BLK_H = SPRITE_H;
   tile_map_mem #(
       .NUM_ROW(MAP_NUM_ROW),
       .NUM_COL(MAP_NUM_COL),
@@ -134,7 +128,8 @@ module game_top (
   );
 
   // drawcon now contains sequential due to map FSM.
-  drawcon #(.BLK_W(BLK_W), .BLK_H(BLK_H)) drawcon_i (
+  assign {drawcon_i_r, drawcon_i_g, drawcon_i_b} = sprite_rgb_raw;
+  drawcon drawcon_i (
     .clk(pixclk), .rst(rst),
     .map_mem_in(map_tile_state),
     .blkpos_x(blkpos_x), .blkpos_y(blkpos_y),
