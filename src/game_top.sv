@@ -51,9 +51,9 @@ module game_top (
   logic [3:0] map_tile_state;
 
   // one-cycle pulse, synchronous to pixclk
-  logic clk_strb;
+  logic tick;
   always_ff @(posedge pixclk)
-    clk_strb <= (curr_x == 0 && curr_y == 0);
+    tick <= (curr_x == 0 && curr_y == 0);
 
   // Single Sprite mem for Bomberman_walking
   localparam int SPRITE_W = 32;
@@ -82,7 +82,7 @@ module game_top (
   ) player_ctrl_i (
       .clk(pixclk),
       .rst(rst),
-      .tick(clk_strb),
+      .tick(tick),
       .up(up),
       .down(down),
       .left(left),

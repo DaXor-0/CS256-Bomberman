@@ -24,16 +24,21 @@ module player_controller #(
     output logic [9:0]  blkpos_y
 );
 
+  logic [3:0] move_dir;
+  assign move_dir = {up, down, left, right};
+
   always_ff @(posedge clk) begin
     if (rst) begin
       blkpos_x <= INIT_X;
       blkpos_y <= INIT_Y;
     end else if (tick) begin
-      if (up && !obstacle_up) blkpos_y <= blkpos_y - STEP_SIZE;
-      else if (down && !obstacle_down) blkpos_y <= blkpos_y + STEP_SIZE;
-
-      if (left && !obstacle_left) blkpos_x <= blkpos_x - STEP_SIZE;
-      else if (right && !obstacle_right) blkpos_x <= blkpos_x + STEP_SIZE;
+      case (move_dir)
+        4'b1000: if (!obstacle_up)    blkpos_y <= blkpos_y - STEP_SIZE; // Up
+        4'b0100: if (!obstacle_down)  blkpos_y <= blkpos_y + STEP_SIZE; // Down
+        4'b0010: if (!obstacle_left)  blkpos_x <= blkpos_x - STEP_SIZE; // Left
+        4'b0001: if (!obstacle_right) blkpos_x <= blkpos_x + STEP_SIZE; // Right
+        default: ; // No movement or conflicting inputs
+      endcase
     end
   end
 
