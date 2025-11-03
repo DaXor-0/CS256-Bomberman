@@ -46,8 +46,8 @@ module check_obst #(
   // ===========================================================================
   // End-of-block (EOB) conditions for a 32x64 sprite on 64x64 tiles
   // ===========================================================================
-  // Vertical: y%TILE_PX==0.
-  // Right boundary when right edge aligns: x%TILE_PX==SPRITE_W%TILE_PX.
+  // Vertical: y lower bits == 0.
+  // Right boundary when right edge aligns with tile boundary or sprite width.
   logic [3:0] eob;
 
   // Map edge_block flags (prevent OOB addressing)
@@ -70,8 +70,8 @@ module check_obst #(
   logic [TILE_SHIFT:0] right_edge_offset;
   logic [TILE_SHIFT:0] bottom_edge_offset;
   always_comb begin
-    tile_offset_x      = player_x % TILE_PX;
-    tile_offset_y      = player_y % TILE_PX;
+    tile_offset_x      = {1'b0, player_x[TILE_SHIFT-1:0]};
+    tile_offset_y      = {1'b0, player_y[TILE_SHIFT-1:0]};
     right_edge_offset  = tile_offset_x + SPRITE_W;
     bottom_edge_offset = tile_offset_y + SPRITE_H;
 

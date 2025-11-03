@@ -52,6 +52,8 @@ module player_controller #(
   localparam int MAX_MAP_X    = MAP_W_PX - SPRITE_W;
   localparam int MAX_MAP_Y    = MAP_H_PX - SPRITE_H;
   localparam int TILE_SHIFT   = $clog2(TILE_PX);
+  localparam int DIST_WIDTH   = TILE_SHIFT + 1;
+  localparam int MAX_STEP     = (1 << TILE_SHIFT);
 
   // ---- HUD layout (derived) ----
   // horizontally centered map; full HUD bar at top
@@ -68,7 +70,7 @@ module player_controller #(
 
   // ---- Obstacle detection in map-space ----
   logic [3:0] obstacles;
-  logic [TILE_SHIFT-1:0] obstacle_dist [3:0];
+  logic [DIST_WIDTH-1:0] obstacle_dist [3:0];
   check_obst #(
     .NUM_ROW (NUM_ROW),
     .NUM_COL (NUM_COL),
@@ -87,9 +89,10 @@ module player_controller #(
   );
 
   // ---- Max movement per direction ---
-  logic [TILE_SHIFT-1:0] step [3:0];
+  logic [DIST_WIDTH-1:0] step [3:0];
   always_comb begin
-    logic [TILE_SHIFT-1:0] step_req = TILE_SHIFT'(STEP_SIZE); // cast STEP_SIZE
+    logic [DIST_WIDTH-1:0] step_req;
+    step_req = (STEP_SIZE > MAX_STEP) ? DIST_WIDTH'(MAX_STEP) : DIST_WIDTH'(STEP_SIZE);
 
     step[UP]    = obstacles[UP]    ? '0 : ((obstacle_dist[UP]    < step_req) ? obstacle_dist[UP]    : step_req);
     step[DOWN]  = obstacles[DOWN]  ? '0 : ((obstacle_dist[DOWN]  < step_req) ? obstacle_dist[DOWN]  : step_req);
