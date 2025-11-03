@@ -25,8 +25,8 @@ module player_controller #(
     parameter int SCREEN_W    = 1280,
     parameter int SCREEN_H    = 800,
     // ---- Initial player position ----
-    parameter int INIT_X      = 0,
-    parameter int INIT_Y      = 0,
+    parameter int INIT_X      = 64,
+    parameter int INIT_Y      = 64,
 
     localparam int DEPTH      = NUM_ROW * NUM_COL,
     localparam int ADDR_WIDTH = $clog2(DEPTH)
@@ -52,32 +52,27 @@ module player_controller #(
   localparam int MAX_MAP_X    = MAP_W_PX - SPRITE_W;
   localparam int MAX_MAP_Y    = MAP_H_PX - SPRITE_H;
   localparam int TILE_SHIFT   = $clog2(TILE_PX);
-  localparam int DIST_WIDTH   = TILE_SHIFT + 1;
-  localparam int MOVE_WIDTH   = 16;
-  localparam int MAX_SCREEN_X = MAX_MAP_X + HUD_LEFT_PX;
-  localparam int MAX_SCREEN_Y = MAX_MAP_Y + HUD_TOP_PX;
 
   // ---- HUD layout (derived) ----
   // horizontally centered map; full HUD bar at top
-  localparam int HUD_LEFT_PX  = (SCREEN_W - MAP_W_PX) / 2; // 32 px
-  localparam int HUD_RIGHT_PX = (SCREEN_W - MAP_W_PX) / 2; // 32 px
+  localparam int HUD_SIDE_PX  = (SCREEN_W - MAP_W_PX) / 2; // 32 px
   localparam int HUD_TOP_PX   = (SCREEN_H - MAP_H_PX);     // 96 px
 
   // ---- Convert player position to map-space (remove HUD offsets) ----
   logic [10:0] map_player_x;
   logic [9:0]  map_player_y;
-
   always_comb begin
-    map_player_x = (player_x > HUD_LEFT_PX) ? (player_x - HUD_LEFT_PX) : 11'd0;
+    map_player_x = (player_x > HUD_SIDE_PX) ? (player_x - HUD_SIDE_PX) : 11'd0;
     map_player_y = (player_y > HUD_TOP_PX)  ? (player_y - HUD_TOP_PX)  : 10'd0;
   end
 
   // ---- Obstacle detection in map-space ----
   logic [3:0] obstacles;
-  logic [DIST_WIDTH-1:0] obstacle_dist [3:0];
+  logic [TILE_SHIFT-1:0] obstacle_dist [3:0];
   check_obst #(
     .NUM_ROW (NUM_ROW),
     .NUM_COL (NUM_COL),
+    .TILE_PX (TILE_PX),
     .SPRITE_W(SPRITE_W),
     .SPRITE_H(SPRITE_H)
   ) check_obst_i (
@@ -91,53 +86,29 @@ module player_controller #(
     .obstacle_dist(obstacle_dist)
   );
 
+  // ---- Max movement per direction ---
+  logic [TILE_SHIFT-1:0] step [3:0];
+  always_comb begin
+    logic [TILE_SHIFT-1:0] step_req = TILE_SHIFT'(STEP_SIZE); // cast STEP_SIZE
 
-  // ---- Player movement logic ----
-  
-  logic [MOVE_WIDTH-1:0] next_x;
-  logic [MOVE_WIDTH-1:0] next_y;
-  logic [MOVE_WIDTH-1:0] step_amt;
+    step[UP]    = obstacles[UP]    ? '0 : ((obstacle_dist[UP]    < step_req) ? obstacle_dist[UP]    : step_req);
+    step[DOWN]  = obstacles[DOWN]  ? '0 : ((obstacle_dist[DOWN]  < step_req) ? obstacle_dist[DOWN]  : step_req);
+    step[LEFT]  = obstacles[LEFT]  ? '0 : ((obstacle_dist[LEFT]  < step_req) ? obstacle_dist[LEFT]  : step_req);
+    step[RIGHT] = obstacles[RIGHT] ? '0 : ((obstacle_dist[RIGHT] < step_req) ? obstacle_dist[RIGHT] : step_req);
+  end
+
+  // ---- Player position update ----
   always_ff @(posedge clk) begin
     if (rst) begin
-      player_x <= INIT_X + HUD_LEFT_PX;
+      player_x <= INIT_X + HUD_SIDE_PX;
       player_y <= INIT_Y + HUD_TOP_PX;
     end else if (tick) begin
-      next_x   = player_x;
-      next_y   = player_y;
-      step_amt = '0;
-
       case (move_dir)
-        4'b1000: if (!obstacles[UP]) begin
-                   step_amt[DIST_WIDTH-1:0] = obstacle_dist[UP];
-                   if (step_amt > STEP_SIZE) step_amt = STEP_SIZE;
-                   next_y -= step_amt;
-                 end
-        4'b0100: if (!obstacles[DOWN]) begin
-                   step_amt[DIST_WIDTH-1:0] = obstacle_dist[DOWN];
-                   if (step_amt > STEP_SIZE) step_amt = STEP_SIZE;
-                   next_y += step_amt;
-                 end
-        4'b0010: if (!obstacles[LEFT]) begin
-                   step_amt[DIST_WIDTH-1:0] = obstacle_dist[LEFT];
-                   if (step_amt > STEP_SIZE) step_amt = STEP_SIZE;
-                   next_x -= step_amt;
-                 end
-        4'b0001: if (!obstacles[RIGHT]) begin
-                   step_amt[DIST_WIDTH-1:0] = obstacle_dist[RIGHT];
-                   if (step_amt > STEP_SIZE) step_amt = STEP_SIZE;
-                   next_x += step_amt;
-                 end
-        default:; // No movement or conflicting inputs
+        4'b1000: player_y <= player_y - step[UP];    // UP
+        4'b0100: player_y <= player_y + step[DOWN];  // DOWN
+        4'b0010: player_x <= player_x - step[LEFT];  // LEFT
+        4'b0001: player_x <= player_x + step[RIGHT]; // RIGHT
       endcase
-
-      if (next_x < HUD_LEFT_PX)       next_x = HUD_LEFT_PX;
-      else if (next_x > MAX_SCREEN_X) next_x = MAX_SCREEN_X;
-
-      if (next_y < HUD_TOP_PX)        next_y = HUD_TOP_PX;
-      else if (next_y > MAX_SCREEN_Y) next_y = MAX_SCREEN_Y;
-
-      player_x <= next_x[10:0];
-      player_y <= next_y[9:0];
     end
   end
 endmodule

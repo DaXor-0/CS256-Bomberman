@@ -150,16 +150,13 @@ module check_obst #(
       obstacle_dist[LEFT]  <= MAX_DIST;
       obstacle_dist[RIGHT] <= MAX_DIST;
     end else begin
-      logic blocked_dir;
-      blocked_dir = edge_block_a[dir_a] | (map_mem_in != 2'b00);
-
       // Block only if we're crossing a tile boundary (eob_a)
       // and either: (a) we're at the map edge, or (b) the neighbor tile is non-empty.
-      obstacles[dir_a] <= eob_a[dir_a] & blocked_dir;
+      obstacles[dir_a] <= eob_a[dir_a] & ( edge_block_a[dir_a] | (map_mem_in != 2'b00) );
 
       // Distance to obstacle: when blocked, clamp to remaining pixels in tile;
       // otherwise present a large value so the controller is unconstrained.
-      obstacle_dist[dir_a] <= blocked_dir ? dist_a : MAX_DIST;
+      obstacle_dist[dir_a] <= (edge_block_a[dir_a] | (map_mem_in != 2'b00)) ? dist_a : MAX_DIST;
     end
   end
 
