@@ -38,10 +38,8 @@ module check_obst #(
   // player_x/y are the sprite's TOP-LEFT corner
   logic [$clog2(NUM_ROW)-1:0] blockpos_row;
   logic [$clog2(NUM_COL)-1:0] blockpos_col;
-  always_comb begin
-    blockpos_row = player_y[9:TILE_SHIFT];
-    blockpos_col = player_x[10:TILE_SHIFT];
-  end
+  assign blockpos_row = (player_y >> TILE_SHIFT); // truncates to ROW_W
+  assign blockpos_col = (player_x >> TILE_SHIFT); // truncates to COL_W
 
   // ===========================================================================
   // End-of-block (EOB) conditions for a 32x64 sprite on 64x64 tiles
@@ -64,17 +62,17 @@ module check_obst #(
   // ==========================================================================
   localparam [TILE_SHIFT:0] MAX_DIST = { (TILE_SHIFT+1) {1'b1} };
 
-  logic [TILE_SHIFT:0] dist_next [3:0];
   logic [TILE_SHIFT:0] tile_offset_x;
   logic [TILE_SHIFT:0] tile_offset_y;
   logic [TILE_SHIFT:0] right_edge_offset;
   logic [TILE_SHIFT:0] bottom_edge_offset;
-  always_comb begin
-    tile_offset_x      = {1'b0, player_x[TILE_SHIFT-1:0]};
-    tile_offset_y      = {1'b0, player_y[TILE_SHIFT-1:0]};
-    right_edge_offset  = tile_offset_x + SPRITE_W;
-    bottom_edge_offset = tile_offset_y + SPRITE_H;
+  assign tile_offset_x = {1'b0, player_x[TILE_SHIFT-1:0]};
+  assign tile_offset_y = {1'b0, player_y[TILE_SHIFT-1:0]};
+  assign right_edge_offset = tile_offset_x + SPRITE_W;
+  assign bottom_edge_offset = tile_offset_y + SPRITE_H;
 
+  logic [TILE_SHIFT:0] dist_next [3:0];
+  always_comb begin
     eob[UP]    = (tile_offset_y == 0);
     eob[DOWN]  = (bottom_edge_offset == TILE_PX);
     eob[LEFT]  = (tile_offset_x == 0);
@@ -118,7 +116,7 @@ module check_obst #(
       dist_a        <= dist_next[dir_cnt];
 
       // Default to 0 when out-of-bounds; only form address when valid.
-      unique case (dir_cnt)
+      case (dir_cnt)
         2'b00:  map_addr_a <= edge_block[UP]
                               ? '0 : ( (blockpos_row - 1) * NUM_COL + blockpos_col );
         2'b01:  map_addr_a <= edge_block[DOWN]
@@ -127,7 +125,6 @@ module check_obst #(
                               ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col - 1) );
         2'b11:  map_addr_a <= edge_block[RIGHT]
                               ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col + 1) );
-        default: map_addr_a <= '0;
       endcase
     end
   end

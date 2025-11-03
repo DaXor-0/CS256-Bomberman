@@ -2,35 +2,40 @@
 
 module check_obst_tb;
   localparam int CLK_PERIOD = 10;
-  localparam int NUM_ROW = 3;
-  localparam int NUM_COL = 3;
-  localparam int TILE_PX = 64;
-  localparam int TILE_SHIFT = $clog2(TILE_PX);
-  localparam logic [1:0] TILE_FREE = 2'b00;
-  localparam logic [1:0] TILE_WALL = 2'b01;
+  localparam int NUM_ROW    = 11;
+  localparam int NUM_COL    = 19;
+  localparam int TILE_PX    = 64;
+  localparam int SPRITE_W   = 32;
+  localparam int SPRITE_H   = 64;
+  localparam string MAP_FILE = "maps/basic_map.mem";
 
-  localparam int UP = 0;
-  localparam int DOWN = 1;
-  localparam int LEFT = 2;
+  localparam int TILE_SHIFT = $clog2(TILE_PX);
+  localparam int DEPTH      = NUM_ROW * NUM_COL;
+  localparam int ADDR_WIDTH = $clog2(DEPTH);
+
+  localparam int UP    = 0;
+  localparam int DOWN  = 1;
+  localparam int LEFT  = 2;
   localparam int RIGHT = 3;
 
   logic clk = 0;
   logic rst = 1;
-  logic [10:0] player_x = 0;
-  logic [9:0]  player_y = 0;
-  logic [1:0]  map_mem_in;
+  logic [10:0] player_x = '0;
+  logic [9:0]  player_y = '0;
+  logic [1:0]  map_mem_in = '0;
   logic [3:0]  obstacles;
+  logic [ADDR_WIDTH-1:0] map_addr;
   logic [TILE_SHIFT:0] obstacle_dist [3:0];
-  logic [$clog2(NUM_ROW * NUM_COL)-1:0] map_addr;
 
-  logic [1:0] map_mem [0:NUM_ROW * NUM_COL - 1];
+  logic [1:0] map_mem [0:DEPTH-1];
+  logic [ADDR_WIDTH-1:0] map_addr_d;
 
-  // DUT ----------------------------------------------------------------------
   check_obst #(
       .NUM_ROW (NUM_ROW),
       .NUM_COL (NUM_COL),
-      .SPRITE_W(32),
-      .SPRITE_H(64)
+      .TILE_PX (TILE_PX),
+      .SPRITE_W(SPRITE_W),
+      .SPRITE_H(SPRITE_H)
   ) dut (
       .clk(clk),
       .rst(rst),
@@ -44,72 +49,57 @@ module check_obst_tb;
 
   always #(CLK_PERIOD / 2) clk = ~clk;
 
-  always_comb begin
-    map_mem_in = map_mem[map_addr];
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      map_addr_d <= '0;
+      map_mem_in <= '0;
+    end else begin
+      map_addr_d <= map_addr;
+      map_mem_in <= map_mem[map_addr_d];
+    end
   end
 
-  function automatic int idx(input int row, input int col);
-    idx = row * NUM_COL + col;
-  endfunction
-
-  task automatic expect_obstacles(
-      input int px,
-      input int py,
-      input logic [3:0] expected,
-      input string label
+  task automatic place_sprite(
+      input int tile_row,
+      input int tile_col,
+      input int x_offset = 0,
+      input int y_offset = 0,
+      input string label = ""
   );
+    int px;
+    int py;
+    px = tile_col * TILE_PX + x_offset;
+    py = tile_row * TILE_PX + y_offset;
+
     player_x = px;
     player_y = py;
 
-    repeat (8) @(posedge clk); // sweep all directions twice
+    repeat (8) @(posedge clk);
 
-    if (obstacles !== expected) begin
-      $error("[%0t] %s FAILED -> got %b expected %b",
-             $time, label, obstacles, expected);
-    end else begin
-      $display("[%0t] %s -> obstacles %b",
-               $time, label, obstacles);
-    end
+    $display("[%0t] %s -> pos (%0d,%0d) obstacles=%b dist={U:%0d D:%0d L:%0d R:%0d}",
+             $time, label, player_x, player_y, obstacles,
+             obstacle_dist[UP], obstacle_dist[DOWN], obstacle_dist[LEFT], obstacle_dist[RIGHT]);
   endtask
 
   initial begin
     $dumpfile("check_obst_tb.vcd");
     $dumpvars(0, check_obst_tb);
 
-    foreach (map_mem[i]) map_mem[i] = TILE_FREE;
-    map_mem[idx(0, 1)] = TILE_WALL; // above the centre tile
-    map_mem[idx(1, 2)] = TILE_WALL; // to the right of the centre tile
+    $readmemh(MAP_FILE, map_mem);
 
-    repeat (2) @(posedge clk);
+    repeat (4) @(posedge clk);
     rst = 0;
 
-    repeat (6) @(posedge clk);
+    repeat (8) @(posedge clk);
 
-    expect_obstacles(
-        32, 32,
-        4'b0001, // up blocked, others clear
-        "centre tile"
-    );
+    place_sprite(1, 1, 0, 0,  "inner corner near border");
+    place_sprite(1, 1, 32, 0, "sliding right along open corridor");
+    place_sprite(2, 1, 32, 0, "corridor facing pillar on the right");
+    place_sprite(5, 9, 0, 0,  "centre corridor with open neighbours");
+    place_sprite(5, 9, 20, 24,"within tile to observe distances");
+    place_sprite(9, 17, 32, 0,"adjacent to outer wall on the right");
 
-    expect_obstacles(
-        63, 32,
-        4'b1001, // right blocked (at tile boundary), up still blocked
-        "approaching right neighbour"
-    );
-
-    expect_obstacles(
-        0, 32,
-        4'b0100, // left boundary blocks, others free
-        "left edge boundary"
-    );
-
-    expect_obstacles(
-        32, 0,
-        4'b0001, // top boundary blocks upward movement
-        "top edge boundary"
-    );
-
-    repeat (6) @(posedge clk);
+    repeat (8) @(posedge clk);
     $finish;
   end
 

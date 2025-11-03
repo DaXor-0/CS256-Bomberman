@@ -90,15 +90,13 @@ module player_controller #(
 
   // ---- Max movement per direction ---
   logic [DIST_WIDTH-1:0] step [3:0];
-  always_comb begin
-    logic [DIST_WIDTH-1:0] step_req;
-    step_req = (STEP_SIZE > MAX_STEP) ? DIST_WIDTH'(MAX_STEP) : DIST_WIDTH'(STEP_SIZE);
+  logic [DIST_WIDTH-1:0] step_req;
+  assign step_req = (STEP_SIZE > MAX_STEP) ? DIST_WIDTH'(MAX_STEP) : DIST_WIDTH'(STEP_SIZE);
 
-    step[UP]    = obstacles[UP]    ? '0 : ((obstacle_dist[UP]    < step_req) ? obstacle_dist[UP]    : step_req);
-    step[DOWN]  = obstacles[DOWN]  ? '0 : ((obstacle_dist[DOWN]  < step_req) ? obstacle_dist[DOWN]  : step_req);
-    step[LEFT]  = obstacles[LEFT]  ? '0 : ((obstacle_dist[LEFT]  < step_req) ? obstacle_dist[LEFT]  : step_req);
-    step[RIGHT] = obstacles[RIGHT] ? '0 : ((obstacle_dist[RIGHT] < step_req) ? obstacle_dist[RIGHT] : step_req);
-  end
+  assign step[UP]    = obstacles[UP]    ? '0 : ((obstacle_dist[UP]    < step_req) ? obstacle_dist[UP]    : step_req);
+  assign step[DOWN]  = obstacles[DOWN]  ? '0 : ((obstacle_dist[DOWN]  < step_req) ? obstacle_dist[DOWN]  : step_req);
+  assign step[LEFT]  = obstacles[LEFT]  ? '0 : ((obstacle_dist[LEFT]  < step_req) ? obstacle_dist[LEFT]  : step_req);
+  assign step[RIGHT] = obstacles[RIGHT] ? '0 : ((obstacle_dist[RIGHT] < step_req) ? obstacle_dist[RIGHT] : step_req);
 
   // ---- Player position update ----
   always_ff @(posedge clk) begin
