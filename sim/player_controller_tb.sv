@@ -98,11 +98,12 @@ module player_controller_tb;
   endtask
 
   task automatic pulse_tick(input logic [3:0] dir);
-    move_dir = dir;
-    tick = 1'b1;
+    // Use non-blocking assignments to avoid delta-cycle races with DUT sampling.
+    move_dir <= dir;
+    tick <= 1'b1;
     @(posedge clk);
-    tick = 1'b0;
-    move_dir = 4'b0;
+    tick <= 1'b0;
+    move_dir <= 4'b0;
     repeat (4) @(posedge clk);
   endtask
 
