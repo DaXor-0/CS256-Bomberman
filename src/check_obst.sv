@@ -1,87 +1,166 @@
 `timescale 1ns / 1ps
-
-
+/*
+* Module: check_obst
+* Description: Check for obstacles around a player sprite in a tile map.
+* */
 module check_obst #(
-  parameter int NUM_ROW = 11,
-  parameter int NUM_COL = 19,
-  localparam int DEPTH = NUM_ROW * NUM_COL,
+  parameter int NUM_ROW   = 11,
+  parameter int NUM_COL   = 19,
+  parameter int TILE_PX   = 64,
+  parameter int SPRITE_W  = 32,
+  parameter int SPRITE_H  = 64,
+
+  localparam int TILE_SHIFT = $clog2(TILE_PX),
+  localparam int DEPTH      = NUM_ROW * NUM_COL,
   localparam int ADDR_WIDTH = $clog2(DEPTH)
-  )(
-  input logic clk,
-  input logic rst,
-  input logic player_x[10:0],
-  input logic player_y[9:0],
-  output logic obstacles[3:0], // up, down, left, right
-  output logic [ADDR_WIDTH-1:0] map_addr
+)(
+  input  logic                  clk,
+  input  logic                  rst,
+
+  input  logic [10:0]           player_x,     // pixel coords in logic map
+  input  logic [9:0]            player_y,
+  input  logic [1:0]            map_mem_in,   // BRAM/ROM data (1-cycle after addr)
+
+  output logic [3:0]            obstacles,    // [0]=up,[1]=down,[2]=left,[3]=right
+  output logic [ADDR_WIDTH-1:0] map_addr,     // BRAM/ROM address
+  output logic [TILE_SHIFT:0]   obstacle_dist [3:0] // distance (px) to next obstacle or max if none
 );
-  // get coordinate of player in map
-  logic [3:0] blockpos_row;
-  logic [4:0] blockpos_col;
+
+  // Direction indices
+  localparam int UP    = 0;
+  localparam int DOWN  = 1;
+  localparam int LEFT  = 2;
+  localparam int RIGHT = 3;
+
+  // ==========================================================================
+  // Tile coordinates (64 px per tile -> shift by 6)
+  // ==========================================================================
+  // player_x/y are the sprite's TOP-LEFT corner
+  logic [$clog2(NUM_ROW)-1:0] blockpos_row;
+  logic [$clog2(NUM_COL)-1:0] blockpos_col;
   always_comb begin
-    blockpos_col = player_x / 32;
-    blockpos_row = player_y / 32;
+    blockpos_row = player_y[9:TILE_SHIFT];
+    blockpos_col = player_x[10:TILE_SHIFT];
   end
 
-  // cycle through each direction
-  logic [1:0] cnt;
+  // ===========================================================================
+  // End-of-block (EOB) conditions for a 32x64 sprite on 64x64 tiles
+  // ===========================================================================
+  // Vertical: y%TILE_PX==0.
+  // Right boundary when right edge aligns: x%TILE_PX==SPRITE_W%TILE_PX.
+  logic [3:0] eob;
+
+  // Map edge_block flags (prevent OOB addressing)
+  logic [3:0] edge_block;
+  always_comb begin
+    edge_block[UP]    = (blockpos_row == 0);
+    edge_block[DOWN]  = (blockpos_row == NUM_ROW-1);
+    edge_block[LEFT]  = (blockpos_col == 0);
+    edge_block[RIGHT] = (blockpos_col == NUM_COL-1);
+  end
+
+  // ==========================================================================
+  // Distance to the next tile boundary for each direction (in pixels)
+  // ==========================================================================
+  localparam [TILE_SHIFT:0] MAX_DIST = { (TILE_SHIFT+1) {1'b1} };
+
+  logic [TILE_SHIFT:0] dist_next [3:0];
+  logic [TILE_SHIFT:0] tile_offset_x;
+  logic [TILE_SHIFT:0] tile_offset_y;
+  logic [TILE_SHIFT:0] right_edge_offset;
+  logic [TILE_SHIFT:0] bottom_edge_offset;
+  always_comb begin
+    tile_offset_x      = player_x % TILE_PX;
+    tile_offset_y      = player_y % TILE_PX;
+    right_edge_offset  = tile_offset_x + SPRITE_W;
+    bottom_edge_offset = tile_offset_y + SPRITE_H;
+
+    eob[UP]    = (tile_offset_y == 0);
+    eob[DOWN]  = (bottom_edge_offset == TILE_PX);
+    eob[LEFT]  = (tile_offset_x == 0);
+    eob[RIGHT] = (right_edge_offset == TILE_PX);
+
+    dist_next[LEFT]  = tile_offset_x;
+    dist_next[UP]    = tile_offset_y;
+    dist_next[RIGHT] = (right_edge_offset >= TILE_PX)
+                       ? '0 : (TILE_PX - right_edge_offset);
+    dist_next[DOWN]  = (bottom_edge_offset >= TILE_PX)
+                       ? '0 : (TILE_PX - bottom_edge_offset);
+  end
+
+  // ===========================================================================
+  // Direction counter (iterates through UP/DOWN/LEFT/RIGHT)
+  // ===========================================================================
+  logic [1:0] dir_cnt;
+  always_ff @(posedge clk) begin
+    if (rst) dir_cnt <= 2'd0;
+    else     dir_cnt <= dir_cnt + 2'd1;
+  end
+
+  // ===========================================================================
+  // Stage A: compute address & capture context for the current direction
+  // ===========================================================================
+  logic [ADDR_WIDTH-1:0] map_addr_a;
+  logic [1:0]            dir_a;
+  logic [3:0]            edge_block_a, eob_a;
+  logic [TILE_SHIFT:0]   dist_a;
   always_ff @(posedge clk) begin
     if (rst) begin
-      cnt <= '0;
+      dir_a         <= 2'd0;
+      edge_block_a  <= '0;
+      eob_a         <= '0;
+      map_addr_a    <= '0;
+      dist_a        <= '0;
     end else begin
-      cnt <= cnt + 1;
+      dir_a         <= dir_cnt; // capture the direction used for this addr
+      edge_block_a  <= edge_block;
+      eob_a         <= eob;
+      dist_a        <= dist_next[dir_cnt];
+
+      // Default to 0 when out-of-bounds; only form address when valid.
+      unique case (dir_cnt)
+        2'b00:  map_addr_a <= edge_block[UP]
+                              ? '0 : ( (blockpos_row - 1) * NUM_COL + blockpos_col );
+        2'b01:  map_addr_a <= edge_block[DOWN]
+                              ? '0 : ( (blockpos_row + 1) * NUM_COL + blockpos_col );
+        2'b10:  map_addr_a <= edge_block[LEFT]
+                              ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col - 1) );
+        2'b11:  map_addr_a <= edge_block[RIGHT]
+                              ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col + 1) );
+        default: map_addr_a <= '0;
+      endcase
     end
   end
 
-  // calculate map address for each direction
-  always_comb begin
-    case (cnt)
-      2'b00: begin // up
-        if (blockpos_row == 0) begin
-          map_addr = '0; // out of bounds
-        end else begin
-          map_addr = (blockpos_row - 1) * NUM_COL + blockpos_col;
-        end
-      end
-      2'b01: begin // down
-        if (blockpos_row == NUM_ROW - 1) begin
-          map_addr = '0; // out of bounds
-        end else begin
-          map_addr = (blockpos_row + 1) * NUM_COL + blockpos_col;
-        end
-      end
-      2'b10: begin // left
-        if (blockpos_col == 0) begin
-          map_addr = '0; // out of bounds
-        end else begin
-          map_addr = blockpos_row * NUM_COL + (blockpos_col - 1);
-        end
-      end
-      2'b11: begin // right
-        if (blockpos_col == NUM_COL - 1) begin
-          map_addr = '0; // out of bounds
-        end else begin
-          map_addr = blockpos_row * NUM_COL + (blockpos_col + 1);
-        end
-      end
-      default: map_addr = '0;
-    endcase
+  // Drive memory address (assumes 1-cycle synchronous read)
+  always_ff @(posedge clk) begin
+    if (rst) map_addr <= '0;
+    else     map_addr <= map_addr_a;
   end
 
-  // check obstacles based on map data
-  // NOTE: 00 is free space, anything else is an obstacle
-  logic [3:0] end_of_block;
-  assign end_of_block[0] = (player_y % 32 == 0);  // up
-  assign end_of_block[1] = (player_y % 32 == 31); // down
-  assign end_of_block[2] = (player_x % 32 == 0);  // left
-  assign end_of_block[3] = (player_x % 32 == 31); // right
-  always_comb begin
-    case (cnt)
-      2'b00: obstacles[0] = (map_mem_in != 2'b00) & end_of_block[0]; // up
-      2'b01: obstacles[1] = (map_mem_in != 2'b00) & end_of_block[1]; // down
-      2'b10: obstacles[2] = (map_mem_in != 2'b00) & end_of_block[2]; // left
-      2'b11: obstacles[3] = (map_mem_in != 2'b00) & end_of_block[3]; // right
-      default: obstacles = '0;
-    endcase
+  // ===========================================================================
+  // Stage B: data returns; update exactly one obstacle bit per cycle
+  // ===========================================================================
+  // Keep previous bits for directions not being updated this cycle.
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      obstacles     <= '0;
+      obstacle_dist[UP]    <= MAX_DIST;
+      obstacle_dist[DOWN]  <= MAX_DIST;
+      obstacle_dist[LEFT]  <= MAX_DIST;
+      obstacle_dist[RIGHT] <= MAX_DIST;
+    end else begin
+      logic blocked_dir;
+      blocked_dir = edge_block_a[dir_a] | (map_mem_in != 2'b00);
+
+      // Block only if we're crossing a tile boundary (eob_a)
+      // and either: (a) we're at the map edge, or (b) the neighbor tile is non-empty.
+      obstacles[dir_a] <= eob_a[dir_a] & blocked_dir;
+
+      // Distance to obstacle: when blocked, clamp to remaining pixels in tile;
+      // otherwise present a large value so the controller is unconstrained.
+      obstacle_dist[dir_a] <= blocked_dir ? dist_a : MAX_DIST;
+    end
   end
 
 endmodule

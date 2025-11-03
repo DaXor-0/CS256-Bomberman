@@ -63,7 +63,7 @@ module drawcon_map_tb();
   // Test memory with random states
   logic [3:0] map [0:208];
   initial
-    $readmemh("./sim/mem.txt", map); 
+    $readmemh("./sim/basic_map.txt", map); 
   
   assign map_mem_in = map[blk_addr];
 

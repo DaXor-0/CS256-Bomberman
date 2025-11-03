@@ -13,7 +13,7 @@
 module map_mem #(
     parameter int NUM_ROW = 11,
     parameter int NUM_COL = 19,
-    parameter string MEM_INIT_FILE = "maps/default_map.mem",
+    parameter string MEM_INIT_FILE = "maps/basic_map.mem",
     localparam int DEPTH = NUM_ROW * NUM_COL,
     localparam int ADDR_WIDTH = $clog2(DEPTH)
 )(

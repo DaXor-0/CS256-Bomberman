@@ -114,7 +114,7 @@ module game_top (
       .NUM_ROW(MAP_NUM_ROW),
       .NUM_COL(MAP_NUM_COL),
       .DATA_WIDTH(4),
-      .MEM_INIT_FILE("maps/default_map.mem")
+      .MEM_INIT_FILE("maps/basic_map.mem")
   ) mem_i (
       .clk(pixclk),
       .rst(rst),

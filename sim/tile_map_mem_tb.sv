@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module tile_map_mem_tb;
+module map_mem_tb;
   localparam CLK_PERIOD = 10;
 
   logic clk = 0;
@@ -15,7 +15,7 @@ module tile_map_mem_tb;
       .NUM_ROW(11),
       .NUM_COL(19),
       .DATA_WIDTH(4),
-      .MEM_INIT_FILE("maps/default_map.mem")
+      .MEM_INIT_FILE("maps/basic_map.mem")
   ) dut (
       .clk(clk),
       .rst(rst),
@@ -29,7 +29,7 @@ module tile_map_mem_tb;
   always #(CLK_PERIOD/2) clk = ~clk;
 
   initial begin
-    $dumpfile("tile_map_mem_tb.vcd");
+    $dumpfile("map_mem_tb.vcd");
     $dumpvars(0, tile_map_mem_tb);
 
     rd_addr = 0;
