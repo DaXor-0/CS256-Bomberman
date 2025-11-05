@@ -26,7 +26,7 @@ module check_obst_tb;
   logic [3:0]  obstacles;
   logic [ADDR_WIDTH-1:0] map_addr;
   logic [TILE_SHIFT:0] obstacle_dist [3:0];
-
+  logic [TILE_SHIFT:0] dist_up, dist_down, dist_left, dist_right;
   logic [1:0] map_mem [0:DEPTH-1];
   logic [ADDR_WIDTH-1:0] map_addr_d;
 
@@ -51,11 +51,9 @@ module check_obst_tb;
 
   always_ff @(posedge clk) begin
     if (rst) begin
-      map_addr_d <= '0;
       map_mem_in <= '0;
     end else begin
-      map_addr_d <= map_addr;
-      map_mem_in <= map_mem[map_addr_d];
+      map_mem_in <= map_mem[map_addr];
     end
   end
 
@@ -76,8 +74,8 @@ module check_obst_tb;
 
     repeat (8) @(posedge clk);
 
-    $display("[%0t] %s -> pos (%0d,%0d) obstacles=%b dist={U:%0d D:%0d L:%0d R:%0d}",
-             $time, label, player_x, player_y, obstacles,
+    $display("[%0t] %s -> col,row (%0d,%0d) pos (%0d,%0d) obstacles=%b dist={U:%0d D:%0d L:%0d R:%0d}",
+             $time, label, tile_col, tile_row, player_x, player_y, obstacles,
              obstacle_dist[UP], obstacle_dist[DOWN], obstacle_dist[LEFT], obstacle_dist[RIGHT]);
   endtask
 

@@ -1,0 +1,37 @@
+[*]
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+[*] Wed Nov  5 13:47:02 2025
+[*]
+[dumpfile] "/Users/mohammadalsharif/Desktop/KAUST/CS256/bomberman/CS256-Bomberman/check_obst_tb.vcd"
+[dumpfile_mtime] "Wed Nov  5 13:43:01 2025"
+[dumpfile_size] 7588
+[savefile] "/Users/mohammadalsharif/Desktop/KAUST/CS256/bomberman/CS256-Bomberman/wvcfg.gtkw"
+[timestart] 0
+[size] 1920 1027
+[pos] 1709 -15
+*-16.456678 49400 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[treeopen] check_obst_tb.
+[sst_width] 255
+[signals_width] 184
+[sst_expanded] 1
+[sst_vpaned_height] 308
+@28
+check_obst_tb.clk
+check_obst_tb.rst
+@22
+check_obst_tb.dut.blockpos_row[3:0]
+check_obst_tb.dut.blockpos_col[4:0]
+check_obst_tb.dut.player_x[10:0]
+check_obst_tb.dut.player_y[9:0]
+@28
+check_obst_tb.dut.dir_cnt[1:0]
+check_obst_tb.dut.dir_wait[1:0]
+check_obst_tb.dut.dir_a[1:0]
+check_obst_tb.dut.map_mem_in[1:0]
+@24
+check_obst_tb.dut.map_addr[7:0]
+@22
+check_obst_tb.dut.eob[3:0]
+check_obst_tb.dut.edge_block[3:0]
+[pattern_trace] 1
+[pattern_trace] 0

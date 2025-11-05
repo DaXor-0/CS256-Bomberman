@@ -53,10 +53,10 @@ module check_obst #(
   // Map edge_block flags (prevent OOB addressing)
   logic [3:0] edge_block;
   always_comb begin
-    edge_block[UP]    = (blockpos_row == 0);
-    edge_block[DOWN]  = (blockpos_row == NUM_ROW-1);
-    edge_block[LEFT]  = (blockpos_col == 0);
-    edge_block[RIGHT] = (blockpos_col == NUM_COL-1);
+    edge_block[UP]    = (blockpos_row == 1);
+    edge_block[DOWN]  = (blockpos_row == NUM_ROW-2);
+    edge_block[LEFT]  = (blockpos_col == 1);
+    edge_block[RIGHT] = (blockpos_col == NUM_COL-2);
   end
 
   // ==========================================================================
@@ -83,9 +83,9 @@ module check_obst #(
 
     dist_next[LEFT]  = tile_offset_x;
     dist_next[UP]    = tile_offset_y;
-    dist_next[RIGHT] = (right_edge_offset >= TILE_PX)
+    dist_next[RIGHT] = (right_edge_offset >= TILE_PX) // change with eob[RIGHT] ?
                        ? '0 : (TILE_PX - right_edge_offset);
-    dist_next[DOWN]  = (bottom_edge_offset >= TILE_PX)
+    dist_next[DOWN]  = (bottom_edge_offset >= TILE_PX) // change with eob[LEFT] ?
                        ? '0 : (TILE_PX - bottom_edge_offset);
   end
 
@@ -106,48 +106,44 @@ module check_obst #(
       obstacles_valid <= 1'b0;
     else
       // Assert when dir_cnt == 0, meaning we just finished writing RIGHT (dir=3)
-      obstacles_valid <= (dir_cnt == 2'b00);
+      obstacles_valid <= (dir_cnt == 2'b01); // equivalent to dir_a == 2'b11 (2 cycle delay).
   end
 
   // ===========================================================================
   // Stage A: compute address & capture context for the current direction
   // ===========================================================================
-  logic [ADDR_WIDTH-1:0] map_addr_a;
-  logic [1:0]            dir_a;
-  logic [3:0]            edge_block_a, eob_a;
-  logic [TILE_SHIFT:0]   dist_a;
+  logic [1:0]            dir_a, dir_wait;
   always_ff @(posedge clk) begin
     if (rst) begin
       dir_a         <= 2'd0;
-      edge_block_a  <= '0;
-      eob_a         <= '0;
-      map_addr_a    <= '0;
-      dist_a        <= '0;
+      dir_wait      <= 2'd0;
+      map_addr      <= '0;
     end else begin
-      dir_a         <= dir_cnt; // capture the direction used for this addr
-      edge_block_a  <= edge_block;
-      eob_a         <= eob;
-      dist_a        <= dist_next[dir_cnt];
+      dir_wait      <= dir_cnt;  // wait 1 cycle for correct map_mem_in to arrive from memory
+      dir_a         <= dir_wait; // capture the direction used for this addr
 
+
+      // Drive memory address (assumes 1-cycle synchronous read)
       // Default to 0 when out-of-bounds; only form address when valid.
+      // NOTE: Multiplying by NUM_COL will synthesize a DSP multiplier, which may cause negative slack. In this case, we can change to shift-add arithmetic, and assume NUM_COL = 19 always.
       case (dir_cnt)
-        2'b00:  map_addr_a <= edge_block[UP]
+        2'b00:  map_addr <= edge_block[UP]
                               ? '0 : ( (blockpos_row - 1) * NUM_COL + blockpos_col );
-        2'b01:  map_addr_a <= edge_block[DOWN]
+        2'b01:  map_addr <= edge_block[DOWN]
                               ? '0 : ( (blockpos_row + 1) * NUM_COL + blockpos_col );
-        2'b10:  map_addr_a <= edge_block[LEFT]
+        2'b10:  map_addr <= edge_block[LEFT]
                               ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col - 1) );
-        2'b11:  map_addr_a <= edge_block[RIGHT]
+        2'b11:  map_addr <= edge_block[RIGHT]
                               ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col + 1) );
       endcase
     end
   end
 
-  // Drive memory address (assumes 1-cycle synchronous read)
-  always_ff @(posedge clk) begin
-    if (rst) map_addr <= '0;
-    else     map_addr <= map_addr_a;
-  end
+  
+  // always_ff @(posedge clk) begin
+  //   if (rst) map_addr <= '0;
+  //   else     map_addr <= map_addr_a;
+  // end
 
   // ===========================================================================
   // Stage B: data returns; update exactly one obstacle bit per cycle
@@ -163,11 +159,11 @@ module check_obst #(
     end else begin
       // Block only if we're crossing a tile boundary (eob_a)
       // and either: (a) we're at the map edge, or (b) the neighbor tile is non-empty.
-      obstacles[dir_a] <= eob_a[dir_a] & ( edge_block_a[dir_a] | (map_mem_in != 2'b00) );
+      obstacles[dir_a] <= eob[dir_a] & ( edge_block[dir_a] | (map_mem_in != 2'b00) );
 
       // Distance to obstacle: when blocked, clamp to remaining pixels in tile;
       // otherwise present a large value so the controller is unconstrained.
-      obstacle_dist[dir_a] <= (edge_block_a[dir_a] | (map_mem_in != 2'b00)) ? dist_a : MAX_DIST;
+      obstacle_dist[dir_a] <= (edge_block[dir_a] | (map_mem_in != 2'b00)) ? dist_next[dir_a] : MAX_DIST;
     end
   end
 
