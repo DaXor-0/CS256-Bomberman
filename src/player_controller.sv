@@ -64,8 +64,8 @@ module player_controller #(
   logic [10:0] map_player_x;
   logic [9:0]  map_player_y;
   always_comb begin
-    map_player_x = (player_x > HUD_SIDE_PX) ? (player_x - HUD_SIDE_PX) : 11'd0;
-    map_player_y = (player_y > HUD_TOP_PX)  ? (player_y - HUD_TOP_PX)  : 10'd0;
+    map_player_x = (player_x > HUD_SIDE_PX) ? (player_x - HUD_SIDE_PX) : 11'd64; // (64,64) is pos of first free block, (0,0) is perm_block
+    map_player_y = (player_y > HUD_TOP_PX)  ? (player_y - HUD_TOP_PX)  : 10'd64;
   end
 
   // ---- Obstacle detection in map-space ----

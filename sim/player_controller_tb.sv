@@ -25,16 +25,13 @@ module player_controller_tb;
   
   logic clk  = 0;
   logic rst  = 1;
-  logic tick = 0;
+  logic tick;
   logic [3:0] move_dir = 4'b0;
   logic [1:0] map_mem_in = '0;
   logic [10:0] player_x;
   logic [9:0]  player_y;
   logic [ADDR_WIDTH-1:0] map_addr;
   logic [1:0] map_mem [0:DEPTH-1];
-  
-  // Delayed address for memory read (1-cycle latency)
-  logic [ADDR_WIDTH-1:0] map_addr_d;
   
   player_controller #(
       .NUM_ROW (NUM_ROW),
@@ -59,15 +56,24 @@ module player_controller_tb;
   );
   
   always #(CLK_PERIOD / 2) clk = ~clk;
+  logic [20:0] tick_count;
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      tick_count <= 0;
+    end else begin
+      if (tick_count == (256)) tick_count <= 0;
+      else tick_count <= tick_count + 1;
+    end
+  end
+
+  assign tick = (tick_count == 16);
   
   // Memory read with 1-cycle latency
   always_ff @(posedge clk) begin
     if (rst) begin
-      map_addr_d <= '0;
       map_mem_in <= '0;
     end else begin
-      map_addr_d <= map_addr;
-      map_mem_in <= map_mem[map_addr_d];
+      map_mem_in <= map_mem[map_addr];
     end
   end
   
@@ -93,43 +99,33 @@ module player_controller_tb;
              map_mem[idx(tile_row, tile_col)]);
   endtask
   
-  // Updated pulse_tick to wait for obstacles_valid signal
-  task automatic pulse_tick(input logic [3:0] dir);
-    // Set direction and tick
-    move_dir <= dir;
-    tick <= 1'b1;
-    
-    // Wait for obstacles_valid to go high (happens every 4 cycles)
-    // The move will only execute when both tick=1 and obstacles_valid=1
-    @(posedge clk);
-    
-    // Wait additional cycles to ensure obstacles_valid is sampled
-    // Since check_obst takes 4 cycles to complete a full scan,
-    // we need to wait until the next valid window
-    repeat (3) @(posedge clk);
-    
-    // Hold tick high for one more cycle to catch the valid window
-    @(posedge clk);
-    
-    // Release tick and direction
-    tick <= 1'b0;
-    move_dir <= 4'b0;
-    
-    // Allow time for movement to settle
-    repeat (4) @(posedge clk);
-  endtask
-  
+  // task automatic gen_random_dir(output logic [3:0] dir);
+  //   logic [2:0] index;
+  //   logic [3:0] dir_set [0:4] = '{4'b0010, 4'b1000, 4'b0100, 4'b0001, 4'b0000};
+  //   index = $urandom_range(0, 4);
+  //   dir = dir_set[index];
+  // endtask
+
+
   task automatic drive_moves(
       input logic [3:0] dir,
       input int num_ticks,
       input string label
   );
+    int count = 0;
     $display("[%0t] >>> %s (%0d ticks)", $time, label, num_ticks);
-    for (int i = 0; i < num_ticks; i++) begin
-      pulse_tick(dir);
+    move_dir = dir;
+    while (count < num_ticks) begin
+      @(posedge clk);
+      if (tick) begin
+        count++;
+        $display("[%0t] Tick %0d/%0d active with dir=%b", $time, count, num_ticks, dir);
+      end
     end
+    move_dir = 4'b0000;
     log_position({"after ", label});
   endtask
+
   
   initial begin
     $dumpfile("player_controller_tb.vcd");
@@ -158,21 +154,21 @@ module player_controller_tb;
     drive_moves(DIR_RIGHT, 2, "attempt to breach east wall");
     
     // Final wait
-    repeat (16) @(posedge clk);
+    repeat (3) @(posedge clk);
     
     $display("\n[%0t] === Simulation Complete ===", $time);
     $finish;
   end
   
   // Optional: Monitor obstacles_valid signal for debugging
-  initial begin
-    forever begin
-      @(posedge clk);
-      if (dut.check_obst_i.obstacles_valid) begin
-        $display("[%0t] [DEBUG] obstacles_valid HIGH - obstacles=%b", 
-                 $time, dut.check_obst_i.obstacles);
-      end
-    end
-  end
+  // initial begin
+  //   forever begin
+  //     @(posedge clk);
+  //     if (dut.check_obst_i.obstacles_valid) begin
+  //       $display("[%0t] [DEBUG] obstacles_valid HIGH - obstacles=%b", 
+  //                $time, dut.check_obst_i.obstacles);
+  //     end
+  //   end
+  // end
   
 endmodule
