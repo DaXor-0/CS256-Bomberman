@@ -94,14 +94,16 @@ module player_controller #(
   // ---- Register obstacles for stable use ----
   logic [3:0] obstacles_r;
   logic [DIST_WIDTH-1:0] obstacle_dist_r [3:0];
-  `ifdef DEBUG_WAVES
+
+`ifdef DEBUG_WAVES // Needed for iverilog
   generate
-    wire [DIST_WIDTH-1:0] obstacle_dist_up_probe    = obstacle_dist_r[UP];
-    wire [DIST_WIDTH-1:0] obstacle_dist_down_probe  = obstacle_dist_r[DOWN];
-    wire [DIST_WIDTH-1:0] obstacle_dist_left_probe  = obstacle_dist_r[LEFT];
-    wire [DIST_WIDTH-1:0] obstacle_dist_right_probe = obstacle_dist_r[RIGHT];
+    wire [DIST_WIDTH-1:0] obstacle_dist_r_up_probe    = obstacle_dist_r[UP];
+    wire [DIST_WIDTH-1:0] obstacle_dist_r_down_probe  = obstacle_dist_r[DOWN];
+    wire [DIST_WIDTH-1:0] obstacle_dist_r_left_probe  = obstacle_dist_r[LEFT];
+    wire [DIST_WIDTH-1:0] obstacle_dist_r_right_probe = obstacle_dist_r[RIGHT];
   endgenerate
-  `endif
+`endif
+
   always_ff @(posedge clk) begin
     if (rst) begin
       obstacles_r <= '0;
@@ -120,15 +122,17 @@ module player_controller #(
 
   // ---- Max movement per direction ---
   logic [DIST_WIDTH-1:0] step [3:0];
-  `ifdef DEBUG_WAVES
+  logic [DIST_WIDTH-1:0] step_req;
+
+`ifdef DEBUG_WAVES // Needed for iverilog
   generate
     wire [DIST_WIDTH-1:0] step_up_probe    = step[UP];
     wire [DIST_WIDTH-1:0] step_down_probe  = step[DOWN];
     wire [DIST_WIDTH-1:0] step_left_probe  = step[LEFT];
     wire [DIST_WIDTH-1:0] step_right_probe = step[RIGHT];
   endgenerate
-  `endif
-  logic [DIST_WIDTH-1:0] step_req;
+`endif
+
   assign step_req = (STEP_SIZE > MAX_STEP) ? DIST_WIDTH'(MAX_STEP) : DIST_WIDTH'(STEP_SIZE);
 
   assign step[UP]    = obstacles_r[UP]    ? '0 : ((obstacle_dist_r[UP]    < step_req) ? obstacle_dist_r[UP]    : step_req);

@@ -29,6 +29,15 @@ module check_obst #(
   output logic                  obstacles_valid      // HIGH when all 4 directions checked
 );
 
+`ifdef DEBUG_WAVES // Needed for iverilog
+  generate
+    wire [TILE_SHIFT:0] obstacle_dist_up_probe    = obstacle_dist[UP];
+    wire [TILE_SHIFT:0] obstacle_dist_down_probe  = obstacle_dist[DOWN];
+    wire [TILE_SHIFT:0] obstacle_dist_left_probe  = obstacle_dist[LEFT];
+    wire [TILE_SHIFT:0] obstacle_dist_right_probe = obstacle_dist[RIGHT];
+  endgenerate
+`endif
+
   // Direction indices
   localparam int UP    = 0;
   localparam int DOWN  = 1;
@@ -102,7 +111,7 @@ module check_obst #(
   // Stage A: compute address & capture context for the current direction
   // Valid signal: HIGH when all 4 directions have been checked
   // ===========================================================================
-  logic [1:0]            dir_a;
+  logic [1:0] dir_a;
   always_ff @(posedge clk) begin
     if (rst) begin
       dir_a         <= 2'd0;
@@ -113,22 +122,21 @@ module check_obst #(
     end
   end
 
-  // map_addr always_comb
   // Drive memory address (assumes 1-cycle synchronous read)
   // Default to 0 when out-of-bounds; only form address when valid.
   // NOTE: Multiplying by NUM_COL will synthesize a DSP multiplier, which may cause negative slack. In this case, we can change to shift-add arithmetic, and assume NUM_COL = 19 always.
-  always @*
+  always @* // using always @* since iverilog has issues with using UP,DOWN,LEFT,RIGHT in an always_comb
   begin
     map_addr = '0; // default
     case (dir_cnt)
-      2'b00:  map_addr = edge_block[UP]
-                            ? '0 : ( (blockpos_row - 1) * NUM_COL + blockpos_col );
+      2'b00:  map_addr = edge_block[UP] 
+                          ? '0 : ( (blockpos_row - 1) * NUM_COL + blockpos_col );
       2'b01:  map_addr = edge_block[DOWN]
-                            ? '0 : ( (blockpos_row + 1) * NUM_COL + blockpos_col );
+                          ? '0 : ( (blockpos_row + 1) * NUM_COL + blockpos_col );
       2'b10:  map_addr = edge_block[LEFT]
-                            ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col - 1) );
+                          ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col - 1) );
       2'b11:  map_addr = edge_block[RIGHT]
-                            ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col + 1) );
+                          ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col + 1) );
     endcase
   end
 

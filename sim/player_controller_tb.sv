@@ -56,7 +56,7 @@ module player_controller_tb;
   );
   
   always #(CLK_PERIOD / 2) clk = ~clk;
-  logic [20:0] tick_count;
+  logic [8:0] tick_count;
   always_ff @(posedge clk) begin
     if (rst) begin
       tick_count <= 0;
