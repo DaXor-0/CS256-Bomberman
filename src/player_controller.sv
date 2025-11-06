@@ -94,6 +94,14 @@ module player_controller #(
   // ---- Register obstacles for stable use ----
   logic [3:0] obstacles_r;
   logic [DIST_WIDTH-1:0] obstacle_dist_r [3:0];
+  `ifdef DEBUG_WAVES
+  generate
+    wire [DIST_WIDTH-1:0] obstacle_dist_up_probe    = obstacle_dist_r[UP];
+    wire [DIST_WIDTH-1:0] obstacle_dist_down_probe  = obstacle_dist_r[DOWN];
+    wire [DIST_WIDTH-1:0] obstacle_dist_left_probe  = obstacle_dist_r[LEFT];
+    wire [DIST_WIDTH-1:0] obstacle_dist_right_probe = obstacle_dist_r[RIGHT];
+  endgenerate
+  `endif
   always_ff @(posedge clk) begin
     if (rst) begin
       obstacles_r <= '0;
@@ -112,6 +120,14 @@ module player_controller #(
 
   // ---- Max movement per direction ---
   logic [DIST_WIDTH-1:0] step [3:0];
+  `ifdef DEBUG_WAVES
+  generate
+    wire [DIST_WIDTH-1:0] step_up_probe    = step[UP];
+    wire [DIST_WIDTH-1:0] step_down_probe  = step[DOWN];
+    wire [DIST_WIDTH-1:0] step_left_probe  = step[LEFT];
+    wire [DIST_WIDTH-1:0] step_right_probe = step[RIGHT];
+  endgenerate
+  `endif
   logic [DIST_WIDTH-1:0] step_req;
   assign step_req = (STEP_SIZE > MAX_STEP) ? DIST_WIDTH'(MAX_STEP) : DIST_WIDTH'(STEP_SIZE);
 
@@ -125,7 +141,7 @@ module player_controller #(
     if (rst) begin
       player_x <= 11'(INIT_X + HUD_SIDE_PX);
       player_y <= 10'(INIT_Y + HUD_TOP_PX);
-    end else if (tick && obstacles_valid) begin
+    end else if (tick) begin
       case (move_dir)
         4'b1000: player_y <= (player_y >= step[UP])   ? (player_y - step[UP])   : player_y; // UP with saturation
         4'b0100: player_y <= (player_y <= MAX_MAP_Y)  ? (player_y + step[DOWN]) : player_y; // DOWN with saturation

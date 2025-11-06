@@ -76,7 +76,14 @@ module player_controller_tb;
       map_mem_in <= map_mem[map_addr];
     end
   end
-  
+
+  // // Per-element probe wires for map_mem
+  // generate
+  //   for (genvar j = 0; j < DEPTH; j++) begin : MAP_PROBE
+  //     wire [1:0] map_mem_probe = map_mem[j];
+  //   end
+  // endgenerate
+
   function automatic int idx(input int row, input int col);
     return row * NUM_COL + col;
   endfunction
@@ -98,14 +105,6 @@ module player_controller_tb;
              $time, label, px, py, map_x, map_y, tile_row, tile_col,
              map_mem[idx(tile_row, tile_col)]);
   endtask
-  
-  // task automatic gen_random_dir(output logic [3:0] dir);
-  //   logic [2:0] index;
-  //   logic [3:0] dir_set [0:4] = '{4'b0010, 4'b1000, 4'b0100, 4'b0001, 4'b0000};
-  //   index = $urandom_range(0, 4);
-  //   dir = dir_set[index];
-  // endtask
-
 
   task automatic drive_moves(
       input logic [3:0] dir,
@@ -130,19 +129,18 @@ module player_controller_tb;
   initial begin
     $dumpfile("player_controller_tb.vcd");
     $dumpvars(0, player_controller_tb);
-    
+
     // Load map
     $readmemh(MAP_FILE, map_mem);
-    
+
     // Wait for a few cycles before releasing reset
     repeat (6) @(posedge clk);
     rst = 0;
-    
+
     // Wait for obstacle checker to complete first full scan (4 cycles + margin)
     repeat (12) @(posedge clk);
-    
     log_position("reset released");
-    
+
     // Test movements
     drive_moves(DIR_UP, 1, "attempt move up into perimeter");
     drive_moves(DIR_RIGHT, 2, "step right into column 2");
@@ -152,23 +150,10 @@ module player_controller_tb;
     drive_moves(DIR_RIGHT, 6, "move east through open hall");
     drive_moves(DIR_RIGHT, 26, "long stride towards east wall");
     drive_moves(DIR_RIGHT, 2, "attempt to breach east wall");
-    
+
     // Final wait
     repeat (3) @(posedge clk);
-    
     $display("\n[%0t] === Simulation Complete ===", $time);
     $finish;
   end
-  
-  // Optional: Monitor obstacles_valid signal for debugging
-  // initial begin
-  //   forever begin
-  //     @(posedge clk);
-  //     if (dut.check_obst_i.obstacles_valid) begin
-  //       $display("[%0t] [DEBUG] obstacles_valid HIGH - obstacles=%b", 
-  //                $time, dut.check_obst_i.obstacles);
-  //     end
-  //   end
-  // end
-  
 endmodule
