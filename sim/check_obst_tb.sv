@@ -20,8 +20,8 @@ module check_obst_tb;
 
   logic clk = 0;
   logic rst = 1;
-  logic [10:0] player_x = '0;
-  logic [9:0]  player_y = '0;
+  logic [10:0] player_x = 64;
+  logic [9:0]  player_y = 64;
   logic [1:0]  map_mem_in = '0;
   logic [3:0]  obstacles;
   logic [ADDR_WIDTH-1:0] map_addr;

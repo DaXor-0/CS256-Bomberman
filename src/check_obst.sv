@@ -3,6 +3,7 @@
 * Module: check_obst
 * Description: Check for obstacles around a player sprite in a tile map.
 * Updated: Added obstacles_valid signal for 4-cycle round-robin completion
+* NOTE: What about if there is an obstacle in bottom-right and the player is between two blocks? (TBD Later, solveable using a simple condition).
 * */
 module check_obst #(
   parameter int NUM_ROW   = 11,
@@ -70,7 +71,6 @@ module check_obst #(
   logic [TILE_SHIFT:0] bottom_edge_offset;
   assign tile_offset_x = {1'b0, player_x[TILE_SHIFT-1:0]};
   assign tile_offset_y = {1'b0, player_y[TILE_SHIFT-1:0]};
-  // FIX [P0]: Keep SPRITE_W and SPRITE_H at full TILE_SHIFT+1 bits to avoid truncation
   assign right_edge_offset = tile_offset_x + (TILE_SHIFT+1)'(SPRITE_W);
   assign bottom_edge_offset = tile_offset_y + (TILE_SHIFT+1)'(SPRITE_H);
 
@@ -83,9 +83,9 @@ module check_obst #(
 
     dist_next[LEFT]  = tile_offset_x;
     dist_next[UP]    = tile_offset_y;
-    dist_next[RIGHT] = (right_edge_offset >= TILE_PX) // change with eob[RIGHT] ?
+    dist_next[RIGHT] = (right_edge_offset >= TILE_PX)
                        ? '0 : (TILE_PX - right_edge_offset);
-    dist_next[DOWN]  = (bottom_edge_offset >= TILE_PX) // change with eob[LEFT] ?
+    dist_next[DOWN]  = (bottom_edge_offset >= TILE_PX)
                        ? '0 : (TILE_PX - bottom_edge_offset);
   end
 
@@ -99,51 +99,38 @@ module check_obst #(
   end
 
   // ===========================================================================
+  // Stage A: compute address & capture context for the current direction
   // Valid signal: HIGH when all 4 directions have been checked
   // ===========================================================================
-  always_ff @(posedge clk) begin
-    if (rst) 
-      obstacles_valid <= 1'b0;
-    else
-      // Assert when dir_cnt == 0, meaning we just finished writing RIGHT (dir=3)
-      obstacles_valid <= (dir_cnt == 2'b01); // equivalent to dir_a == 2'b11 (2 cycle delay).
-  end
-
-  // ===========================================================================
-  // Stage A: compute address & capture context for the current direction
-  // ===========================================================================
-  logic [1:0]            dir_a, dir_wait;
+  logic [1:0]            dir_a;
   always_ff @(posedge clk) begin
     if (rst) begin
       dir_a         <= 2'd0;
-      dir_wait      <= 2'd0;
-      map_addr      <= '0;
+      obstacles_valid <= 1'b0;
     end else begin
-      dir_wait      <= dir_cnt;  // wait 1 cycle for correct map_mem_in to arrive from memory
-      dir_a         <= dir_wait; // capture the direction used for this addr
-
-
-      // Drive memory address (assumes 1-cycle synchronous read)
-      // Default to 0 when out-of-bounds; only form address when valid.
-      // NOTE: Multiplying by NUM_COL will synthesize a DSP multiplier, which may cause negative slack. In this case, we can change to shift-add arithmetic, and assume NUM_COL = 19 always.
-      case (dir_cnt)
-        2'b00:  map_addr <= edge_block[UP]
-                              ? '0 : ( (blockpos_row - 1) * NUM_COL + blockpos_col );
-        2'b01:  map_addr <= edge_block[DOWN]
-                              ? '0 : ( (blockpos_row + 1) * NUM_COL + blockpos_col );
-        2'b10:  map_addr <= edge_block[LEFT]
-                              ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col - 1) );
-        2'b11:  map_addr <= edge_block[RIGHT]
-                              ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col + 1) );
-      endcase
+      dir_a      <= dir_cnt;  // wait 1 cycle for correct map_mem_in to arrive from memory
+      obstacles_valid <= (dir_a == 2'b11); // equivalent to dir_a == 2'b11 (2 cycle delay).
     end
   end
 
-  
-  // always_ff @(posedge clk) begin
-  //   if (rst) map_addr <= '0;
-  //   else     map_addr <= map_addr_a;
-  // end
+  // map_addr always_comb
+  // Drive memory address (assumes 1-cycle synchronous read)
+  // Default to 0 when out-of-bounds; only form address when valid.
+  // NOTE: Multiplying by NUM_COL will synthesize a DSP multiplier, which may cause negative slack. In this case, we can change to shift-add arithmetic, and assume NUM_COL = 19 always.
+  always @*
+  begin
+    map_addr = '0; // default
+    case (dir_cnt)
+      2'b00:  map_addr = edge_block[UP]
+                            ? '0 : ( (blockpos_row - 1) * NUM_COL + blockpos_col );
+      2'b01:  map_addr = edge_block[DOWN]
+                            ? '0 : ( (blockpos_row + 1) * NUM_COL + blockpos_col );
+      2'b10:  map_addr = edge_block[LEFT]
+                            ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col - 1) );
+      2'b11:  map_addr = edge_block[RIGHT]
+                            ? '0 : ( blockpos_row       * NUM_COL + (blockpos_col + 1) );
+    endcase
+  end
 
   // ===========================================================================
   // Stage B: data returns; update exactly one obstacle bit per cycle
