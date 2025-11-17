@@ -11,22 +11,23 @@ module check_obst #(
   parameter int TILE_PX   = 64,
   parameter int SPRITE_W  = 32,
   parameter int SPRITE_H  = 64,
+  parameter int MAP_MEM_WIDTH = 2,
 
   localparam int TILE_SHIFT = $clog2(TILE_PX),
   localparam int DEPTH      = NUM_ROW * NUM_COL,
   localparam int ADDR_WIDTH = $clog2(DEPTH)
 )(
-  input  logic                  clk,
-  input  logic                  rst,
+  input  logic                    clk,
+  input  logic                    rst,
 
-  input  logic [10:0]           player_x,     // pixel coords in logic map
-  input  logic [9:0]            player_y,
-  input  logic [1:0]            map_mem_in,   // BRAM/ROM data (1-cycle after addr)
+  input  logic [10:0]             player_x,     // pixel coords in logic map
+  input  logic [9:0]              player_y,
+  input  logic [MAP_MEM_WIDTH:0]  map_mem_in,   // BRAM/ROM data (1-cycle after addr)
 
-  output logic [3:0]            obstacles,    // [0]=up,[1]=down,[2]=left,[3]=right
-  output logic [ADDR_WIDTH-1:0] map_addr,     // BRAM/ROM address
-  output logic [TILE_SHIFT:0]   obstacle_dist [3:0], // distance (px) to next obstacle or max if none
-  output logic                  obstacles_valid      // HIGH when all 4 directions checked
+  output logic [3:0]              obstacles,    // [0]=up,[1]=down,[2]=left,[3]=right
+  output logic [ADDR_WIDTH-1:0]   map_addr,     // BRAM/ROM address
+  output logic [TILE_SHIFT:0]     obstacle_dist [3:0], // distance (px) to next obstacle or max if none
+  output logic                    obstacles_valid      // HIGH when all 4 directions checked
 );
 
 `ifdef DEBUG_WAVES // Needed for iverilog

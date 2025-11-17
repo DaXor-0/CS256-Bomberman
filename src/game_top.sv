@@ -42,12 +42,13 @@ module game_top (
   localparam int MAP_NUM_COL = 19;
   localparam int MAP_DEPTH = MAP_NUM_ROW * MAP_NUM_COL;
   localparam int MAP_ADDR_WIDTH = $clog2(MAP_DEPTH);
+  localparam int MAP_MEM_WIDTH = 2;
 
   // Logic for positioning rectangle control.
-  logic [10:0] blkpos_x;
-  logic [9:0]  blkpos_y;
-  logic [MAP_ADDR_WIDTH-1:0] map_addr;
-  logic [3:0] map_tile_state;
+  logic [10:0] player_x;
+  logic [9:0]  player_y;
+  logic [MAP_ADDR_WIDTH-1:0] map_addr_obst, map_addr_drawcon;
+  logic [MAP_MEM_WIDTH-1:0] map_tile_state_obst, map_tile_state_drawcon;
 
   // one-cycle pulse, synchronous to pixclk
   logic tick;
@@ -60,21 +61,21 @@ module game_top (
   localparam int SPRITE_ADDR_WIDTH = $clog2(SPRITE_W * SPRITE_H);
   logic [SPRITE_ADDR_WIDTH-1:0] sprite_addr;
   logic [11:0] sprite_rgb_raw;
-  logic sprite_active;
+  logic player_sprite;
   logic [$clog2(SPRITE_W)-1:0] sprite_local_x;
   logic [$clog2(SPRITE_H)-1:0] sprite_local_y;
 
   always_comb begin
-    sprite_active = 1'b0;
+    player_sprite = 1'b0;
     sprite_local_x = '0;
     sprite_local_y = '0;
     sprite_addr    = '0;
 
-    if ((curr_x >= blkpos_x) && (curr_x < blkpos_x + SPRITE_W) &&
-        (curr_y >= blkpos_y) && (curr_y < blkpos_y + SPRITE_H)) begin
-      sprite_active = 1'b1;
-      sprite_local_x = curr_x - blkpos_x;
-      sprite_local_y = curr_y - blkpos_y;
+    if ((curr_x >= player_x) && (curr_x < player_x + SPRITE_W) &&
+        (curr_y >= player_y) && (curr_y < player_y + SPRITE_H)) begin
+      player_sprite = 1'b1;
+      sprite_local_x = curr_x - player_x;
+      sprite_local_y = curr_y - player_y;
       sprite_addr = {sprite_local_y, sprite_local_x};
     end
   end
@@ -101,12 +102,10 @@ module game_top (
       .rst(rst),
       .tick(tick),
       .move_dir(move_dir),
-      .obstacle_up(obstacle_up),
-      .obstacle_down(obstacle_down),
-      .obstacle_left(obstacle_left),
-      .obstacle_right(obstacle_right),
-      .blkpos_x(blkpos_x),
-      .blkpos_y(blkpos_y)
+      .map_mem_in(map_tile_state_obst),
+      .map_addr(map_addr_obst),
+      .player_x(player_x),
+      .player_y(player_y)
   );
 
 
@@ -118,8 +117,10 @@ module game_top (
   ) mem_i (
       .clk(pixclk),
       .rst(rst),
-      .rd_addr(map_addr),
-      .rd_data(map_tile_state),
+      .rd_addr_1(map_addr_obst),
+      .rd_data_1(map_tile_state_obst),
+      .rd_addr_2(map_addr_drawcon),
+      .rd_data_2(map_tile_state_drawcon),
       .we(1'b0),
       .wr_addr('0),
       .wr_data('0)
@@ -128,15 +129,17 @@ module game_top (
   // drawcon now contains sequential due to map FSM.
   assign {drawcon_i_r, drawcon_i_g, drawcon_i_b} = sprite_rgb_raw;
   drawcon drawcon_i (
-    .clk(pixclk), .rst(rst),
-    .map_mem_in(map_tile_state),
-    .blkpos_x(blkpos_x), .blkpos_y(blkpos_y),
+    // Map State to determine draw current tile
+    .map_tile_state(map_tile_state_drawcon), 
+    // Game conditions
+    .is_player(player_sprite),
+    // curr_x and curr_y
     .draw_x(curr_x),     .draw_y(curr_y),
+    // input output colors
     .i_r(drawcon_i_r), .i_g(drawcon_i_g), .i_b(drawcon_i_b),
     .o_r(drawcon_o_r), .o_g(drawcon_o_g), .o_b(drawcon_o_b),
-    .obstacle_right(obstacle_right), .obstacle_left(obstacle_left),
-    .obstacle_up(obstacle_up),       .obstacle_down(obstacle_down),
-    .blk_addr(map_addr)
+    // Map addressing
+    .map_addr(map_addr_drawcon)
   );
 
 endmodule
