@@ -74,7 +74,7 @@ module drawcon #(
 } map_state;
 
   map_state st;
-  assign st = map_tile_state;
+  assign st = map_state'(map_tile_state);
 
   // change drawing inputs based on the map_mem_in.
   // initially: will multiplex different colors.
