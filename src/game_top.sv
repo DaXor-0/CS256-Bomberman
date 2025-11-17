@@ -76,7 +76,7 @@ module game_top (
       player_sprite = 1'b1;
       sprite_local_x = curr_x - player_x;
       sprite_local_y = curr_y - player_y;
-      sprite_addr = {sprite_local_y, sprite_local_x};
+      sprite_addr = {sprite_local_y, sprite_local_x} - 1;
     end
   end
 
@@ -112,7 +112,7 @@ module game_top (
   map_mem #(
       .NUM_ROW(MAP_NUM_ROW),
       .NUM_COL(MAP_NUM_COL),
-      .DATA_WIDTH(4),
+      .DATA_WIDTH(2),
       .MEM_INIT_FILE("maps/basic_map.mem")
   ) mem_i (
       .clk(pixclk),
@@ -126,6 +126,14 @@ module game_top (
       .wr_data('0)
   );
 
+  logic [10:0] curr_x_d;
+  logic [9:0]  curr_y_d;
+
+always_ff @(posedge pixclk) begin
+    curr_x_d <= curr_x;
+    curr_y_d <= curr_y;
+end
+
   // drawcon now contains sequential due to map FSM.
   assign {drawcon_i_r, drawcon_i_g, drawcon_i_b} = sprite_rgb_raw;
   drawcon drawcon_i (
@@ -134,7 +142,7 @@ module game_top (
     // Game conditions
     .is_player(player_sprite),
     // curr_x and curr_y
-    .draw_x(curr_x),     .draw_y(curr_y),
+    .draw_x(curr_x_d),     .draw_y(curr_y_d),
     // input output colors
     .i_r(drawcon_i_r), .i_g(drawcon_i_g), .i_b(drawcon_i_b),
     .o_r(drawcon_o_r), .o_g(drawcon_o_g), .o_b(drawcon_o_b),

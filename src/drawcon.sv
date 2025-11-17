@@ -25,7 +25,7 @@
 * - r, g, b: Color values for the current pixel (4-bit each).
 */
 module drawcon #(
-    parameter MAP_MEM_WIDTH   = 4, // this is $clog2(number of map states).
+    parameter MAP_MEM_WIDTH   = 2, // this is $clog2(number of map states).
     parameter NUM_ROW     = 11,
     parameter NUM_COL     = 19,
     parameter SCREEN_W       = 1280,
@@ -66,7 +66,12 @@ module drawcon #(
   end
 
   // Map state-machine (0,1,2,...), with next-state obtained from the map_memory
-  typedef enum { no_blk, perm_blk, destroyable_blk, bomb } map_state;
+  typedef enum logic [1:0] {
+    no_blk          = 2'd0,
+    perm_blk        = 2'd1,
+    destroyable_blk = 2'd2,
+    bomb            = 2'd3
+} map_state;
 
   map_state st;
   assign st = map_tile_state;
@@ -80,7 +85,7 @@ module drawcon #(
     else if (is_player)
       {o_r, o_g, o_b} = {i_r, i_g, i_b};
     else
-      case (st)
+      unique case (st)
         no_blk:          { o_r, o_g, o_b } = { BG_R, BG_G, BG_B };
         perm_blk:        { o_r, o_g, o_b } = 12'hFFF;
         destroyable_blk: { o_r, o_g, o_b } = 12'h00F;
@@ -106,7 +111,7 @@ logic [ADDR_WIDTH-1:0] addr_next;
 always_comb begin
   col = map_x >> BLK_W_LOG2;
   row = map_y >> BLK_H_LOG2;
-  addr_next = (row << 4) + (row << 1) + row + col; // (row << 4) + (row << 1) + row == row*16+row*2+row == row*19 --> hard-coded for 19 blocks. It's okay, since we will not change number of blocks.
+  addr_next = row * NUM_COL + col;
   map_addr = out_of_map ? '0 : addr_next;
 end
 
