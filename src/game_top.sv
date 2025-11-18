@@ -90,7 +90,7 @@ module game_top (
       .addr(sprite_addr),
       .data(sprite_rgb_raw)
   );
-
+  
   logic[3:0] move_dir;
   assign move_dir = {up, down, left, right};
   player_controller #(
