@@ -85,7 +85,7 @@ module game_top (
       .SPRITE_W(SPRITE_W),
       .SPRITE_H(SPRITE_H),
       .DATA_WIDTH(12),
-      .MEM_INIT_FILE("sprites/walk/mem/down_1.mem") // for now just use the down sprite
+      .MEM_INIT_FILE("down_1.mem") // for now just use the down sprite
   ) bomberman_sprite_i (
       .addr(sprite_addr),
       .data(sprite_rgb_raw)
@@ -113,7 +113,7 @@ module game_top (
       .NUM_ROW(MAP_NUM_ROW),
       .NUM_COL(MAP_NUM_COL),
       .DATA_WIDTH(2),
-      .MEM_INIT_FILE("maps/basic_map.mem")
+      .MEM_INIT_FILE("basic_map.mem")
   ) mem_i (
       .clk(pixclk),
       .rst(rst),
