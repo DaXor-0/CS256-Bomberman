@@ -158,10 +158,7 @@ module check_obst #(
     end else begin
       // Block only if we're crossing a tile boundary (eob_a)
       // and either: (a) we're at the map edge, or (b) the neighbor tile is non-empty.
-      obstacles[UP] <= eob[UP] & ( edge_block[UP] | (map_mem_in != 2'b00) );
-      obstacles[DOWN] <= eob[DOWN] & ( edge_block[DOWN] | (map_mem_in != 2'b00) );
-      obstacles[LEFT] <= eob[LEFT] & ( edge_block[LEFT] | (map_mem_in != 2'b00) );
-      obstacles[RIGHT] <= eob[RIGHT] & ( edge_block[RIGHT] | (map_mem_in != 2'b00) );
+      obstacles[dir_a] <= eob[dir_a] & ( edge_block[dir_a] | (map_mem_in != 2'b00) );
 
       // Distance to obstacle: when blocked, clamp to remaining pixels in tile;
       // otherwise present a large value so the controller is unconstrained.
