@@ -87,7 +87,7 @@ module drawcon #(
     else
       unique case (st)
         no_blk:          { o_r, o_g, o_b } = { BG_R, BG_G, BG_B };
-        perm_blk:        { o_r, o_g, o_b } = 12'hFFF;
+        perm_blk:        { o_r, o_g, o_b } = 12'h0F0;
         destroyable_blk: { o_r, o_g, o_b } = 12'h00F;
         bomb:            { o_r, o_g, o_b } = 12'h333;
 //      power_up:        { o_r, o_g, o_b } = 12'h0F0;

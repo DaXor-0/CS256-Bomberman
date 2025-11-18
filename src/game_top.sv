@@ -76,7 +76,7 @@ module game_top (
       player_sprite = 1'b1;
       sprite_local_x = curr_x - player_x;
       sprite_local_y = curr_y - player_y;
-      sprite_addr = {sprite_local_y, sprite_local_x} - 1;
+      sprite_addr = {sprite_local_y, sprite_local_x};
     end
   end
 
@@ -94,8 +94,8 @@ module game_top (
   logic[3:0] move_dir;
   assign move_dir = {up, down, left, right};
   player_controller #(
-      .INIT_X(800),
-      .INIT_Y(400),
+      .INIT_X(64),
+      .INIT_Y(64),
       .STEP_SIZE(4)
   ) player_ctrl_i (
       .clk(pixclk),

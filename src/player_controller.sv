@@ -129,10 +129,10 @@ module player_controller #(
       player_y <= 10'(INIT_Y + HUD_TOP_PX);
     end else if (tick) begin
       case (move_dir)
-        4'b1000: player_y <= (player_y >= step[UP])   ? (player_y - step[UP])   : player_y; // UP with saturation
-        4'b0100: player_y <= (player_y <= MAX_MAP_Y)  ? (player_y + step[DOWN]) : player_y; // DOWN with saturation
-        4'b0010: player_x <= (player_x >= step[LEFT]) ? (player_x - step[LEFT]) : player_x; // LEFT with saturation
-        4'b0001: player_x <= (player_x <= MAX_MAP_X)  ? (player_x + step[RIGHT]): player_x; // RIGHT with saturation
+        4'b1000: player_y <= (player_y - step[UP]);    // UP with saturation
+        4'b0100: player_y <= (player_y + step[DOWN]);  // DOWN with saturation
+        4'b0010: player_x <= (player_x - step[LEFT]);  // LEFT with saturation
+        4'b0001: player_x <= (player_x + step[RIGHT]); // RIGHT with saturation
       endcase
     end
   end
