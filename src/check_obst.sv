@@ -99,9 +99,10 @@ module check_obst #(
                        ? '0 : (TILE_PX - bottom_edge_offset);
   end
 
-  logic diagonal_down;
-  assign diagonal_down = (tile_offset_y > 8);
-  
+  logic diagonal_down, diagonal_right;
+  assign diagonal_down = (tile_offset_y > 4);
+  assign diagonal_right = (tile_offset_x > 32);
+     
   // ===========================================================================
   // Direction counter (iterates through UP/DOWN/LEFT/RIGHT)
   // ===========================================================================
@@ -158,8 +159,14 @@ module check_obst #(
     end else begin
       // Block only if we're crossing a tile boundary (eob_a)
       // and either: (a) we're at the map edge, or (b) the neighbor tile is non-empty.
-      obstacles[dir_a] <= eob[dir_a] & ( edge_block[dir_a] | (map_mem_in != 2'b00) );
-
+      unique case (dir_a)
+        UP: obstacles[dir_a] <= eob[dir_a] & ( edge_block[dir_a] | (map_mem_in != 2'b00) | diagonal_right);
+        DOWN: obstacles[dir_a] <= eob[dir_a] & ( edge_block[dir_a] | (map_mem_in != 2'b00) | diagonal_right );
+        LEFT: obstacles[dir_a] <= eob[dir_a] & ( edge_block[dir_a] | (map_mem_in != 2'b00) | diagonal_down );
+        RIGHT: obstacles[dir_a] <= eob[dir_a] & ( edge_block[dir_a] | (map_mem_in != 2'b00) | diagonal_down );
+      endcase
+      
+      
       // Distance to obstacle: when blocked, clamp to remaining pixels in tile;
       // otherwise present a large value so the controller is unconstrained.
       obstacle_dist[dir_a] <= (edge_block[dir_a] | (map_mem_in != 2'b00)) ? dist_next[dir_a] : MAX_DIST;
