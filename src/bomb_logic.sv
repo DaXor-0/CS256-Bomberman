@@ -21,12 +21,7 @@ module bomb_logic
 
     localparam int DEPTH      = NUM_ROW * NUM_COL,
     localparam int ADDR_WIDTH = $clog2(DEPTH),
-    localparam int TILE_SHIFT = $clog2(TILE_PX),
-
-    // ---- HUD layout (derived) ----
-    // horizontally centered map; full HUD bar at top
-    localparam int HUD_SIDE_PX  = (SCREEN_W - MAP_W_PX) / 2, // 32 px
-    localparam int HUD_TOP_PX   = (SCREEN_H - MAP_H_PX)      // 96 px
+    localparam int TILE_SHIFT = $clog2(TILE_PX)
 
 )(
     input logic clk, rst, tick,
