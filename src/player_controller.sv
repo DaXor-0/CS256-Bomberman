@@ -40,6 +40,8 @@ module player_controller #(
     input  logic [MAP_MEM_WIDTH-1:0] map_mem_in,
     output logic [10:0]              player_x,      // screen-space
     output logic [9:0]               player_y,      // screen-space
+    output logic [10:0]              map_player_x,
+    output logic [9:0]               map_player_y,
     output logic [ADDR_WIDTH-1:0]    map_addr
 );
   // Direction indices
@@ -63,8 +65,6 @@ module player_controller #(
   localparam int HUD_TOP_PX   = (SCREEN_H - MAP_H_PX);     // 96 px
 
   // ---- Convert player position to map-space (remove HUD offsets) ----
-  logic [10:0] map_player_x;
-  logic [9:0]  map_player_y;
   always_comb begin
     map_player_x = (player_x > HUD_SIDE_PX) ? (player_x - HUD_SIDE_PX) : 11'd64; // (64,64) is pos of first free block, (0,0) is perm_block
     map_player_y = (player_y > HUD_TOP_PX)  ? (player_y - HUD_TOP_PX)  : 10'd64;

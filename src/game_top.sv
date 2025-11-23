@@ -4,6 +4,7 @@ module game_top (
     input  logic        CLK100MHZ,
     input  logic        CPU_RESETN,
     input  logic        up, down, left, right,      // movement control
+    input  logic        place_bomb,
     output logic [3:0]  o_pix_r, o_pix_g, o_pix_b,
     output logic        o_hsync, o_vsync
 );
@@ -45,8 +46,8 @@ module game_top (
   localparam int MAP_MEM_WIDTH = 2;
 
   // Logic for positioning rectangle control.
-  logic [10:0] player_x;
-  logic [9:0]  player_y;
+  logic [10:0] player_x, map_player_x;
+  logic [9:0]  player_y, map_player_y;
   logic [MAP_ADDR_WIDTH-1:0] map_addr_obst, map_addr_drawcon;
   logic [MAP_MEM_WIDTH-1:0] map_tile_state_obst, map_tile_state_drawcon;
 
@@ -105,9 +106,28 @@ module game_top (
       .map_mem_in(map_tile_state_obst),
       .map_addr(map_addr_obst),
       .player_x(player_x),
-      .player_y(player_y)
+      .player_y(player_y),
+      .map_player_x(map_player_x),
+      .map_player_y(map_player_y)
   );
 
+  logic [MAP_ADDR_WIDTH-1:0] wr_addr;
+  logic [MAP_MEM_WIDTH-1:0] write_data;
+  logic we;
+  bomb_logic bomb_logic_i (
+      .clk(pixclk),
+      .rst(rst),
+      .player_x(map_player_x),
+      .player_y(map_player_y),
+      .place_bomb(place_bomb),
+      .bomb_addr(wr_addr),
+      .write_data(write_data),
+      .write_en(we),
+      .trigger_explosion(trigger_explosion),
+      .countdown(countdown)
+  );
+
+  // Countdown to be displayed on 7-seg display.
 
   map_mem #(
       .NUM_ROW(MAP_NUM_ROW),
@@ -121,9 +141,9 @@ module game_top (
       .rd_data_1(map_tile_state_obst),
       .rd_addr_2(map_addr_drawcon),
       .rd_data_2(map_tile_state_drawcon),
-      .we(1'b0),
-      .wr_addr('0),
-      .wr_data('0)
+      .we(we),
+      .wr_addr(wr_addr),
+      .wr_data(write_data)
   );
 
   logic [10:0] curr_x_d;

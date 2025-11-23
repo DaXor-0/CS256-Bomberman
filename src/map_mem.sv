@@ -11,6 +11,10 @@
 * - DATA_WIDTH: Width of each tile entry.
 * - MEM_INIT_FILE: Optional hex file used to initialise the memory.
 *
+* no_blk          = 2'd0,
+* perm_blk        = 2'd1,
+* destroyable_blk = 2'd2,
+* bomb            = 2'd3
 */
 module map_mem #(
     parameter int NUM_ROW = 11,

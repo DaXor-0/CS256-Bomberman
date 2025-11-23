@@ -3,7 +3,6 @@
 * Module: check_obst
 * Description: Check for obstacles around a player sprite in a tile map.
 * Updated: Added obstacles_valid signal for 4-cycle round-robin completion
-* NOTE: What about if there is an obstacle in bottom-right and the player is between two blocks? (TBD Later, solveable using a simple condition).
 * */
 module check_obst #(
   parameter int NUM_ROW   = 11,
