@@ -26,37 +26,67 @@ module map_mem #(
 )(
     input  logic                 clk,
     input  logic                 rst,
-    input  logic[ADDR_WIDTH-1:0] rd_addr_1,
-    output logic[DATA_WIDTH-1:0] rd_data_1,
-    input  logic[ADDR_WIDTH-1:0] rd_addr_2,
-    output logic[DATA_WIDTH-1:0] rd_data_2,
-    input  logic                 we,
-    input  logic[ADDR_WIDTH-1:0] wr_addr,
-    input  logic[DATA_WIDTH-1:0] wr_data
+
+    input  logic [ADDR_WIDTH-1:0] rd_addr_1,
+    output logic [DATA_WIDTH-1:0] rd_data_1,
+    input  logic [ADDR_WIDTH-1:0] rd_addr_2,
+    output logic [DATA_WIDTH-1:0] rd_data_2,
+
+    input  logic                  we,
+    input  logic [ADDR_WIDTH-1:0] wr_addr,
+    input  logic [DATA_WIDTH-1:0] wr_data
 );
 
-  (* ram_style = "block" *)
-  logic [DATA_WIDTH-1:0] mem [0:DEPTH-1]; // 4-bit states for the map
+    // -----------------------------
+    // ROM: stores original map
+    // -----------------------------
+    (* ram_style = "block" *)
+    logic [DATA_WIDTH-1:0] init_rom [0:DEPTH-1];
 
-  // Initialise the memory if a file is provided.
-  initial begin
-    if (MEM_INIT_FILE != "") begin
-      $readmemh(MEM_INIT_FILE, mem);
+    initial begin
+        if (MEM_INIT_FILE != "")
+            $readmemh(MEM_INIT_FILE, init_rom);
     end
-  end
 
-  always_ff @(posedge clk) begin
-    if (we)
-        mem[wr_addr] <= wr_data;
+    // -----------------------------
+    // RAM: actual modifiable map
+    // -----------------------------
+    (* ram_style = "block" *)
+    logic [DATA_WIDTH-1:0] map_ram [0:DEPTH-1];
 
-    if (rst) begin
-        rd_data_1 <= '0;
-        rd_data_2 <= '0;
-    end else begin
-        rd_data_1 <= mem[rd_addr_1];
-        rd_data_2 <= mem[rd_addr_2];
+    // Simple FSM to copy ROM → RAM when rst is high
+    typedef enum logic {IDLE, RESET_COPY} state_t;
+    state_t state;
+
+    logic [ADDR_WIDTH-1:0] copy_idx;
+
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            state     <= RESET_COPY;
+            copy_idx  <= '0;
+        end
+        else begin
+            case (state)
+                RESET_COPY: begin
+                    map_ram[copy_idx] <= init_rom[copy_idx];
+                    copy_idx          <= copy_idx + 1;
+
+                    if (copy_idx == DEPTH-1)
+                        state <= IDLE;
+                end
+
+                IDLE: begin
+                    if (we)
+                        map_ram[wr_addr] <= wr_data;
+                end
+            endcase
+        end
     end
-end
 
+    // synchronous reads
+    always_ff @(posedge clk) begin
+        rd_data_1 <= map_ram[rd_addr_1];
+        rd_data_2 <= map_ram[rd_addr_2];
+    end
 
 endmodule

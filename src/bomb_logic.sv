@@ -46,6 +46,7 @@ module bomb_logic
       countdown <= BOMB_TIME;
       place_bomb_r <= 0;
       second_cnt <= 0;
+      trigger_explosion <= 0;
     end else begin
     if (tick) begin
       if (place_bomb_success) begin
@@ -59,9 +60,9 @@ module bomb_logic
           if (countdown == 0) begin countdown <= BOMB_TIME; place_bomb_r <= 0; max_bombs <= max_bombs + 1; end        
           else countdown <= countdown - 1;
         end
-        else second_cnt <= second_cnt +1;
-      if (countdown == 0 & second_cnt == 59) trigger_explosion <= 1'b1; else trigger_explosion <= 1'b0;
+        else second_cnt <= second_cnt + 1;
     end
+    if (countdown == 0 & second_cnt == 59) trigger_explosion <= 1'b1; else trigger_explosion <= 1'b0;
     end
 
   assign place_bomb_success = place_bomb & (max_bombs > 0);
