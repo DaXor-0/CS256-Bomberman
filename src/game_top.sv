@@ -119,6 +119,7 @@ module game_top (
   bomb_logic bomb_logic_i (
       .clk(pixclk),
       .rst(rst),
+      .tick(tick),
       .player_x(map_player_x),
       .player_y(map_player_y),
       .place_bomb(place_bomb),

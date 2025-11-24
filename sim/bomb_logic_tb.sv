@@ -44,6 +44,8 @@ module tb_bomb_logic;
       else tick_count <= tick_count + 1;
     end
   end
+  
+  assign tick = (tick_count == 20);
 
   // DUT INSTANCE
   bomb_logic #(
@@ -65,9 +67,7 @@ module tb_bomb_logic;
     .write_data(write_data),
     .write_en(write_en),
     .trigger_explosion(trigger_explosion),
-    .countdown(countdown),
-    .state_probe(state_probe),
-    .saved_addr_probe(saved_addr_probe)
+    .countdown(countdown)
   );
 
   // WAVEFORM DUMPING
@@ -115,6 +115,12 @@ module tb_bomb_logic;
 
     // Finish a few cycles later
     repeat (10) @(posedge clk);
+    
+    repeat(2000) @(posedge clk);
+    place_bomb = 1;
+    @(posedge clk); place_bomb = 0;
+    player_x = 192; player_y = 192;
+    @(posedge clk); player_x = 64; player_y = 64;
     $finish;
   end
 

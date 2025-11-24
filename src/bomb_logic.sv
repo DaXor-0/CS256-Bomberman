@@ -32,17 +32,9 @@ module bomb_logic
     output logic [ADDR_WIDTH-1:0] write_addr,
     output logic [MAP_MEM_WIDTH-1:0] write_data,
     output logic write_en, trigger_explosion,
-    output logic [$clog2(BOMB_TIME)-1:0] countdown,
-
-    // debugging output
-    output logic [1:0] state_probe,
-    output logic [ADDR_WIDTH-1:0] saved_addr_probe
+    output logic [$clog2(BOMB_TIME)-1:0] countdown
 );
   
-  // debugging wires
-  assign state_probe = st;
-  assign saved_addr_probe = saved_addr;
-
   // NOTE: This implementation can do 1 bomb only. For more bombs, each bomb should have its state-machine, and there should be an indexing between currently placed bombs.
   // -- internal state --
   logic [1:0] max_bombs;
@@ -110,13 +102,13 @@ module bomb_logic
       case (st)
         IDLE:
         begin
-          saved_addr <= computed_addr; // save the bomb address to be freed later.
           max_bombs <= 1;
           countdown <= BOMB_TIME;
           second_cnt <= 0;
         end
         PLACE:
         begin
+          saved_addr <= computed_addr; // save the bomb address to be freed later.
           max_bombs <= 0;
           countdown <= BOMB_TIME;
           second_cnt <= 0;
@@ -132,7 +124,7 @@ module bomb_logic
             else second_cnt <= second_cnt + 1;
           end
         end
-        default: // {EXPLODE} state, do nothing
+        default: // {IDLE, PLACE, EXPLODE} states, do nothing
         begin
           max_bombs <= 1;
           countdown <= BOMB_TIME;
@@ -153,6 +145,8 @@ module bomb_logic
   // ------------------------------
   // player_x/y are the sprite's TOP-LEFT corner
   // center coordinates (combinational)
+  logic [10:0] center_x;
+  logic [9:0] center_y;
   assign center_x = player_x + (SPRITE_W >> 1);
   assign center_y = player_y + (SPRITE_H >> 1); 
  
