@@ -29,6 +29,7 @@ module check_obst_tb;
   logic [TILE_SHIFT:0] dist_up, dist_down, dist_left, dist_right;
   logic [1:0] map_mem [0:DEPTH-1];
   logic [ADDR_WIDTH-1:0] map_addr_d;
+  logic obstacle_valid;
 
   check_obst #(
       .NUM_ROW (NUM_ROW),
@@ -44,7 +45,8 @@ module check_obst_tb;
       .map_mem_in(map_mem_in),
       .obstacles(obstacles),
       .map_addr(map_addr),
-      .obstacle_dist(obstacle_dist)
+      .obstacle_dist(obstacle_dist),
+      .obstacles_valid(obstacle_valid)
   );
 
   always #(CLK_PERIOD / 2) clk = ~clk;
