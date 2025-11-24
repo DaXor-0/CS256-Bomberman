@@ -32,9 +32,17 @@ module bomb_logic
     output logic [ADDR_WIDTH-1:0] write_addr,
     output logic [MAP_MEM_WIDTH-1:0] write_data,
     output logic write_en, trigger_explosion,
-    output logic [$clog2(BOMB_TIME)-1:0] countdown
+    output logic [$clog2(BOMB_TIME)-1:0] countdown,
+
+    // debugging output
+    output logic [1:0] state_probe,
+    output logic [ADDR_WIDTH-1:0] saved_addr_probe
 );
   
+  // debugging wires
+  assign state_probe = st;
+  assign saved_addr_probe = saved_addr;
+
   // NOTE: This implementation can do 1 bomb only. For more bombs, each bomb should have its state-machine, and there should be an indexing between currently placed bombs.
   // -- internal state --
   logic [1:0] max_bombs;
@@ -82,7 +90,7 @@ module bomb_logic
     case (st)
       IDLE: if (place_pulse) nst = PLACE;
       PLACE: nst = CNTDWN;
-      CNTDWN: if (countdown == 1 & second_cnt == 6'd59) nst = EXPLODE;
+      CNTDWN: if ((countdown == 1) && (second_cnt == 6'd59)) nst = EXPLODE;
       EXPLODE: nst = IDLE;
       default: nst = IDLE;
     endcase
@@ -109,7 +117,7 @@ module bomb_logic
         end
         PLACE:
         begin
-          max_bombs <= 1;
+          max_bombs <= 0;
           countdown <= BOMB_TIME;
           second_cnt <= 0;
         end
@@ -124,7 +132,7 @@ module bomb_logic
             else second_cnt <= second_cnt + 1;
           end
         end
-        default: // {IDLE, PLACE, EXPLODE} states, do nothing
+        default: // {EXPLODE} state, do nothing
         begin
           max_bombs <= 1;
           countdown <= BOMB_TIME;
