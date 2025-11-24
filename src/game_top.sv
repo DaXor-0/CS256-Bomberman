@@ -111,6 +111,8 @@ module game_top (
       .map_player_y(map_player_y)
   );
 
+
+  // Bomb Logic
   logic [MAP_ADDR_WIDTH-1:0] wr_addr;
   logic [MAP_MEM_WIDTH-1:0] write_data;
   logic we;
@@ -120,7 +122,7 @@ module game_top (
       .player_x(map_player_x),
       .player_y(map_player_y),
       .place_bomb(place_bomb),
-      .bomb_addr(wr_addr),
+      .write_addr(wr_addr),
       .write_data(write_data),
       .write_en(we),
       .trigger_explosion(trigger_explosion),
@@ -128,6 +130,9 @@ module game_top (
   );
 
   // Countdown to be displayed on 7-seg display.
+
+  // Explosion Logic
+  
 
   map_mem #(
       .NUM_ROW(MAP_NUM_ROW),

@@ -27,57 +27,123 @@ module bomb_logic
     input logic clk, rst, tick,
     input logic [10:0] player_x,  // map_player_x
     input logic [9:0] player_y,   // map_player_y
+    // input logic add_bomb :: to be integrated with implementation of power-up
     input logic place_bomb,
-    output logic [ADDR_WIDTH-1:0] bomb_addr,
+    output logic [ADDR_WIDTH-1:0] write_addr,
     output logic [MAP_MEM_WIDTH-1:0] write_data,
     output logic write_en, trigger_explosion,
     output logic [$clog2(BOMB_TIME)-1:0] countdown
 );
   
+  // NOTE: This implementation can do 1 bomb only. For more bombs, each bomb should have its state-machine, and there should be an indexing between currently placed bombs.
+  // -- internal state --
   logic [1:0] max_bombs;
-  logic place_bomb_r;
-  logic place_bomb_success;
-
+  logic place_bomb_r, place_bomb_prev;
   logic [5:0] second_cnt;
+  logic [ADDR_WIDTH-1:0] saved_addr, computed_addr;
 
+  // pulses
+  logic place_pulse;
+
+  // -----------------------------------------------------------------
+  // -- edge detection for bomb placement + success condition --
+  // -----------------------------------------------------------------
+  always_ff @(posedge clk)
+  if (rst)
+    begin
+    place_bomb_r <= 0;
+    place_bomb_prev <= 0;
+    end
+  else
+    begin
+    place_bomb_r <= place_bomb;
+    place_bomb_prev <= place_bomb_r;
+    end
+  // place_pulse -- makes sure that the bomb placement is only triggered once.
+  assign place_pulse = (~place_bomb_prev & place_bomb_r) & (max_bombs > 0);
+
+
+  // -----------------------------------------------------------------
+  // -- FSM for the bomb logic, bomb_state --
+  // -----------------------------------------------------------------
+  typedef enum logic [1:0] { IDLE, PLACE, CNTDWN, EXPLODE } bomb_state;
+
+  bomb_state st, nst;
+
+  // next state ff block
+  always_ff @(posedge clk)
+    if (rst) st <= IDLE;
+    else st <= nst;
+
+  // Next state logic
+  always_comb
+  begin
+    nst = st; // State remains unchanged if no condition triggered.
+    case (st)
+      IDLE: if (place_pulse) nst = PLACE;
+      PLACE: nst = CNTDWN;
+      CNTDWN: if (countdown == 1 & second_cnt == 6'd59) nst = EXPLODE;
+      EXPLODE: nst = IDLE;
+      default: nst = IDLE;
+    endcase
+  end
+  
+  // -----------------------------------------------------------------
+  // -- Sequential elements (counters, registers) control per state
+  // -----------------------------------------------------------------
   always_ff @(posedge clk)
     if (rst) begin
       max_bombs <= 1;
       countdown <= BOMB_TIME;
-      place_bomb_r <= 0;
       second_cnt <= 0;
-      trigger_explosion <= 0;
-    end else begin
-    if (tick) begin
-      if (place_bomb_success) begin
-        max_bombs <= max_bombs - 1;
-        place_bomb_r <= place_bomb;
-      end
-      if (place_bomb_r)
-        if (second_cnt == 59)
+    end else 
+    begin
+      case (st)
+        PLACE:
         begin
+          saved_addr <= computed_addr; // save the bomb address to be freed later.
+          max_bombs <= 1;
+          countdown <= BOMB_TIME;
           second_cnt <= 0;
-          if (countdown == 0) begin countdown <= BOMB_TIME; place_bomb_r <= 0; max_bombs <= max_bombs + 1; end        
-          else countdown <= countdown - 1;
         end
-        else second_cnt <= second_cnt + 1;
-    end
-    if (countdown == 0 & second_cnt == 59) trigger_explosion <= 1'b1; else trigger_explosion <= 1'b0;
+        CNTDWN: // Countdown state, such that
+        begin
+          if (tick)
+          begin
+            if (second_cnt == 59) begin 
+              second_cnt <= 0; 
+              countdown <= countdown - 1; // no need for if (countdown == 0), as it is handled in the next_state logic
+            end 
+            else second_cnt <= second_cnt + 1;
+          end
+        end
+        default: // {IDLE, PLACE, EXPLODE} states, do nothing
+        begin
+          max_bombs <= 1;
+          countdown <= BOMB_TIME;
+          second_cnt <= 0;
+        end
+      endcase
     end
 
-  assign place_bomb_success = place_bomb & (max_bombs > 0);
-  assign write_en = (place_bomb_success | trigger_explosion);
+  assign trigger_explosion = (st == EXPLODE);
+  assign write_en = ((st == PLACE) | (st == EXPLODE));
   assign write_data = (trigger_explosion) ? 2'd0 : 2'd3;
 
+  // ------------------------------
   // Determining Bomb placement address
-  // ==========================================================================
-  // Tile coordinates (64 px per tile -> shift by 6)
-  // ==========================================================================
+  // Addressing: compute tile from sprite CENTER (safer than top-left heuristics)
+  // center_x = player_x + SPRITE_W/2  (integer arithmetic)
+  // ------------------------------
   // player_x/y are the sprite's TOP-LEFT corner
+  // center coordinates (combinational)
+  assign center_x = player_x + (SPRITE_W >> 1);
+  assign center_y = player_y + (SPRITE_H >> 1); 
+ 
   logic [$clog2(NUM_ROW)-1:0] blockpos_row;
   logic [$clog2(NUM_COL)-1:0] blockpos_col;
-  assign blockpos_row = (player_y >> TILE_SHIFT); // truncates to ROW_W
-  assign blockpos_col = (player_x >> TILE_SHIFT); // truncates to COL_W
+  assign blockpos_row = (cetner_y >> TILE_SHIFT); // truncates to ROW_W
+  assign blockpos_col = (center_x >> TILE_SHIFT); // truncates to COL_W
 
   // ==========================================================================
   // Distance to the next tile boundary for each direction (in pixels)
@@ -86,14 +152,7 @@ module bomb_logic
   logic [TILE_SHIFT-1:0] tile_offset_y;
   assign tile_offset_x = player_x[TILE_SHIFT-1:0];
   assign tile_offset_y = player_y[TILE_SHIFT-1:0];
-  
-  always_comb
-    begin
-      bomb_addr = blockpos_row * NUM_COL + blockpos_col;
-      if (tile_offset_y > (TILE_PX >> 2))
-        bomb_addr = (blockpos_row + 1) * NUM_COL + blockpos_col;
-      else if (tile_offset_x > (TILE_PX >> 2) + (SPRITE_W >> 2))
-        bomb_addr = blockpos_row * NUM_COL + (blockpos_col + 1);
-    end
+  assign computed_addr = blockpos_row * NUM_COL + blockpos_col;
+  assign write_addr = (trigger_explosion) ? saved_addr : computed_addr; // free the same block that was placed to.
 
 endmodule
