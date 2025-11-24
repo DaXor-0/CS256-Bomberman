@@ -96,12 +96,19 @@ module bomb_logic
       max_bombs <= 1;
       countdown <= BOMB_TIME;
       second_cnt <= 0;
+      saved_addr <= 0;
     end else 
     begin
       case (st)
-        PLACE:
+        IDLE:
         begin
           saved_addr <= computed_addr; // save the bomb address to be freed later.
+          max_bombs <= 1;
+          countdown <= BOMB_TIME;
+          second_cnt <= 0;
+        end
+        PLACE:
+        begin
           max_bombs <= 1;
           countdown <= BOMB_TIME;
           second_cnt <= 0;
@@ -129,6 +136,7 @@ module bomb_logic
   assign trigger_explosion = (st == EXPLODE);
   assign write_en = ((st == PLACE) | (st == EXPLODE));
   assign write_data = (trigger_explosion) ? 2'd0 : 2'd3;
+  assign write_addr = (trigger_explosion) ? saved_addr : computed_addr; // free the same block that was placed to.
 
   // ------------------------------
   // Determining Bomb placement address
@@ -142,7 +150,7 @@ module bomb_logic
  
   logic [$clog2(NUM_ROW)-1:0] blockpos_row;
   logic [$clog2(NUM_COL)-1:0] blockpos_col;
-  assign blockpos_row = (cetner_y >> TILE_SHIFT); // truncates to ROW_W
+  assign blockpos_row = (center_y >> TILE_SHIFT); // truncates to ROW_W
   assign blockpos_col = (center_x >> TILE_SHIFT); // truncates to COL_W
 
   // ==========================================================================
@@ -153,6 +161,6 @@ module bomb_logic
   assign tile_offset_x = player_x[TILE_SHIFT-1:0];
   assign tile_offset_y = player_y[TILE_SHIFT-1:0];
   assign computed_addr = blockpos_row * NUM_COL + blockpos_col;
-  assign write_addr = (trigger_explosion) ? saved_addr : computed_addr; // free the same block that was placed to.
+  
 
 endmodule
