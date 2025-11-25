@@ -1,33 +1,45 @@
-`timescale 1ns/1ps
+`timescale 1ns / 1ps
 
 module game_top (
-    input  logic        CLK100MHZ,
-    input  logic        CPU_RESETN,
-    input  logic        up, down, left, right,      // movement control
-    input  logic        place_bomb,
-    output logic [3:0]  o_pix_r, o_pix_g, o_pix_b,
-    output logic        o_hsync, o_vsync
+    input  logic       CLK100MHZ,
+    input  logic       CPU_RESETN,
+    input  logic       up,
+    down,
+    left,
+    right,  // movement control
+    input  logic       place_bomb,
+    output logic [3:0] o_pix_r,
+    o_pix_g,
+    o_pix_b,
+    output logic       o_hsync,
+    o_vsync
 );
 
   wire pixclk, rst;
-  assign rst = ~CPU_RESETN; // the reset button is reversed (lost too much time on that :( )
+  assign rst = ~CPU_RESETN;  // the reset button is reversed (lost too much time on that :( )
 
-  clk_wiz_0 pixclk_i ( // Set pixclk to 83.456MHz
-    .clk_in1  (CLK100MHZ),
-    .clk_out1 (pixclk)
+  clk_wiz_0 pixclk_i (  // Set pixclk to 83.456MHz
+      .clk_in1 (CLK100MHZ),
+      .clk_out1(pixclk)
   );
 
   // Get the VGA timing signals
   logic [10:0] curr_x;
-  logic [9:0]  curr_y;
-  logic [3:0]  drawcon_i_r, drawcon_i_g, drawcon_i_b;
-  logic [3:0]  drawcon_o_r, drawcon_o_g, drawcon_o_b;
+  logic [ 9:0] curr_y;
+  logic [3:0] drawcon_o_r, drawcon_o_g, drawcon_o_b;
   vga_out vga_out_u (
-    .i_clk    (pixclk),      .i_rst    (rst),
-    .i_r      (drawcon_o_r), .i_g      (drawcon_o_g), .i_b  (drawcon_o_b),
-    .o_pix_r  (o_pix_r),     .o_pix_g  (o_pix_g),     .o_pix_b (o_pix_b), // VGA color output
-    .o_hsync  (o_hsync),     .o_vsync  (o_vsync),                         // horizontal and vertical sync
-    .o_curr_x (curr_x),      .o_curr_y (curr_y)                           // what pixel are we on
+      .i_clk   (pixclk),
+      .i_rst   (rst),
+      .i_r     (drawcon_o_r),
+      .i_g     (drawcon_o_g),
+      .i_b     (drawcon_o_b),
+      .o_pix_r (o_pix_r),
+      .o_pix_g (o_pix_g),
+      .o_pix_b (o_pix_b),      // VGA color output
+      .o_hsync (o_hsync),
+      .o_vsync (o_vsync),      // horizontal and vertical sync
+      .o_curr_x(curr_x),
+      .o_curr_y(curr_y)        // what pixel are we on
   );
 
   localparam int SCREEN_W = 1280;
@@ -40,17 +52,16 @@ module game_top (
 
   // Logic for positioning rectangle control.
   logic [10:0] player_x, map_player_x;
-  logic [9:0]  player_y, map_player_y;
+  logic [9:0] player_y, map_player_y;
   logic [MAP_ADDR_WIDTH-1:0] map_addr_obst, map_addr_drawcon;
   logic [MAP_MEM_WIDTH-1:0] map_tile_state_obst, map_tile_state_drawcon;
 
   // one-cycle pulse, synchronous to pixclk
   logic tick;
-  always_ff @(posedge pixclk)
-    tick <= (curr_x == 0 && curr_y == 0);
+  always_ff @(posedge pixclk) tick <= (curr_x == 0 && curr_y == 0);
 
 
-  logic[3:0] move_dir;
+  logic [3:0] move_dir;
   assign move_dir = {up, down, left, right};
   player_controller #(
       .INIT_X(64),
@@ -88,8 +99,6 @@ module game_top (
       .countdown(countdown)
   );
 
-  // Countdown to be displayed on 7-seg display.
-
   // Explosion Logic
   map_mem #(
       .NUM_ROW(MAP_NUM_ROW),
@@ -109,27 +118,24 @@ module game_top (
   );
 
   logic [10:0] curr_x_d;
-  logic [9:0]  curr_y_d;
+  logic [ 9:0] curr_y_d;
 
-always_ff @(posedge pixclk) begin
+  always_ff @(posedge pixclk) begin
     curr_x_d <= curr_x;
     curr_y_d <= curr_y;
-end
+  end
 
   // drawcon now contains sequential due to map FSM.
-  assign {drawcon_i_r, drawcon_i_g, drawcon_i_b} = sprite_rgb_raw;
   drawcon drawcon_i (
-    // Map State to determine draw current tile
-    .map_tile_state(map_tile_state_drawcon), 
-    // Game conditions
-    .is_player(player_sprite),
-    // curr_x and curr_y
-    .draw_x(curr_x_d),     .draw_y(curr_y_d),
-    // input output colors
-    .i_r(drawcon_i_r), .i_g(drawcon_i_g), .i_b(drawcon_i_b),
-    .o_r(drawcon_o_r), .o_g(drawcon_o_g), .o_b(drawcon_o_b),
-    // Map addressing
-    .map_addr(map_addr_drawcon)
+      .map_tile_state(map_tile_state_drawcon),
+      .draw_x(curr_x_d),
+      .draw_y(curr_y_d),
+      .player_x(player_x),
+      .player_y(player_y),
+      .o_r(drawcon_o_r),
+      .o_g(drawcon_o_g),
+      .o_b(drawcon_o_b),
+      .map_addr(map_addr_drawcon)
   );
 
 endmodule

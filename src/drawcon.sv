@@ -45,9 +45,8 @@ module drawcon #(
     input logic [MAP_MEM_WIDTH-1:0] map_tile_state,
     input logic [10:0] draw_x,
     input logic [9:0] draw_y,
-    input logic [3:0] i_r,
-    i_g,
-    i_b,
+    input logic [10:0] player_x,
+    input logic [9:0] player_y,
     output logic [3:0] o_r,
     o_g,
     o_b,
@@ -70,11 +69,11 @@ module drawcon #(
     sprite_local_y = '0;
     sprite_addr    = '0;
 
-    if ((curr_x >= player_x) && (curr_x < player_x + SPRITE_W) &&
-        (curr_y >= player_y) && (curr_y < player_y + SPRITE_H)) begin
+    if ((draw_x >= player_x) && (draw_x < player_x + SPRITE_W) &&
+        (draw_y >= player_y) && (draw_y < player_y + SPRITE_H)) begin
       player_sprite  = 1'b1;
-      sprite_local_x = curr_x - player_x;
-      sprite_local_y = curr_y - player_y;
+      sprite_local_x = draw_x - player_x;
+      sprite_local_y = draw_y - player_y;
       sprite_addr    = {sprite_local_y, sprite_local_x};
     end
   end
@@ -120,11 +119,14 @@ module drawcon #(
   // Initially: multiplex different colors.
   // When adding sprites: bring counter and control logic out, multiplexing at
   // the memory and simply receiving pix_rgb as input.
+  logic is_player;
+  assign is_player = (draw_x >= player_x) && (draw_x < player_x + SPRITE_W) &&
+                     (draw_y >= player_y) && (draw_y < player_y + SPRITE_H);
   always_comb begin
     if (out_of_map) begin
       {o_r, o_g, o_b} = {BRD_R, BRD_G, BRD_B};
     end else if (is_player) begin
-      {o_r, o_g, o_b} = {i_r, i_g, i_b};
+      {o_r, o_g, o_b} = sprite_rgb_raw;
     end else begin
       unique case (st)
         no_blk:          {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
