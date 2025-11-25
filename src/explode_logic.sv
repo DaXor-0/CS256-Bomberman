@@ -1,8 +1,8 @@
 `timescale 1ns/1ps
 
 /**
-* Module: place_bomb
-* Description: contains all the logic that lets player place bomb, time for bomb, writing to map_mem, triggering explosion
+* Module: explode_logic 
+* Description: contains the logic that operates the explosion of the bombs.
 *
 **/
 
@@ -25,10 +25,11 @@ module explode_logic
 )(
     input logic clk, rst, tick,
     input logic trigger_explosion,
+    input logic [ADDR_WIDTH-1:0] explosion_addr,
+
     // input logic increase_explode_length :: to be integrated with implementation of power-up
     input logic [10:0] player_x,  // map_player_x
     input logic [9:0] player_y,   // map_player_y
-    input logic [ADDR_WIDTH-1:0] explosion_addr,
     
     output logic [ADDR_WIDTH-1:0] saved_explosion_addr,
     output logic explode_signal,          // To be used by drawcon to draw the explosion
@@ -62,8 +63,8 @@ module explode_logic
   begin
     nst = st; // State remains unchanged if no condition triggered.
     case (st)
-      IDLE: if (trigger_explosion) nst = CHECK;
-      EXPLODE: if (second_cnt <= 6'd59) nst = FREE_BLKS;
+      IDLE: if (trigger_explosion) nst = EXPLODE;
+      EXPLODE: if (second_cnt == 6'd59) nst = FREE_BLKS;
       FREE_BLKS: nst = IDLE;
       default: nst = IDLE;
     endcase
@@ -91,7 +92,7 @@ module explode_logic
         end
         EXPLODE:
         begin
-          if (ticks) second_cnt <= second_cnt + 1;
+          if (tick) second_cnt <= second_cnt + 1;
         end
       endcase
     end
@@ -114,7 +115,7 @@ module explode_logic
   logic [$clog2(NUM_COL)-1:0] blockpos_col;
   assign blockpos_row = (player_y >> TILE_SHIFT); // truncates to ROW_W
   assign blockpos_col = (player_x >> TILE_SHIFT); // truncates to COL_W
-  assign blockpos_row2 = (bottom_edge_offset > TILE_PX) ? blockpos_row + NUM_COL : 0;  // Player between two blocks
+  assign blockpos_row2 = (bottom_edge_offset > TILE_PX) ? blockpos_row + 1 : 0;  // Player between two blocks
   assign blockpos_col2 = (right_edge_offset > TILE_PX) ? blockpos_col + 1 : 0;         // Player between two blocks
   
   // player blocks addresses
@@ -122,24 +123,18 @@ module explode_logic
   assign blk1_addr = blockpos_row * NUM_COL + blockpos_col;
   assign blk2_addr = blockpos_row2 * NUM_COL + blockpos_col2;
 
-  // Explosion addresses
-  logic [ADDR_WIDTH-1:0] exp [0:3];
-  assign exp[UP] = saved_explosion_addr - NUM_COL;
-  assign exp[DOWN] = saved_explosion_addr + NUM_COL;
-  assign exp[LEFT] = saved_explosion_addr - 1;
-  assign exp[RIGHT] = saved_explosion_addr + 1;
   
   // Function to check if the player's block is exploding
   function logic is_exploding(input logic [ADDR_WIDTH-1:0] blk_addr, 
-                              input logic [ADDR_WIDTH-1:0] exp [0:3]);
-    return ((blk_addr == exp[UP])   ||
-            (blk_addr == exp[DOWN]) ||
-            (blk_addr == exp[LEFT]) ||
-            (blk_addr == exp[RIGHT]));
+                              input logic [ADDR_WIDTH-1:0] exp);
+    return ((blk_addr == saved_explosion_addr - NUM_COL)   ||
+            (blk_addr == saved_explosion_addr + NUM_COL) ||
+            (blk_addr == saved_explosion_addr - 1) ||
+            (blk_addr == saved_explosion_addr - 1));
   endfunction
 
   // Game Over condition
-  assign game_over = (is_exploding(blk1_addr, exp) ||
-                      is_exploding(blk2_addr, exp));
+  assign game_over = (is_exploding(blk1_addr, saved_explosion_addr) ||
+                      is_exploding(blk2_addr, saved_explosion_addr));
 
 endmodule
