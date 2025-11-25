@@ -62,6 +62,7 @@ module game_top (
   logic tick;
   always_ff @(posedge pixclk) tick <= (curr_x == 0 && curr_y == 0);
 
+  dir_t move_dir;
   always_comb begin
     move_dir = DIR_NONE;
     case ({

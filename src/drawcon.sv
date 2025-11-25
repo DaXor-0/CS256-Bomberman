@@ -39,9 +39,8 @@ module drawcon #(
                           BG_B          = 4'h0,
 
     // Derived parameters (not overridable)
-    localparam DEPTH             = NUM_COL * NUM_ROW,
-    localparam ADDR_WIDTH        = $clog2(DEPTH),               // bit-width of map_addr output
-    localparam SPRITE_ADDR_WIDTH = $clog2(SPRITE_W * SPRITE_H)
+    localparam DEPTH      = NUM_COL * NUM_ROW,
+    localparam ADDR_WIDTH = $clog2(DEPTH)       // bit-width of map_addr output
 ) (
     // Map Memory block state input
     input logic [MAP_MEM_WIDTH-1:0] map_tile_state,
@@ -66,6 +65,7 @@ module drawcon #(
   localparam int SPR_PIXELS_PER_FRM = SPRITE_W * SPRITE_H;
   localparam int SPRITE_ROM_DEPTH = NUM_FRAMES_TOTAL * SPR_PIXELS_PER_FRM;
   localparam int SPRITE_ADDR_WIDTH = $clog2(SPRITE_ROM_DEPTH);
+
 
   // ---------------------------------------------------------------------------
   // Sprite addressing
