@@ -1,5 +1,7 @@
 `timescale 1ns / 1ps
 
+import common_pkg::*;
+
 module game_top (
     input  logic       CLK100MHZ,
     input  logic       CPU_RESETN,
@@ -60,9 +62,19 @@ module game_top (
   logic tick;
   always_ff @(posedge pixclk) tick <= (curr_x == 0 && curr_y == 0);
 
+  always_comb begin
+    move_dir = DIR_NONE;
+    case ({
+      up, down, left, right
+    })
+      4'b1000: move_dir = DIR_UP;
+      4'b0100: move_dir = DIR_DOWN;
+      4'b0010: move_dir = DIR_LEFT;
+      4'b0001: move_dir = DIR_RIGHT;
+      default: move_dir = DIR_NONE;
+    endcase
+  end
 
-  logic [3:0] move_dir;
-  assign move_dir = {up, down, left, right};
   player_controller #(
       .INIT_X(64),
       .INIT_Y(64),
@@ -125,6 +137,27 @@ module game_top (
     curr_y_d <= curr_y;
   end
 
+  // Selects animation frame based on movement
+  localparam int ANIM_HOLD = 5;  // hold each frame for 5 ticks
+  localparam int NUM_FRAMES = 3;  // walking frames: 0,1,2
+
+  logic [7:0] frame_cnt;  // free counter
+  logic [1:0] anim_frame;  // final output (0,1,2)
+  always_ff @(posedge pixclk) begin
+    if (rst) begin
+      frame_cnt  <= 8'd0;
+      anim_frame <= 2'd0;
+    end else if (tick && move_dir != DIR_NONE) begin
+      if (frame_cnt == (ANIM_HOLD * NUM_FRAMES - 1)) begin
+        frame_cnt  <= 0;
+        anim_frame <= 0;
+      end else begin
+        frame_cnt <= frame_cnt + 1;
+        if ((frame_cnt + 1) % ANIM_HOLD == 0) anim_frame <= anim_frame + 1;
+      end
+    end
+  end
+
   // drawcon now contains sequential due to map FSM.
   drawcon drawcon_i (
       .map_tile_state(map_tile_state_drawcon),
@@ -132,6 +165,8 @@ module game_top (
       .draw_y(curr_y_d),
       .player_x(player_x),
       .player_y(player_y),
+      .anim_frame(anim_frame),
+      .player_dir(move_dir),
       .o_r(drawcon_o_r),
       .o_g(drawcon_o_g),
       .o_b(drawcon_o_b),

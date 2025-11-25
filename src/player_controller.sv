@@ -1,4 +1,7 @@
 `timescale 1ns / 1ps
+
+import common_pkg::*;
+
 /**
 * Module: player_controller
 * Description:
@@ -36,7 +39,7 @@ module player_controller #(
     input  logic                     clk,
     input  logic                     rst,
     input  logic                     tick,
-    input  logic [              3:0] move_dir,      // [UP,DOWN,LEFT,RIGHT]
+    input  dir_t                     move_dir,
     input  logic [MAP_MEM_WIDTH-1:0] map_mem_in,
     output logic [             10:0] player_x,      // screen-space
     output logic [              9:0] player_y,      // screen-space
@@ -44,12 +47,6 @@ module player_controller #(
     output logic [              9:0] map_player_y,
     output logic [   ADDR_WIDTH-1:0] map_addr
 );
-  // Direction indices
-  localparam int UP = 0;
-  localparam int DOWN = 1;
-  localparam int LEFT = 2;
-  localparam int RIGHT = 3;
-
   // ---- Derived geometry ----
   localparam int MAP_W_PX = NUM_COL * TILE_PX;  // 19 * 64 = 1216
   localparam int MAP_H_PX = NUM_ROW * TILE_PX;  // 11 * 64 = 704
@@ -128,11 +125,11 @@ module player_controller #(
       player_x <= 11'(INIT_X + HUD_SIDE_PX);
       player_y <= 10'(INIT_Y + HUD_TOP_PX);
     end else if (tick) begin
-      case (move_dir)
-        4'b1000: player_y <= (player_y - step[UP]);  // UP with saturation
-        4'b0100: player_y <= (player_y + step[DOWN]);  // DOWN with saturation
-        4'b0010: player_x <= (player_x - step[LEFT]);  // LEFT with saturation
-        4'b0001: player_x <= (player_x + step[RIGHT]);  // RIGHT with saturation
+      unique case (move_dir)
+        DIR_UP:    player_y <= (player_y - step[UP]);    // UP with saturation
+        DIR_DOWN:  player_y <= (player_y + step[DOWN]);  // DOWN with saturation
+        DIR_LEFT:  player_x <= (player_x - step[LEFT]);  // LEFT with saturation
+        DIR_RIGHT: player_x <= (player_x + step[RIGHT]); // RIGHT with saturation
       endcase
     end
   end
