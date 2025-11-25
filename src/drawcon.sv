@@ -1,5 +1,7 @@
 `timescale 1ns / 1ps
 
+`include "bomberman_dir.svh"
+
 /**
  * Module: drawcon
  * Description: Draws borders / map blocks and multiplexes colors based on map state.
@@ -47,6 +49,8 @@ module drawcon #(
     input logic [9:0] draw_y,
     input logic [10:0] player_x,
     input logic [9:0] player_y,
+    input logic [1:0] anim_frame,
+    input dir_t player_dir,
     output logic [3:0] o_r,
     o_g,
     o_b,
@@ -54,14 +58,26 @@ module drawcon #(
 );
 
   // ---------------------------------------------------------------------------
+  // Sprite sheet layout parameters
+  // ---------------------------------------------------------------------------
+  localparam int FRAMES_PER_DIR = 3;  // left/right share these 3 frames
+  localparam int NUM_DIRS_STORED = 3;  // LEFT/RIGHT, UP, DOWN
+  localparam int NUM_FRAMES_TOTAL = FRAMES_PER_DIR * NUM_DIRS_STORED;  // 9
+  localparam int SPR_PIXELS_PER_FRM = SPRITE_W * SPRITE_H;
+  localparam int SPRITE_ROM_DEPTH = NUM_FRAMES_TOTAL * SPR_PIXELS_PER_FRM;
+  localparam int SPRITE_ADDR_WIDTH = $clog2(SPRITE_ROM_DEPTH);
+
+  // ---------------------------------------------------------------------------
   // Sprite addressing
   // ---------------------------------------------------------------------------
-  // Single sprite memory for Bomberman_walking
-  logic [SPRITE_ADDR_WIDTH-1:0] sprite_addr;
-  logic [                 11:0] sprite_rgb_raw;
-  logic                         player_sprite;
-  logic [ $clog2(SPRITE_W)-1:0] sprite_local_x;
-  logic [ $clog2(SPRITE_H)-1:0] sprite_local_y;
+  logic [       SPRITE_ADDR_WIDTH-1:0] sprite_addr;
+  logic [                        11:0] sprite_rgb_raw;
+  logic                                player_sprite;
+
+  logic [        $clog2(SPRITE_W)-1:0] sprite_local_x;
+  logic [        $clog2(SPRITE_H)-1:0] sprite_local_y;
+  logic [        $clog2(SPRITE_W)-1:0] sprite_x_in_rom;
+  logic [$clog2(NUM_FRAMES_TOTAL)-1:0] frame_idx;
 
   always_comb begin
     player_sprite  = 1'b0;
@@ -74,16 +90,41 @@ module drawcon #(
       player_sprite  = 1'b1;
       sprite_local_x = draw_x - player_x;
       sprite_local_y = draw_y - player_y;
-      sprite_addr    = {sprite_local_y, sprite_local_x};
     end
   end
 
-  // Simply loads the down walking sprite for now.
+  always_comb begin
+    unique case (dir_t'(player_dir))
+      DIR_RIGHT: sprite_x_in_rom = SPRITE_W - 1 - sprite_local_x;  // mirrored
+      default:   sprite_x_in_rom = sprite_local_x;  // normal
+    endcase
+  end
+
+  always_comb begin
+    frame_idx = '0;
+    unique case (dir_t'(player_dir))
+      DIR_LEFT,
+      DIR_RIGHT: frame_idx = 0*FRAMES_PER_DIR + anim_frame; // 0..2
+      DIR_UP:    frame_idx = 1*FRAMES_PER_DIR + anim_frame; // 3..5
+      DIR_DOWN:  frame_idx = 2*FRAMES_PER_DIR + anim_frame; // 6..8
+      default:   frame_idx = '0;
+    endcase
+  end
+
+  always_comb begin
+    if (player_sprite) begin
+      sprite_addr = frame_idx * SPR_PIXELS_PER_FRM + sprite_local_y * SPRITE_W + sprite_x_in_rom;
+    end else begin
+      sprite_addr = '0;
+    end
+  end
+
   sprite_rom #(
       .SPRITE_W     (SPRITE_W),
       .SPRITE_H     (SPRITE_H),
+      .NUM_FRAMES   (9),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("down_1.mem")  // for now just use the down sprite
+      .MEM_INIT_FILE("player_1_sprites.mem")  // for now just use the down sprite
   ) bomberman_sprite_i (
       .addr(sprite_addr),
       .data(sprite_rgb_raw)
@@ -93,16 +134,18 @@ module drawcon #(
   // Border / map region detection
   // ---------------------------------------------------------------------------
   logic out_of_map;
+
   always_comb begin
     out_of_map =
-        (draw_x < BRD_H)   || (draw_x >= SCREEN_W - BRD_H)  ||
-        (draw_y < BRD_TOP) || (draw_y >= SCREEN_H - BRD_BOT);
+        (draw_x < BRD_H)              ||
+        (draw_x >= SCREEN_W - BRD_H) ||
+        (draw_y < BRD_TOP)           ||
+        (draw_y >= SCREEN_H - BRD_BOT);
   end
 
   // ---------------------------------------------------------------------------
   // Map state decoding
   // ---------------------------------------------------------------------------
-  // Map state-machine (0,1,2,...), with next-state obtained from the map_memory
   typedef enum logic [1:0] {
     no_blk          = 2'd0,
     perm_blk        = 2'd1,
@@ -116,16 +159,10 @@ module drawcon #(
   // ---------------------------------------------------------------------------
   // Color output muxing
   // ---------------------------------------------------------------------------
-  // Initially: multiplex different colors.
-  // When adding sprites: bring counter and control logic out, multiplexing at
-  // the memory and simply receiving pix_rgb as input.
-  logic is_player;
-  assign is_player = (draw_x >= player_x) && (draw_x < player_x + SPRITE_W) &&
-                     (draw_y >= player_y) && (draw_y < player_y + SPRITE_H);
   always_comb begin
     if (out_of_map) begin
       {o_r, o_g, o_b} = {BRD_R, BRD_G, BRD_B};
-    end else if (is_player) begin
+    end else if (player_sprite) begin
       {o_r, o_g, o_b} = sprite_rgb_raw;
     end else begin
       unique case (st)
@@ -133,7 +170,6 @@ module drawcon #(
         perm_blk:        {o_r, o_g, o_b} = 12'h0F0;
         destroyable_blk: {o_r, o_g, o_b} = 12'h00F;
         bomb:            {o_r, o_g, o_b} = 12'h333;
-        // power_up:     {o_r, o_g, o_b} = 12'h0F0;
         default:         {o_r, o_g, o_b} = 12'hFF0;  // bug state; yellow = error
       endcase
     end
@@ -142,10 +178,8 @@ module drawcon #(
   // ---------------------------------------------------------------------------
   // Map address generation
   // ---------------------------------------------------------------------------
-  // map_addr_drawcon addressing control
-  // Indexing the block address
-  localparam BLK_H_LOG2 = $clog2(BLK_H);
-  localparam BLK_W_LOG2 = $clog2(BLK_W);
+  localparam int BLK_H_LOG2 = $clog2(BLK_H);
+  localparam int BLK_W_LOG2 = $clog2(BLK_W);
 
   logic [10:0] map_x;
   logic [ 9:0] map_y;

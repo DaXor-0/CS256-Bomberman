@@ -1,4 +1,7 @@
 `timescale 1ns / 1ps
+
+`include "bomberman_dir.svh"
+
 /*
 * Module: check_obst
 * Description: Check for obstacles around a player sprite in a tile map.
@@ -37,12 +40,6 @@ module check_obst #(
     wire [TILE_SHIFT:0] obstacle_dist_right_probe = obstacle_dist[RIGHT];
   endgenerate
 `endif
-
-  // Direction indices
-  localparam int UP = 0;
-  localparam int DOWN = 1;
-  localparam int LEFT = 2;
-  localparam int RIGHT = 3;
 
   // ==========================================================================
   // Tile coordinates (64 px per tile -> shift by 6)
@@ -99,8 +96,8 @@ module check_obst #(
   end
 
   logic diagonal_down, diagonal_right;
-  assign diagonal_down  = (bottom_edge_offset > TILE_PX);   // sprite overlaps row below
-  assign diagonal_right = (right_edge_offset  > TILE_PX);   // sprite overlaps column to the right
+  assign diagonal_down  = (bottom_edge_offset > TILE_PX);  // sprite overlaps row below
+  assign diagonal_right = (right_edge_offset > TILE_PX);  // sprite overlaps column to the right
 
   // ===========================================================================
   // Direction counter (iterates through UP/DOWN/LEFT/RIGHT)

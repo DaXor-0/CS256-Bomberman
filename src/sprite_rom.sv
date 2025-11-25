@@ -11,26 +11,24 @@
 * - MEM_INIT_FILE: Path to the initialisation hex file.
 */
 module sprite_rom #(
-    parameter int SPRITE_W = 32,
-    parameter int SPRITE_H = 48,
-    parameter int DATA_WIDTH = 12,
-    parameter string MEM_INIT_FILE = "",
-    localparam int DEPTH = SPRITE_W * SPRITE_H,
-    localparam int ADDR_WIDTH = $clog2(DEPTH)
+    parameter int    SPRITE_W      = 32,
+    parameter int    SPRITE_H      = 48,
+    parameter int    NUM_FRAMES    = 9,                    // 3 right + 3 up + 3 down
+    parameter int    DATA_WIDTH    = 12,
+    parameter string MEM_INIT_FILE = "bomberman_walk.mem"
 ) (
-    input  logic [ADDR_WIDTH-1:0] addr,
+    input logic [$clog2(SPRITE_W*SPRITE_H*NUM_FRAMES)-1:0] addr,
     output logic [DATA_WIDTH-1:0] data
 );
 
-  (* rom_style = "distributed" *)
-  logic [DATA_WIDTH-1:0] mem[0:DEPTH-1];
+  localparam int ROM_DEPTH = SPRITE_W * SPRITE_H * NUM_FRAMES;
+
+  logic [DATA_WIDTH-1:0] rom[0:ROM_DEPTH-1];
 
   initial begin
-    if (MEM_INIT_FILE != "") begin
-      $readmemh(MEM_INIT_FILE, mem);
-    end
+    $readmemh(MEM_INIT_FILE, rom);
   end
 
-  assign data = mem[addr];
+  assign data = rom[addr];
 
 endmodule
