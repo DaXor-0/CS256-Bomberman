@@ -125,7 +125,7 @@ module player_controller #(
       player_x <= 11'(INIT_X + HUD_SIDE_PX);
       player_y <= 10'(INIT_Y + HUD_TOP_PX);
     end else if (tick) begin
-      unique case (move_dir)
+      case (move_dir)
         DIR_UP:    player_y <= (player_y - step[UP]);    // UP with saturation
         DIR_DOWN:  player_y <= (player_y + step[DOWN]);  // DOWN with saturation
         DIR_LEFT:  player_x <= (player_x - step[LEFT]);  // LEFT with saturation

@@ -94,20 +94,17 @@ module drawcon #(
   end
 
   always_comb begin
-    unique case (dir_t'(player_dir))
-      DIR_RIGHT: sprite_x_in_rom = SPRITE_W - 1 - sprite_local_x;  // mirrored
-      default:   sprite_x_in_rom = sprite_local_x;  // normal
-    endcase
+    sprite_x_in_rom = sprite_local_x;  // normal
+    if (player_dir == DIR_RIGHT) sprite_x_in_rom = SPRITE_W - 1 - sprite_local_x;
   end
 
   always_comb begin
     frame_idx = '0;
-    unique case (dir_t'(player_dir))
-      DIR_LEFT,
+    case (dir_t'(player_dir))
+      DIR_LEFT: frame_idx = 0*FRAMES_PER_DIR + anim_frame; // 0..2
       DIR_RIGHT: frame_idx = 0*FRAMES_PER_DIR + anim_frame; // 0..2
       DIR_UP:    frame_idx = 1*FRAMES_PER_DIR + anim_frame; // 3..5
       DIR_DOWN:  frame_idx = 2*FRAMES_PER_DIR + anim_frame; // 6..8
-      default:   frame_idx = '0;
     endcase
   end
 
@@ -124,7 +121,7 @@ module drawcon #(
       .SPRITE_H     (SPRITE_H),
       .NUM_FRAMES   (9),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("player_1_sprites.mem")  // for now just use the down sprite
+      .MEM_INIT_FILE("player_1_sprites.mem")  // 9-frame sheet: LR,UP,DOWN
   ) bomberman_sprite_i (
       .addr(sprite_addr),
       .data(sprite_rgb_raw)

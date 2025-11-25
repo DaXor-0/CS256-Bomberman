@@ -22,9 +22,9 @@ module check_obst #(
     input logic clk,
     input logic rst,
 
-    input logic [           10:0] player_x,   // pixel coords in logic map
-    input logic [            9:0] player_y,
-    input logic [MAP_MEM_WIDTH:0] map_mem_in, // BRAM/ROM data (1-cycle after addr)
+    input logic [             10:0] player_x,   // pixel coords in logic map
+    input logic [              9:0] player_y,
+    input logic [MAP_MEM_WIDTH-1:0] map_mem_in, // BRAM/ROM data (1-cycle after addr)
 
     output logic [3:0] obstacles,  // [0]=up,[1]=down,[2]=left,[3]=right
     output logic [ADDR_WIDTH-1:0] map_addr,  // BRAM/ROM address
@@ -151,7 +151,7 @@ module check_obst #(
     end else begin
       // Block only if we're crossing a tile boundary (eob_a)
       // and either: (a) we're at the map edge, or (b) the neighbor tile is non-empty.
-      unique case (dir_a)
+      case (dir_a)
         UP:
         obstacles[dir_a] <= eob[dir_a] & ( edge_block[dir_a] | (map_mem_in != 2'b00) | diagonal_right);
         DOWN:
