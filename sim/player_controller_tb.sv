@@ -5,7 +5,7 @@ module player_controller_tb;
   localparam int NUM_COL    = 19;
   localparam int TILE_PX    = 64;
   localparam int SPRITE_W   = 32;
-  localparam int SPRITE_H   = 64;
+  localparam int SPRITE_H   = 48;
   localparam int STEP_SIZE  = 32;
   localparam int SCREEN_W   = 1280;
   localparam int SCREEN_H   = 800;

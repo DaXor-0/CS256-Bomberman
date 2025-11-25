@@ -6,7 +6,7 @@ module check_obst_tb;
   localparam int NUM_COL    = 19;
   localparam int TILE_PX    = 64;
   localparam int SPRITE_W   = 32;
-  localparam int SPRITE_H   = 64;
+  localparam int SPRITE_H   = 48;
   localparam string MAP_FILE = "maps/basic_map.mem";
 
   localparam int TILE_SHIFT = $clog2(TILE_PX);

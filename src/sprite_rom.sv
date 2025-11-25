@@ -1,4 +1,4 @@
-`timescale 1ns/1ps
+`timescale 1ns / 1ps
 
 /**
 * Module: sprite_rom
@@ -12,18 +12,18 @@
 */
 module sprite_rom #(
     parameter int SPRITE_W = 32,
-    parameter int SPRITE_H = 64,
+    parameter int SPRITE_H = 48,
     parameter int DATA_WIDTH = 12,
     parameter string MEM_INIT_FILE = "",
     localparam int DEPTH = SPRITE_W * SPRITE_H,
     localparam int ADDR_WIDTH = $clog2(DEPTH)
-)(
+) (
     input  logic [ADDR_WIDTH-1:0] addr,
     output logic [DATA_WIDTH-1:0] data
 );
 
   (* rom_style = "distributed" *)
-  logic [DATA_WIDTH-1:0] mem [0:DEPTH-1];
+  logic [DATA_WIDTH-1:0] mem[0:DEPTH-1];
 
   initial begin
     if (MEM_INIT_FILE != "") begin

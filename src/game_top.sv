@@ -30,13 +30,6 @@ module game_top (
     .o_curr_x (curr_x),      .o_curr_y (curr_y)                           // what pixel are we on
   );
 
-  localparam logic [11:0] 
-      C_BLACK  = 12'h000,
-      C_WHITE  = 12'hFFF,
-      C_RED    = 12'hF00,
-      C_GREEN  = 12'h0F0,
-      C_BLUE   = 12'h00F;
-
   localparam int SCREEN_W = 1280;
   localparam int SCREEN_H = 800;
   localparam int MAP_NUM_ROW = 11;
@@ -56,42 +49,7 @@ module game_top (
   always_ff @(posedge pixclk)
     tick <= (curr_x == 0 && curr_y == 0);
 
-  // Single Sprite mem for Bomberman_walking
-  localparam int SPRITE_W = 32;
-  localparam int SPRITE_H = 64;
-  localparam int SPRITE_ADDR_WIDTH = $clog2(SPRITE_W * SPRITE_H);
-  logic [SPRITE_ADDR_WIDTH-1:0] sprite_addr;
-  logic [11:0] sprite_rgb_raw;
-  logic player_sprite;
-  logic [$clog2(SPRITE_W)-1:0] sprite_local_x;
-  logic [$clog2(SPRITE_H)-1:0] sprite_local_y;
 
-  always_comb begin
-    player_sprite = 1'b0;
-    sprite_local_x = '0;
-    sprite_local_y = '0;
-    sprite_addr    = '0;
-
-    if ((curr_x >= player_x) && (curr_x < player_x + SPRITE_W) &&
-        (curr_y >= player_y) && (curr_y < player_y + SPRITE_H)) begin
-      player_sprite = 1'b1;
-      sprite_local_x = curr_x - player_x;
-      sprite_local_y = curr_y - player_y;
-      sprite_addr = {sprite_local_y, sprite_local_x};
-    end
-  end
-
-  // Simply loads the down walking sprite for now.
-  sprite_rom #(
-      .SPRITE_W(SPRITE_W),
-      .SPRITE_H(SPRITE_H),
-      .DATA_WIDTH(12),
-      .MEM_INIT_FILE("down_1.mem") // for now just use the down sprite
-  ) bomberman_sprite_i (
-      .addr(sprite_addr),
-      .data(sprite_rgb_raw)
-  );
-  
   logic[3:0] move_dir;
   assign move_dir = {up, down, left, right};
   player_controller #(
@@ -133,8 +91,6 @@ module game_top (
   // Countdown to be displayed on 7-seg display.
 
   // Explosion Logic
-  
-
   map_mem #(
       .NUM_ROW(MAP_NUM_ROW),
       .NUM_COL(MAP_NUM_COL),
