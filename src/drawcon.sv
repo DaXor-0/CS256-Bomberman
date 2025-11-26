@@ -78,6 +78,7 @@ module drawcon #(
   logic [        $clog2(SPRITE_W)-1:0] sprite_x_in_rom;
   logic [$clog2(NUM_FRAMES_TOTAL)-1:0] sprite_offset;
 
+  // Determine if current pixel is within player sprite bounds
   always_comb begin
     player_sprite  = 1'b0;
     sprite_local_x = '0;
@@ -92,21 +93,24 @@ module drawcon #(
     end
   end
 
-  always_comb begin
-    sprite_x_in_rom = sprite_local_x;  // normal
-    if (player_dir == DIR_RIGHT) sprite_x_in_rom = SPRITE_W - 1 - sprite_local_x;
-  end
-
+  // Determine which sprite frame to use based on player direction and animation frame
   always_comb begin
     sprite_offset = '0;
     case (dir_t'(player_dir))
-      DIR_LEFT:  sprite_offset = 0*FRAMES_PER_DIR + anim_frame; // 0..2
-      DIR_RIGHT: sprite_offset = 0*FRAMES_PER_DIR + anim_frame; // 0..2
-      DIR_UP:    sprite_offset = 1*FRAMES_PER_DIR + anim_frame; // 3..5
-      DIR_DOWN:  sprite_offset = 2*FRAMES_PER_DIR + anim_frame; // 6..8
+      DIR_DOWN:  sprite_offset = 0*FRAMES_PER_DIR + anim_frame; // 0..2
+      DIR_LEFT:  sprite_offset = 1*FRAMES_PER_DIR + anim_frame; // 3..5
+      DIR_RIGHT: sprite_offset = 1*FRAMES_PER_DIR + anim_frame; // 3..5
+      DIR_UP:    sprite_offset = 2*FRAMES_PER_DIR + anim_frame; // 6..8
     endcase
   end
 
+  // If facing left, flip the right sprite horizontaly
+  always_comb begin
+    sprite_x_in_rom = sprite_local_x;
+    if (player_dir == DIR_LEFT) sprite_x_in_rom = SPRITE_W - 1 - sprite_local_x;
+  end
+
+  // Calculate final sprite ROM address also in correlation to frame offset
   always_comb begin
     if (player_sprite) begin
       sprite_addr = sprite_offset * SPR_PIXELS_PER_FRM + sprite_local_y * SPRITE_W + sprite_x_in_rom;
