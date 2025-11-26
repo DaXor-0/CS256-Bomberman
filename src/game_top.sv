@@ -163,7 +163,7 @@ module game_top (
   // end
 
   logic [1:0] anim_frame = 2'd1;
-  dit_t this_dir = DIR_LEFT;
+  dir_t this_dir = DIR_LEFT;
 
   // drawcon now contains sequential due to map FSM.
   drawcon drawcon_i (
