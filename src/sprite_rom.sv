@@ -30,6 +30,7 @@ module sprite_rom #(
     $readmemh(MEM_INIT_FILE, rom);
   end
 
-  assign data = rom[addr];
+  always_ff @(posedge clk)
+    data <= rom[addr];
 
 endmodule
