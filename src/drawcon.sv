@@ -43,6 +43,7 @@ module drawcon #(
     localparam ADDR_WIDTH = $clog2(DEPTH)       // bit-width of map_addr output
 ) (
     // Map Memory block state input
+    input logic clk,
     input logic [MAP_MEM_WIDTH-1:0] map_tile_state,
     input logic [10:0] draw_x,
     input logic [9:0] draw_y,
@@ -71,7 +72,9 @@ module drawcon #(
   // ---------------------------------------------------------------------------
   logic [       SPRITE_ADDR_WIDTH-1:0] sprite_addr;
   logic [                        11:0] sprite_rgb_raw;
+  logic [                        11:0] sprite_rgb_q;
   logic                                player_sprite;
+  logic                                player_sprite_q;
 
   logic [        $clog2(SPRITE_W)-1:0] sprite_local_x;
   logic [        $clog2(SPRITE_H)-1:0] sprite_local_y;
@@ -124,9 +127,16 @@ module drawcon #(
       .DATA_WIDTH   (12),
       .MEM_INIT_FILE("player_1.mem")  // 9-frame sheet: LR,UP,DOWN cropped to 32x48
   ) bomberman_sprite_i (
+      .clk (clk),
       .addr(sprite_addr),
       .data(sprite_rgb_raw)
   );
+
+  // Align sprite presence with synchronous ROM output (1-cycle latency)
+  always_ff @(posedge clk) begin
+    player_sprite_q <= player_sprite;
+    sprite_rgb_q    <= sprite_rgb_raw;
+  end
 
   // ---------------------------------------------------------------------------
   // Border / map region detection
@@ -160,8 +170,8 @@ module drawcon #(
   always_comb begin
     if (out_of_map) begin
       {o_r, o_g, o_b} = {BRD_R, BRD_G, BRD_B};
-    end else if (player_sprite) begin
-      {o_r, o_g, o_b} = sprite_rgb_raw;
+    end else if (player_sprite_q) begin
+      {o_r, o_g, o_b} = sprite_rgb_q;
     end else begin
       unique case (st)
         no_blk:          {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
