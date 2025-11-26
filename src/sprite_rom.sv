@@ -7,6 +7,7 @@
 *
 * Parameters:
 * - SPRITE_W / SPRITE_H: Dimensions of the sprite, used for bounds checking.
+* - NUM_FRAMES: Number of animation frames stored in the ROM.
 * - DATA_WIDTH: Bit width of each stored pixel entry.
 * - MEM_INIT_FILE: Path to the initialisation hex file.
 */

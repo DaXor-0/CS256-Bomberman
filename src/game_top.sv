@@ -155,6 +155,9 @@ module game_top (
       end else begin
         frame_cnt <= frame_cnt + 1;
         if ((frame_cnt + 1) % ANIM_HOLD == 0) anim_frame <= anim_frame + 1;
+        if (anim_frame == NUM_FRAMES - 1 && (frame_cnt + 1) % ANIM_HOLD == 0) begin
+          anim_frame <= 0;
+        end
       end
     end
   end

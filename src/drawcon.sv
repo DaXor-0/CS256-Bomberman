@@ -66,7 +66,6 @@ module drawcon #(
   localparam int SPRITE_ROM_DEPTH = NUM_FRAMES_TOTAL * SPR_PIXELS_PER_FRM;
   localparam int SPRITE_ADDR_WIDTH = $clog2(SPRITE_ROM_DEPTH);
 
-
   // ---------------------------------------------------------------------------
   // Sprite addressing
   // ---------------------------------------------------------------------------
@@ -77,7 +76,7 @@ module drawcon #(
   logic [        $clog2(SPRITE_W)-1:0] sprite_local_x;
   logic [        $clog2(SPRITE_H)-1:0] sprite_local_y;
   logic [        $clog2(SPRITE_W)-1:0] sprite_x_in_rom;
-  logic [$clog2(NUM_FRAMES_TOTAL)-1:0] frame_idx;
+  logic [$clog2(NUM_FRAMES_TOTAL)-1:0] sprite_offset;
 
   always_comb begin
     player_sprite  = 1'b0;
@@ -99,18 +98,18 @@ module drawcon #(
   end
 
   always_comb begin
-    frame_idx = '0;
+    sprite_offset = '0;
     case (dir_t'(player_dir))
-      DIR_LEFT: frame_idx = 0*FRAMES_PER_DIR + anim_frame; // 0..2
-      DIR_RIGHT: frame_idx = 0*FRAMES_PER_DIR + anim_frame; // 0..2
-      DIR_UP:    frame_idx = 1*FRAMES_PER_DIR + anim_frame; // 3..5
-      DIR_DOWN:  frame_idx = 2*FRAMES_PER_DIR + anim_frame; // 6..8
+      DIR_LEFT:  sprite_offset = 0*FRAMES_PER_DIR + anim_frame; // 0..2
+      DIR_RIGHT: sprite_offset = 0*FRAMES_PER_DIR + anim_frame; // 0..2
+      DIR_UP:    sprite_offset = 1*FRAMES_PER_DIR + anim_frame; // 3..5
+      DIR_DOWN:  sprite_offset = 2*FRAMES_PER_DIR + anim_frame; // 6..8
     endcase
   end
 
   always_comb begin
     if (player_sprite) begin
-      sprite_addr = frame_idx * SPR_PIXELS_PER_FRM + sprite_local_y * SPRITE_W + sprite_x_in_rom;
+      sprite_addr = sprite_offset * SPR_PIXELS_PER_FRM + sprite_local_y * SPRITE_W + sprite_x_in_rom;
     end else begin
       sprite_addr = '0;
     end
@@ -121,7 +120,7 @@ module drawcon #(
       .SPRITE_H     (SPRITE_H),
       .NUM_FRAMES   (9),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("player_1_sprites.mem")  // 9-frame sheet: LR,UP,DOWN
+      .MEM_INIT_FILE("player_1_sprites.mem")  // 9-frame sheet: LR,UP,DOWN cropped to 32x48
   ) bomberman_sprite_i (
       .addr(sprite_addr),
       .data(sprite_rgb_raw)
@@ -135,8 +134,8 @@ module drawcon #(
   always_comb begin
     out_of_map =
         (draw_x < BRD_H)              ||
-        (draw_x >= SCREEN_W - BRD_H) ||
-        (draw_y < BRD_TOP)           ||
+        (draw_x >= SCREEN_W - BRD_H)  ||
+        (draw_y < BRD_TOP)            ||
         (draw_y >= SCREEN_H - BRD_BOT);
   end
 
