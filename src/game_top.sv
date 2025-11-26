@@ -164,7 +164,6 @@ module game_top (
 
   // drawcon now contains sequential due to map FSM.
   drawcon drawcon_i (
-      .clk(pixclk),
       .map_tile_state(map_tile_state_drawcon),
       .draw_x(curr_x_d),
       .draw_y(curr_y_d),
