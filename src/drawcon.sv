@@ -81,15 +81,13 @@ module drawcon #(
   // Determine if current pixel is within player sprite bounds
   always_comb begin
     player_sprite  = 1'b0;
-    sprite_local_x = '0;
-    sprite_local_y = '0;
+    sprite_local_x = draw_x - player_x;
+    sprite_local_y = draw_y - player_y;
     sprite_addr    = '0;
 
     if ((draw_x >= player_x) && (draw_x < player_x + SPRITE_W) &&
         (draw_y >= player_y) && (draw_y < player_y + SPRITE_H)) begin
       player_sprite  = 1'b1;
-      sprite_local_x = draw_x - player_x;
-      sprite_local_y = draw_y - player_y;
     end
   end
 
