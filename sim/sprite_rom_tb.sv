@@ -1,16 +1,18 @@
 `timescale 1ns/1ps
 
 module sprite_rom_tb;
+    
+    
+    parameter int    SPRITE_W      = 32;
+    parameter int    SPRITE_H      = 48;
+    parameter int    NUM_FRAMES    = 9;
+    parameter int    DATA_WIDTH    = 12;
+    parameter string MEM_INIT_FILE = "player_1.mem";
 
-  logic [10:0] addr;
+  logic [$clog2(SPRITE_W*SPRITE_H*NUM_FRAMES)-1:0] addr;
   logic [11:0] data;
 
-  sprite_rom #(
-      .SPRITE_W(32),
-      .SPRITE_H(64),
-      .DATA_WIDTH(12),
-      .MEM_INIT_FILE("sprites/walk/mem/down_1.mem")
-  ) dut (
+  sprite_rom  dut (
       .addr(addr),
       .data(data)
   );
@@ -28,7 +30,7 @@ module sprite_rom_tb;
       end
       $write("\n");
     end
-    #20 $finish;
+    #20;
   end
 
 endmodule
