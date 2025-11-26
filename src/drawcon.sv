@@ -43,6 +43,7 @@ module drawcon #(
     localparam ADDR_WIDTH = $clog2(DEPTH)       // bit-width of map_addr output
 ) (
     // Map Memory block state input
+    input clk,
     input logic [MAP_MEM_WIDTH-1:0] map_tile_state,
     input logic [10:0] draw_x,
     input logic [9:0] draw_y,
@@ -124,6 +125,7 @@ module drawcon #(
       .DATA_WIDTH   (12),
       .MEM_INIT_FILE("player_1.mem")  // 9-frame sheet: LR,UP,DOWN cropped to 32x48
   ) bomberman_sprite_i (
+      .clk(clk),
       .addr(sprite_addr),
       .data(sprite_rgb_raw)
   );
