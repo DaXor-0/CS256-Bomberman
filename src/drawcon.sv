@@ -5,6 +5,7 @@
 /**
  * Module: drawcon
  * Description: Draws borders / map blocks and multiplexes colors based on map state.
+ *              Player sprite comes from a synchronous ROM; related gating is pipelined by 1 cycle.
  *
  * Parameters:
  *  - MAP_MEM_WIDTH : $clog2(number of map states)
@@ -90,7 +91,7 @@ module drawcon #(
 
     if ((draw_x >= player_x) && (draw_x < player_x + SPRITE_W) &&
         (draw_y >= player_y) && (draw_y < player_y + SPRITE_H)) begin
-      player_sprite  = 1'b1;
+      player_sprite = 1'b1;
     end
   end
 
@@ -125,7 +126,7 @@ module drawcon #(
       .SPRITE_H     (SPRITE_H),
       .NUM_FRAMES   (9),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("player_1.mem")  // 9-frame sheet: LR,UP,DOWN cropped to 32x48
+      .MEM_INIT_FILE("player_1.mem")  // 9-frame sheet: DOWN,LR,UP cropped to 32x48
   ) bomberman_sprite_i (
       .clk (clk),
       .addr(sprite_addr),
@@ -142,6 +143,7 @@ module drawcon #(
   // Border / map region detection
   // ---------------------------------------------------------------------------
   logic out_of_map;
+  logic out_of_map_q;
 
   always_comb begin
     out_of_map =
@@ -163,17 +165,24 @@ module drawcon #(
 
   map_state st;
   assign st = map_state'(map_tile_state);
+  map_state st_q;
 
   // ---------------------------------------------------------------------------
   // Color output muxing
   // ---------------------------------------------------------------------------
+  // Everything is pipelined by 1 cycle to line up with the synchronous sprite ROM.
+  always_ff @(posedge clk) begin
+    out_of_map_q <= out_of_map;
+    st_q         <= st;
+  end
+
   always_comb begin
-    if (out_of_map) begin
+    if (out_of_map_q) begin
       {o_r, o_g, o_b} = {BRD_R, BRD_G, BRD_B};
     end else if (player_sprite_q) begin
       {o_r, o_g, o_b} = sprite_rgb_q;
     end else begin
-      unique case (st)
+      unique case (st_q)
         no_blk:          {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
         perm_blk:        {o_r, o_g, o_b} = 12'h0F0;
         destroyable_blk: {o_r, o_g, o_b} = 12'h00F;
