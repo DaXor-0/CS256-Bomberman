@@ -120,7 +120,7 @@ module drawcon #(
       .SPRITE_H     (SPRITE_H),
       .NUM_FRAMES   (9),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("player_1_sprites.mem")  // 9-frame sheet: LR,UP,DOWN cropped to 32x48
+      .MEM_INIT_FILE("player_1.mem")  // 9-frame sheet: LR,UP,DOWN cropped to 32x48
   ) bomberman_sprite_i (
       .addr(sprite_addr),
       .data(sprite_rgb_raw)

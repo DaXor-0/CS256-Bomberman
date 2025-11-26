@@ -14,9 +14,9 @@
 module sprite_rom #(
     parameter int    SPRITE_W      = 32,
     parameter int    SPRITE_H      = 48,
-    parameter int    NUM_FRAMES    = 9,                    // 3 right + 3 up + 3 down
+    parameter int    NUM_FRAMES    = 9,
     parameter int    DATA_WIDTH    = 12,
-    parameter string MEM_INIT_FILE = "bomberman_walk.mem"
+    parameter string MEM_INIT_FILE = "player_1.mem"
 ) (
     input logic [$clog2(SPRITE_W*SPRITE_H*NUM_FRAMES)-1:0] addr,
     output logic [DATA_WIDTH-1:0] data
