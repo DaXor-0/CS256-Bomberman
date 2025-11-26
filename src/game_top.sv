@@ -142,25 +142,28 @@ module game_top (
   localparam int ANIM_HOLD = 5;  // hold each frame for 5 ticks
   localparam int NUM_FRAMES = 3;  // walking frames: 0,1,2
 
-  logic [7:0] frame_cnt;  // free counter
-  logic [1:0] anim_frame;  // final output (0,1,2)
-  always_ff @(posedge pixclk) begin
-    if (rst) begin
-      frame_cnt  <= 8'd0;
-      anim_frame <= 2'd0;
-    end else if (tick && move_dir != DIR_NONE) begin
-      if (frame_cnt == (ANIM_HOLD * NUM_FRAMES - 1)) begin
-        frame_cnt  <= 0;
-        anim_frame <= 0;
-      end else begin
-        frame_cnt <= frame_cnt + 1;
-        if ((frame_cnt + 1) % ANIM_HOLD == 0) anim_frame <= anim_frame + 1;
-        if (anim_frame == NUM_FRAMES - 1 && (frame_cnt + 1) % ANIM_HOLD == 0) begin
-          anim_frame <= 0;
-        end
-      end
-    end
-  end
+  // logic [7:0] frame_cnt;  // free counter
+  // logic [1:0] anim_frame;  // final output (0,1,2)
+  // always_ff @(posedge pixclk) begin
+  //   if (rst) begin
+  //     frame_cnt  <= 8'd0;
+  //     anim_frame <= 2'd0;
+  //   end else if (tick && move_dir != DIR_NONE) begin
+  //     if (frame_cnt == (ANIM_HOLD * NUM_FRAMES - 1)) begin
+  //       frame_cnt  <= 0;
+  //       anim_frame <= 0;
+  //     end else begin
+  //       frame_cnt <= frame_cnt + 1;
+  //       if ((frame_cnt + 1) % ANIM_HOLD == 0) anim_frame <= anim_frame + 1;
+  //       if (anim_frame == NUM_FRAMES - 1 && (frame_cnt + 1) % ANIM_HOLD == 0) begin
+  //         anim_frame <= 0;
+  //       end
+  //     end
+  //   end
+  // end
+
+  logic [1:0] anim_frame = 2'd1;
+  dit_t this_dir = DIR_LEFT;
 
   // drawcon now contains sequential due to map FSM.
   drawcon drawcon_i (
@@ -170,7 +173,7 @@ module game_top (
       .player_x(player_x),
       .player_y(player_y),
       .anim_frame(anim_frame),
-      .player_dir(move_dir),
+      .player_dir(this_dir),
       .o_r(drawcon_o_r),
       .o_g(drawcon_o_g),
       .o_b(drawcon_o_b),
