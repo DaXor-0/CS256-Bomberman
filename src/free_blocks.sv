@@ -78,7 +78,7 @@ module free_blocks
       saved_explosion_addr <= 0;
       dir_cnt <= 0;
       dir_a <= 0;
-      read_addr <= 0;
+      blk_status <= 0;
     end 
     else
     begin
@@ -92,10 +92,11 @@ module free_blocks
             dir_a <= dir_cnt;
           end else 
             dir_cnt <= 0;
+            blk_status <= 0;
         end
         CHECK_BLKS:
         begin
-          dir_cnt <= dir_cnt + 1;
+          if (dir_cnt != 2'b0) dir_cnt <= dir_cnt + 1;
           dir_a   <= dir_cnt;
           if (map_mem_in == 2'b2) blk_status[dir_a] <= 1'b1; // Mark as needs to be free
         end
@@ -111,7 +112,7 @@ module free_blocks
                        (dir_cnt == DOWN)  ? saved_explosion_addr + NUM_COL :  // DOWN
                        (dir_cnt == LEFT)  ? saved_explosion_addr - 1 :        // LEFT
                                             saved_explosion_addr + 1;         // RIGHT
-    assign check_done = ((st==CHECK_BLKS) && (dir_cnt == 2'b11));
+    assign check_done = ((st==CHECK_BLKS) && (dir_cnt == 2'b00));
     assign free_done  = ((st==FREE_BLKS)  && (dir_cnt == 2'b11));
     assign write_data = 2'b0; // write a free_blk
     assign write_en   = ((st==FREE_BLKS) && blk_status[dir_cnt]);
