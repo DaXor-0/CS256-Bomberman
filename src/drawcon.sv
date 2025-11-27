@@ -87,7 +87,7 @@ module drawcon #(
     player_sprite  = 1'b0;
     sprite_local_x = draw_x - player_x;
     sprite_local_y = draw_y - player_y;
-    sprite_addr    = '0;
+    sprite_addr    = sprite_local_x * SPRITE_W + sprite_local_y;
 
     if ((draw_x >= player_x) && (draw_x < player_x + SPRITE_W) &&
         (draw_y >= player_y) && (draw_y < player_y + SPRITE_H)) begin
