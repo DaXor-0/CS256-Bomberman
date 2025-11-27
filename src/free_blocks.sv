@@ -45,7 +45,7 @@ module free_blocks
   // -----------------------------------------------------------------
   // -- FSM for the explosion logic, explosion_state --
   // -----------------------------------------------------------------
-  typedef enum logic [1:0] { IDLE, CHECK_BLKS, FREE_BLKS } bomb_state;
+  typedef enum logic [1:0] { IDLE, REQ_READ, CHECK_BLKS, FREE_BLKS } bomb_state;
 
   bomb_state st, nst;
 
@@ -59,7 +59,8 @@ module free_blocks
   begin
     nst = st; // State remains unchanged if no condition triggered.
     case (st)
-      IDLE: if (free_blks_signal) nst = CHECK_BLKS;
+      IDLE: if (free_blks_signal) nst = REQ_READ;
+      REQ_READ: if (read_granted) nst = CHECK_BLKS;
       CHECK_BLKS: if (check_done) nst = FREE_BLKS;
       FREE_BLKS: if (free_done) nst = IDLE;
       default: nst = IDLE;
@@ -90,11 +91,18 @@ module free_blocks
           if (free_blks_signal) 
           begin
             saved_explosion_addr <= explosion_addr;
-            dir_cnt <= dir_cnt + 1;
-            dir_a <= dir_cnt;
           end else 
             dir_cnt <= 0;
             blk_status <= 0;
+        end
+        REQ_READ:
+        begin
+          // Waiting for read to be granted
+          if (read_granted)
+          begin
+            dir_cnt <= dir_cnt + 1;
+            dir_a <= dir_cnt;
+          end
         end
         CHECK_BLKS:
         begin
@@ -117,5 +125,6 @@ module free_blocks
     assign free_done  = ((st==FREE_BLKS)  && (dir_cnt == 2'b11));
     assign write_data = 2'b0; // write a free_blk
     assign write_en   = ((st==FREE_BLKS) && blk_status[dir_cnt]);
+    assign read_req   = ((st==REQ_READ) || (st==CHECK_BLKS));
 
 endmodule

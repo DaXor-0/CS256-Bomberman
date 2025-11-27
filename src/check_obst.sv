@@ -25,7 +25,9 @@ module check_obst #(
     input logic [             10:0] player_x,   // pixel coords in logic map
     input logic [              9:0] player_y,
     input logic [MAP_MEM_WIDTH-1:0] map_mem_in, // BRAM/ROM data (1-cycle after addr)
+    input logic read_granted,
 
+    output logic read_req,
     output logic [3:0] obstacles,  // [0]=up,[1]=down,[2]=left,[3]=right
     output logic [ADDR_WIDTH-1:0] map_addr,  // BRAM/ROM address
     output logic [TILE_SHIFT:0]     obstacle_dist [3:0], // distance (px) to next obstacle or max if none
@@ -105,7 +107,7 @@ module check_obst #(
   logic [1:0] dir_cnt;
   always_ff @(posedge clk) begin
     if (rst) dir_cnt <= 2'd0;
-    else dir_cnt <= dir_cnt + 2'd1;
+    else if (read_granted) dir_cnt <= dir_cnt + 2'd1;
   end
 
   // ===========================================================================
@@ -117,9 +119,11 @@ module check_obst #(
     if (rst) begin
       dir_a           <= 2'd0;
       obstacles_valid <= 1'b0;
+      read_req        <= 1'b0;
     end else begin
       dir_a           <= dir_cnt;  // wait 1 cycle for correct map_mem_in to arrive from memory
       obstacles_valid <= (dir_a == 2'b11);  // equivalent to dir_a == 2'b11 (2 cycle delay).
+      read_req        <= (dir_cnt == 2'b11);
     end
   end
 
