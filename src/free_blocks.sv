@@ -27,8 +27,9 @@ module free_blocks
     input logic free_blks_signal,
     input logic [ADDR_WIDTH-1:0] explosion_addr,
     input logic [MAP_MEM_WIDTH-1:0] map_mem_in,
-    input logic read_ready,
-    
+    input logic read_granted,
+
+    output logic read_req, 
     output logic [ADDR_WIDTH-1:0] read_addr,
     output logic [ADDR_WIDTH-1:0] write_addr,
     output logic [MAP_MEM_WIDTH-1:0] write_data,
@@ -72,6 +73,7 @@ module free_blocks
   logic [3:0] blk_status;
   logic [1:0] dir_cnt, dir_a;
 
+
   always_ff @( posedge clk ) 
     if (rst)
     begin
@@ -106,7 +108,6 @@ module free_blocks
         end
       endcase
     end
-
 
     assign read_addr = (dir_cnt == UP)    ? explosion_addr - NUM_COL :        // UP
                        (dir_cnt == DOWN)  ? saved_explosion_addr + NUM_COL :  // DOWN
