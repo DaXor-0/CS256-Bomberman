@@ -55,7 +55,9 @@ module game_top (
   // Logic for positioning rectangle control.
   logic [10:0] player_x, map_player_x;
   logic [9:0] player_y, map_player_y;
-  logic [MAP_ADDR_WIDTH-1:0] map_addr_obst, map_addr_drawcon;
+  logic [MAP_ADDR_WIDTH-1:0] map_addr_obst, map_addr_drawcon, read_addr;
+  logic [MAP_ADDR_WIDTH-1:0] read_addr_req [0:1];
+  logic [1:0] read_req, read_granted;
   logic [MAP_MEM_WIDTH-1:0] map_tile_state_obst, map_tile_state_drawcon;
 
   // one-cycle pulse, synchronous to pixclk
@@ -90,7 +92,9 @@ module game_top (
       .player_x(player_x),
       .player_y(player_y),
       .map_player_x(map_player_x),
-      .map_player_y(map_player_y)
+      .map_player_y(map_player_y),
+      .read_granted(read_granted[0]),
+      .read_req(read_req[0])
   );
 
 
@@ -113,6 +117,27 @@ module game_top (
   );
 
   // Explosion Logic
+
+
+  // Free Blocks
+
+
+  // Map memory read controller (arbiter)
+  mem_read_controller r_arbiter (
+    .clk(pixclk),
+    .rst(rst),
+    .read_req(read_req),
+    .read_addr_req(read_addr_req),
+    .read_addr(read_addr),
+    .read_granted(read_granted)
+  )
+
+  assign read_req[1] = 0;
+  assign read_addr_req[0] = map_addr_obst;
+
+  // Map memory write controller (arbiter)
+
+  // Map memory
   map_mem #(
       .NUM_ROW(MAP_NUM_ROW),
       .NUM_COL(MAP_NUM_COL),
@@ -121,7 +146,7 @@ module game_top (
   ) mem_i (
       .clk(pixclk),
       .rst(rst),
-      .rd_addr_1(map_addr_obst),
+      .rd_addr_1(read_addr),
       .rd_data_1(map_tile_state_obst),
       .rd_addr_2(map_addr_drawcon),
       .rd_data_2(map_tile_state_drawcon),

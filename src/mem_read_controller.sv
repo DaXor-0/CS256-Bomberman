@@ -30,7 +30,7 @@ module mem_read_controller
     // --- Internal State ---
 
     // -----------------------------------------------------------------
-    typedef enum data_type { IDLE, BUSY } read_state;
+    typedef enum logic { IDLE, BUSY } read_state;
 
     read_state st, nst;
 

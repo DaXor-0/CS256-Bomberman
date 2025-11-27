@@ -41,6 +41,9 @@ module player_controller #(
     input  logic                     tick,
     input  dir_t                     move_dir,
     input  logic [MAP_MEM_WIDTH-1:0] map_mem_in,
+    input logic read_granted,
+
+    output logic read_req,
     output logic [             10:0] player_x,      // screen-space
     output logic [              9:0] player_y,      // screen-space
     output logic [             10:0] map_player_x,
@@ -87,7 +90,9 @@ module player_controller #(
       .obstacles      (obstacles),
       .map_addr       (map_addr),
       .obstacle_dist  (obstacle_dist),
-      .obstacles_valid(obstacles_valid)
+      .obstacles_valid(obstacles_valid),
+      .read_granted   (read_granted),
+      .read_req       (read_req)
   );
 
   // ---- Register obstacles for stable use ----
