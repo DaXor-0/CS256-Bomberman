@@ -13,6 +13,8 @@ def rgb_to_12bit_hex(rgb):
 def parse_background(bg_string):
     if bg_string is None or bg_string.lower() == "none":
         return None
+    if bg_string.lower() == "auto":
+        return "auto"
     try:
         parts = [int(x) for x in bg_string.split(",")]
         if len(parts) != 3:
@@ -38,7 +40,7 @@ def main():
     parser.add_argument("--height", type=int, default=48,
                         help="Sprite height in pixels (default: 48)")
     parser.add_argument("--background", type=parse_background, default=None,
-                        help="Background RGB as 'R,G,B' or 'none' to auto-detect (default: none)")
+                        help="Background RGB as 'R,G,B', 'none' or 'auto' to auto-detect 1st pixel (default: none)")
 
     args = parser.parse_args()
 
@@ -46,14 +48,16 @@ def main():
     width, height = img.size
 
     expected_width = args.sprites * args.width
-    if height < args.height or width < expected_width:
+    if height != args.height or width != expected_width:
         raise ValueError(
-            f"Image too small: got {width}x{height}, "
-            f"need at least {expected_width}x{args.height}"
+            f"Wrong img size: got {width}x{height}, "
+            f"need {expected_width}x{args.height}"
         )
 
     # Detect background
     if args.background is None:
+        bg_rgb = None
+    elif args.background == "auto":
         bg_pixel = img.getpixel((0, 0))  # RGBA
         bg_rgb = bg_pixel[:3]
     else:
