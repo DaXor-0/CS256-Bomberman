@@ -32,12 +32,12 @@ module drawcon #(
     parameter             BLK_H         = 64,    // should be power of 2
     parameter             SPRITE_W      = 32,
     parameter             SPRITE_H      = 48,
-    parameter logic [3:0] BRD_R         = 4'hF,
-                          BRD_G         = 4'hF,
-                          BRD_B         = 4'hF,
-    parameter logic [3:0] BG_R          = 4'h0,
-                          BG_G          = 4'h0,
-                          BG_B          = 4'h0,
+    parameter logic [3:0] BRD_R         = 4'h1,
+                          BRD_G         = 4'h7,
+                          BRD_B         = 4'h3,
+    parameter logic [3:0] BG_R          = 4'hF,
+                          BG_G          = 4'hF,
+                          BG_B          = 4'hF,
 
     // Derived parameters (not overridable)
     localparam DEPTH      = NUM_COL * NUM_ROW,
@@ -57,6 +57,9 @@ module drawcon #(
     o_b,
     output logic [ADDR_WIDTH-1:0] map_addr
 );
+
+  localparam int BLK_W_LOG2 = $clog2(BLK_W);
+  localparam int BLK_H_LOG2 = $clog2(BLK_H);
 
   // ---------------------------------------------------------------------------
   // Sprite sheet layout parameters
@@ -168,12 +171,23 @@ module drawcon #(
   map_state st_q;
 
   // ---------------------------------------------------------------------------
+  // Permanent block sprite (64x64)
+  // ---------------------------------------------------------------------------
+  localparam int PERM_BLK_ADDR_WIDTH = $clog2(BLK_W * BLK_H);
+  logic [BLK_W_LOG2-1:0] perm_blk_local_x, perm_blk_local_x_q;
+  logic [BLK_H_LOG2-1:0] perm_blk_local_y, perm_blk_local_y_q;
+  logic [PERM_BLK_ADDR_WIDTH-1:0] perm_blk_addr;
+  logic [                   11:0] perm_blk_rgb;
+
+  // ---------------------------------------------------------------------------
   // Color output muxing
   // ---------------------------------------------------------------------------
   // Everything is pipelined by 1 cycle to line up with the synchronous sprite ROM.
   always_ff @(posedge clk) begin
-    out_of_map_q <= out_of_map;
-    st_q         <= st;
+    out_of_map_q       <= out_of_map;
+    st_q               <= st;
+    perm_blk_local_x_q <= perm_blk_local_x;
+    perm_blk_local_y_q <= perm_blk_local_y;
   end
 
   always_comb begin
@@ -184,7 +198,7 @@ module drawcon #(
     end else begin
       unique case (st_q)
         no_blk:          {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
-        perm_blk:        {o_r, o_g, o_b} = 12'h0F0;
+        perm_blk:        {o_r, o_g, o_b} = perm_blk_rgb;
         destroyable_blk: {o_r, o_g, o_b} = 12'h00F;
         bomb:            {o_r, o_g, o_b} = 12'h333;
         default:         {o_r, o_g, o_b} = 12'hFF0;  // bug state; yellow = error
@@ -195,9 +209,6 @@ module drawcon #(
   // ---------------------------------------------------------------------------
   // Map address generation
   // ---------------------------------------------------------------------------
-  localparam int BLK_H_LOG2 = $clog2(BLK_H);
-  localparam int BLK_W_LOG2 = $clog2(BLK_W);
-
   logic [10:0] map_x;
   logic [ 9:0] map_y;
   logic [4:0] row, col;
@@ -206,6 +217,23 @@ module drawcon #(
   // Accounting for the border offset so that indexing is done correctly.
   assign map_x = draw_x - BRD_H;
   assign map_y = draw_y - BRD_TOP;
+
+  assign perm_blk_local_x = map_x[BLK_W_LOG2-1:0];
+  assign perm_blk_local_y = map_y[BLK_H_LOG2-1:0];
+
+  assign perm_blk_addr = {perm_blk_local_y_q, perm_blk_local_x_q};
+
+  sprite_rom #(
+      .SPRITE_W     (BLK_W),
+      .SPRITE_H     (BLK_H),
+      .NUM_FRAMES   (1),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("sprites/w1/mem/perm_blk.mem")
+  ) perm_blk_sprite_i (
+      .clk (clk),
+      .addr(perm_blk_addr),
+      .data(perm_blk_rgb)
+  );
 
   always_comb begin
     col       = map_x >> BLK_W_LOG2;
