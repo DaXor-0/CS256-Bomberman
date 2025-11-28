@@ -104,6 +104,7 @@ module check_obst #(
   // ===========================================================================
   // Direction counter (iterates through UP/DOWN/LEFT/RIGHT)
   // ===========================================================================
+  logic [1:0] dir_cnt;
   
   // adding two states: WAIT, CHECK for read arbitering logic
   typedef enum logic { WAIT, CHECK } check_state;
@@ -126,8 +127,7 @@ module check_obst #(
 
   assign read_done = (st == CHECK) && ~read_req;
   assign read_req = (st == WAIT) || ((st == CHECK) && (dir_cnt != 2'b0));
-  
-  logic [1:0] dir_cnt;
+
   always_ff @(posedge clk) begin
     if (rst) begin dir_cnt <= 2'd0; end
     else 
