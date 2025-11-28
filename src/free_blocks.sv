@@ -108,7 +108,7 @@ module free_blocks
         begin
           if (dir_cnt != 2'b0) dir_cnt <= dir_cnt + 1;
           dir_a   <= dir_cnt;
-          if (map_mem_in == 2'b2) blk_status[dir_a] <= 1'b1; // Mark as needs to be free
+          if (map_mem_in == 2'd2) blk_status[dir_a] <= 1'b1; // Mark as needs to be free
         end
         FREE_BLKS:
         begin

@@ -113,6 +113,9 @@ module drawcon #(
   logic [        $clog2(SPRITE_H)-1:0] sprite_local_y;
   logic [        $clog2(SPRITE_W)-1:0] sprite_x_in_rom;
   logic [$clog2(NUM_FRAMES_TOTAL)-1:0] sprite_offset;
+  
+  logic [ADDR_WIDTH-1:0] addr_next;
+
 
   // Determine if current pixel is within player sprite bounds
   always_comb begin
@@ -181,7 +184,7 @@ module drawcon #(
             (blk_addr == exp - NUM_COL) ||
             (blk_addr == exp + NUM_COL) ||
             (blk_addr == exp - 1) ||
-            (blk_addr == exp - 1));
+            (blk_addr == exp + 1));
   endfunction
 
 
@@ -265,7 +268,6 @@ module drawcon #(
   logic [10:0] map_x;
   logic [ 9:0] map_y;
   logic [4:0] row, col;
-  logic [ADDR_WIDTH-1:0] addr_next;
 
   // Accounting for the border offset so that indexing is done correctly.
   assign map_x = draw_x - BRD_H;

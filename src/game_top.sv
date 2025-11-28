@@ -169,7 +169,6 @@ module game_top (
       .read_granted(read_granted)
   );
 
-  assign read_req[1] = 1'b0;
   assign read_addr_req[0] = map_addr_obst;
 
   // Map memory write controller (arbiter)
