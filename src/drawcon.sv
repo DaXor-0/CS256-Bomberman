@@ -86,7 +86,7 @@ module drawcon #(
   localparam int BOMB_TOTAL_ANIMATION_TIME = 180;  // 3 seconds at 60 fps
   localparam int BOMB_SPRITE_BLACK_TIME = 120;
   localparam int BOMB_SPRITE_RED_RIME = 60;
-  localparam int BOMB_ANIM_TIME = 15;  // hold each frame for 15 ticks
+  localparam int BOMB_ANIM_TIME = 20;  // hold each frame for 20 ticks
 
   localparam int DEST_FRAMES = 6;
   localparam int DEST_SPRITE_SIZE = BLK_W * BLK_H;
@@ -102,12 +102,16 @@ module drawcon #(
   logic [1:0] walk_frame;  // ranges 0,1,2
   logic [5:0] dest_frame_cnt;
   logic [2:0] dest_frame;  // ranges 0..5
+  logic [7:0] bomb_frame_cnt;
+  logic [2:0] bomb_frame;
   always_ff @(posedge clk) begin
     if (rst) begin
       frame_cnt <= 6'd0;
       walk_frame <= 2'd0;
       dest_frame_cnt <= 6'd0;
       dest_frame <= 3'd0;
+      bomb_frame_cnt <= 8'd0;
+      bomb_frame <= 3'd0;
     end else if (tick) begin
       frame_cnt <= frame_cnt + 1;
       if (frame_cnt == 6'd59) frame_cnt <= 0;
@@ -130,6 +134,21 @@ module drawcon #(
         dest_frame_cnt <= 6'd0;
         dest_frame <= 3'd0;
       end
+
+      if (bomb_frame_cnt == BOMB_TOTAL_ANIMATION_TIME - 1) bomb_frame_cnt <= 8'd0;
+      else bomb_frame_cnt <= bomb_frame_cnt + 1;
+
+      // Bomb animation: frames 0-2 repeat every 20 ticks for the first 120 ticks,
+      // then frames 3-5 for the last 60 ticks (one every 20).
+      if (bomb_frame_cnt < BOMB_ANIM_TIME) bomb_frame <= 3'd0;
+      else if (bomb_frame_cnt < 2 * BOMB_ANIM_TIME) bomb_frame <= 3'd1;
+      else if (bomb_frame_cnt < 3 * BOMB_ANIM_TIME) bomb_frame <= 3'd2;
+      else if (bomb_frame_cnt < 4 * BOMB_ANIM_TIME) bomb_frame <= 3'd0;
+      else if (bomb_frame_cnt < 5 * BOMB_ANIM_TIME) bomb_frame <= 3'd1;
+      else if (bomb_frame_cnt < 6 * BOMB_ANIM_TIME) bomb_frame <= 3'd2;
+      else if (bomb_frame_cnt < 7 * BOMB_ANIM_TIME) bomb_frame <= 3'd3;
+      else if (bomb_frame_cnt < 8 * BOMB_ANIM_TIME) bomb_frame <= 3'd4;
+      else bomb_frame <= 3'd5;
     end
   end
 
@@ -213,10 +232,15 @@ module drawcon #(
   logic [BLK_H_LOG2-1:0] perm_blk_local_y, perm_blk_local_y_q;
   logic [BLK_W_LOG2-1:0] dest_blk_local_x, dest_blk_local_x_q;
   logic [BLK_H_LOG2-1:0] dest_blk_local_y, dest_blk_local_y_q;
+  logic [BLK_W_LOG2-1:0] bomb_local_x, bomb_local_x_q;
+  logic [BLK_H_LOG2-1:0] bomb_local_y, bomb_local_y_q;
   logic [        BLK_ADDR_WIDTH-1:0] perm_blk_addr;
   logic [                      11:0] perm_blk_rgb;
   logic [        BLK_ADDR_WIDTH-1:0] dest_blk_addr;
   logic [                      11:0] dest_blk_rgb;
+  logic [BOMB_SPRITE_ADDR_WIDTH-1:0] bomb_sprite_addr;
+  logic [                      11:0] bomb_sprite_rgb;
+  logic [                      11:0] bomb_sprite_rgb_q;
 
   // ---------------------------------------------------------------------------
   // Block destruction animation sprite addressing
@@ -268,6 +292,9 @@ module drawcon #(
     dest_blk_local_x_q  <= dest_blk_local_x;
     dest_blk_local_y_q  <= dest_blk_local_y;
     dest_blk_anim_rgb_q <= dest_blk_anim_rgb;
+    bomb_local_x_q      <= bomb_local_x;
+    bomb_local_y_q      <= bomb_local_y;
+    bomb_sprite_rgb_q   <= bomb_sprite_rgb;
   end
 
   always_comb begin
@@ -297,7 +324,10 @@ module drawcon #(
           end
         end
 
-        BOMB: {o_r, o_g, o_b} = 12'h333;
+        BOMB: begin
+          if (bomb_sprite_rgb_q != TRANSPARENCY) {o_r, o_g, o_b} = bomb_sprite_rgb_q;
+          else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
+        end
 
         default: {o_r, o_g, o_b} = TRANSPARENCY;  // Magenta as error color
       endcase
@@ -345,6 +375,22 @@ module drawcon #(
       .clk (clk),
       .addr(dest_blk_addr),
       .data(dest_blk_rgb)
+  );
+
+  assign bomb_local_x = map_x[BLK_W_LOG2-1:0];
+  assign bomb_local_y = map_y[BLK_H_LOG2-1:0];
+  assign bomb_sprite_addr = {bomb_frame, bomb_local_y_q, bomb_local_x_q};
+
+  sprite_rom #(
+      .SPRITE_W     (BLK_W),
+      .SPRITE_H     (BLK_H),
+      .NUM_FRAMES   (BOMB_SPRITE_TOTAL),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("bomb.mem")
+  ) bomb_sprite_i (
+      .clk (clk),
+      .addr(bomb_sprite_addr),
+      .data(bomb_sprite_rgb)
   );
 
   always_comb begin
