@@ -41,10 +41,11 @@ module drawcon #(
 
     // Derived parameters (not overridable)
     localparam DEPTH          = NUM_COL * NUM_ROW,
-    localparam MAP_ADDR_WIDTH = $clog2(DEPTH),         // bit-width of map_addr output
+    localparam MAP_ADDR_WIDTH = $clog2(DEPTH),          // bit-width of map_addr output
     localparam BLK_W_LOG2     = $clog2(BLK_W),
     localparam BLK_H_LOG2     = $clog2(BLK_H),
-    localparam BLK_ADDR_WIDTH = $clog2(BLK_W * BLK_H)
+    localparam BLK_ADDR_WIDTH = $clog2(BLK_W * BLK_H),
+    localparam TRANSPARENCY   = 12'hF0F
 
 ) (
     // Map Memory block state input
@@ -87,15 +88,26 @@ module drawcon #(
   localparam int BOMB_SPRITE_RED_RIME = 60;
   localparam int BOMB_ANIM_TIME = 15;  // hold each frame for 15 ticks
 
+  localparam int DEST_FRAMES = 6;
+  localparam int DEST_SPRITE_SIZE = BLK_W * BLK_H;
+  localparam int DEST_SPRITE_ROM_DEPTH = DEST_FRAMES * DEST_SPRITE_SIZE;
+  localparam int DEST_SPRITE_ADDR_WIDTH = $clog2(DEST_SPRITE_ROM_DEPTH);
+  localparam int DEST_TOTAL_ANIMATION_TIME = 60;  // 1 second at 60 fps
+  localparam int DEST_FRAME_TIME = DEST_TOTAL_ANIMATION_TIME / DEST_FRAMES;
+
   // ---------------------------------------------------------------------------
   // Animation driver (runs a counter to select animation frame)
   // ---------------------------------------------------------------------------
   logic [5:0] frame_cnt;  // fame counter to 60 fps
   logic [1:0] walk_frame;  // ranges 0,1,2
+  logic [5:0] dest_frame_cnt;
+  logic [2:0] dest_frame;  // ranges 0..5
   always_ff @(posedge clk) begin
     if (rst) begin
-      frame_cnt  <= 6'd0;
+      frame_cnt <= 6'd0;
       walk_frame <= 2'd0;
+      dest_frame_cnt <= 6'd0;
+      dest_frame <= 3'd0;
     end else if (tick) begin
       frame_cnt <= frame_cnt + 1;
       if (frame_cnt == 6'd59) frame_cnt <= 0;
@@ -105,6 +117,18 @@ module drawcon #(
           walk_frame <= walk_frame + 1;
           if (walk_frame == WALK_FRAMES_PER_DIR - 1) walk_frame <= 0;
         end
+      end
+
+      if (explode_signal) begin
+        dest_frame_cnt <= dest_frame_cnt + 1;
+        if ((dest_frame_cnt + 1) % DEST_FRAME_TIME == 0) dest_frame <= dest_frame + 1;
+        if (dest_frame_cnt == 6'd59) begin
+          dest_frame_cnt <= 6'd0;
+          dest_frame <= 3'd0;
+        end
+      end else begin
+        dest_frame_cnt <= 6'd0;
+        dest_frame <= 3'd0;
       end
     end
   end
@@ -189,10 +213,33 @@ module drawcon #(
   logic [BLK_H_LOG2-1:0] perm_blk_local_y, perm_blk_local_y_q;
   logic [BLK_W_LOG2-1:0] dest_blk_local_x, dest_blk_local_x_q;
   logic [BLK_H_LOG2-1:0] dest_blk_local_y, dest_blk_local_y_q;
-  logic [BLK_ADDR_WIDTH-1:0] perm_blk_addr;
-  logic [              11:0] perm_blk_rgb;
-  logic [BLK_ADDR_WIDTH-1:0] dest_blk_addr;
-  logic [              11:0] dest_blk_rgb;
+  logic [        BLK_ADDR_WIDTH-1:0] perm_blk_addr;
+  logic [                      11:0] perm_blk_rgb;
+  logic [        BLK_ADDR_WIDTH-1:0] dest_blk_addr;
+  logic [                      11:0] dest_blk_rgb;
+
+  // ---------------------------------------------------------------------------
+  // Block destruction animation sprite addressing
+  // ---------------------------------------------------------------------------
+
+  logic [DEST_SPRITE_ADDR_WIDTH-1:0] dest_blk_anim_addr;
+  logic [                      11:0] dest_blk_anim_rgb;
+  logic [                      11:0] dest_blk_anim_rgb_q;
+
+  // Select animation frame + local pixel within the 64x64 block
+  assign dest_blk_anim_addr = {dest_frame, dest_blk_local_y_q, dest_blk_local_x_q};
+
+  sprite_rom #(
+      .SPRITE_W     (BLK_W),
+      .SPRITE_H     (BLK_H),
+      .NUM_FRAMES   (DEST_FRAMES),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("dest_blk_anim.mem")
+  ) dest_blk_anim_i (
+      .clk (clk),
+      .addr(dest_blk_anim_addr),
+      .data(dest_blk_anim_rgb)
+  );
 
   // ----------------------------------------------------------------------------
   // Explosion detection: determine if current block is an explosion
@@ -212,14 +259,15 @@ module drawcon #(
   // ---------------------------------------------------------------------------
   // Everything is pipelined by 1 cycle to line up with the synchronous sprite ROM.
   always_ff @(posedge clk) begin
-    out_of_map_q       <= out_of_map;
-    st_q               <= st;
-    player_sprite_q    <= player_sprite;
-    sprite_rgb_q       <= sprite_rgb_raw;
-    perm_blk_local_x_q <= perm_blk_local_x;
-    perm_blk_local_y_q <= perm_blk_local_y;
-    dest_blk_local_x_q <= dest_blk_local_x;
-    dest_blk_local_y_q <= dest_blk_local_y;
+    out_of_map_q        <= out_of_map;
+    st_q                <= st;
+    player_sprite_q     <= player_sprite;
+    sprite_rgb_q        <= sprite_rgb_raw;
+    perm_blk_local_x_q  <= perm_blk_local_x;
+    perm_blk_local_y_q  <= perm_blk_local_y;
+    dest_blk_local_x_q  <= dest_blk_local_x;
+    dest_blk_local_y_q  <= dest_blk_local_y;
+    dest_blk_anim_rgb_q <= dest_blk_anim_rgb;
   end
 
   always_comb begin
@@ -227,7 +275,7 @@ module drawcon #(
       {o_r, o_g, o_b} = {BRD_R, BRD_G, BRD_B};
 
       // Player sprites have a color key (12'hF0F) for transparency
-    end else if (player_sprite_q && (sprite_rgb_q != 12'hF0F)) begin
+    end else if (player_sprite_q && (sprite_rgb_q != TRANSPARENCY)) begin
       {o_r, o_g, o_b} = sprite_rgb_q;
 
     end else begin
@@ -240,14 +288,18 @@ module drawcon #(
         PERM_BLK: {o_r, o_g, o_b} = perm_blk_rgb;
 
         DESTROYABLE_BLK: begin
-          if (is_exploding(addr_next, explosion_addr) && explode_signal)
-            {o_r, o_g, o_b} = 12'hF00; // Here, it should be changed with the reading from explosion ROM
-          else {o_r, o_g, o_b} = dest_blk_rgb;
+          if (is_exploding(addr_next, explosion_addr) && explode_signal) begin
+            if (dest_blk_anim_rgb_q != TRANSPARENCY) {o_r, o_g, o_b} = dest_blk_anim_rgb_q;
+            else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
+          end else begin
+            if (dest_blk_rgb != TRANSPARENCY) {o_r, o_g, o_b} = dest_blk_rgb;
+            else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
+          end
         end
 
         BOMB: {o_r, o_g, o_b} = 12'h333;
 
-        default: {o_r, o_g, o_b} = 12'hF0F;  // Magenta as error color
+        default: {o_r, o_g, o_b} = TRANSPARENCY;  // Magenta as error color
       endcase
     end
   end
