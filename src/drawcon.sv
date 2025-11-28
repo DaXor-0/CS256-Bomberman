@@ -67,52 +67,63 @@ module drawcon #(
   // ---------------------------------------------------------------------------
   // Sprite sheet layout parameters
   // ---------------------------------------------------------------------------
-  localparam int FRAMES_PER_DIR = 3;  // left/right share these 3 frames
-  localparam int NUM_DIRS_STORED = 3;  // LEFT/RIGHT, UP, DOWN
-  localparam int NUM_FRAMES_TOTAL = FRAMES_PER_DIR * NUM_DIRS_STORED;  // 9
-  localparam int SPR_PIXELS_PER_FRM = SPRITE_W * SPRITE_H;
-  localparam int SPRITE_ROM_DEPTH = NUM_FRAMES_TOTAL * SPR_PIXELS_PER_FRM;
-  localparam int SPRITE_ADDR_WIDTH = $clog2(SPRITE_ROM_DEPTH);
-  localparam int ANIM_HOLD = 5;  // hold each frame for 5 ticks
+  localparam int WALK_DIRS_STORED = 3;  // down, left/right (shared), up
+  localparam int WALK_FRAMES_PER_DIR = 3;  // left/right share these 3 frames
+  localparam int WALK_FRAMES_TOTAL = WALK_FRAMES_PER_DIR * WALK_DIRS_STORED;  // 9
+  localparam int WALK_SPRITE_SIZE = SPRITE_W * SPRITE_H;
+  localparam int WALK_SPRITE_ROM_DEPTH = WALK_FRAMES_TOTAL * WALK_SPRITE_SIZE;
+  localparam int WALK_SPRITE_ADDR_WIDTH = $clog2(WALK_SPRITE_ROM_DEPTH);
+  localparam int WALK_ANIM_TIME = 10;  // hold each frame for 5 ticks
+
+  localparam int BOMB_STATUS_TYPES = 2;  // normal, red (about to explode)
+  localparam int BOMB_SPRITE_PER_TYPE = 3;
+  localparam int BOMB_SPRITE_TOTAL = BOMB_STATUS_TYPES * BOMB_SPRITE_PER_TYPE;  // 6
+  localparam int BOMB_SPRITE_SIZE = BLK_W * BLK_H;
+  localparam int BOMB_SPRITE_ROM_DEPTH = BOMB_SPRITE_TOTAL * BOMB_SPRITE_SIZE;
+  localparam int BOMB_SPRITE_ADDR_WIDTH = $clog2(BOMB_SPRITE_ROM_DEPTH);
+  localparam int BOMB_TOTAL_ANIMATION_TIME = 180;  // 3 seconds at 60 fps
+  localparam int BOMB_SPRITE_BLACK_TIME = 120;
+  localparam int BOMB_SPRITE_RED_RIME = 60;
+  localparam int BOMB_ANIM_TIME = 15;  // hold each frame for 15 ticks
 
   // ---------------------------------------------------------------------------
   // Animation driver (runs a counter to select animation frame)
   // ---------------------------------------------------------------------------
   // Selects animation frame based on movement
 
-  logic [7:0] frame_cnt;  // free counter
-  logic [1:0] anim_frame;  // final output (0,1,2)
+  logic [5:0] frame_cnt;  // fame counter to 60 fps
+  logic [1:0] walk_frame;  // ranges 0,1,2
   always_ff @(posedge clk) begin
     if (rst) begin
-      frame_cnt  <= 8'd0;
-      anim_frame <= 2'd0;
-    end else if (tick && player_dir != DIR_NONE) begin
-      if (frame_cnt == (ANIM_HOLD * FRAMES_PER_DIR - 1)) begin
-        frame_cnt  <= 0;
-        anim_frame <= 0;
-      end else begin
-        frame_cnt <= frame_cnt + 1;
-        if ((frame_cnt + 1) % ANIM_HOLD == 0) anim_frame <= anim_frame + 1;
-        if (anim_frame == FRAMES_PER_DIR - 1 && (frame_cnt + 1) % ANIM_HOLD == 0) begin
-          anim_frame <= 0;
+      frame_cnt  <= 6'd0;
+      walk_frame <= 2'd0;
+    end else if (tick) begin
+      frame_cnt <= frame_cnt + 1;
+      if (frame_cnt == 6'd59) frame_cnt <= 0;
+
+      if (player_dir != DIR_NONE) begin
+        if ((frame_cnt + 1) % WALK_ANIM_TIME == 0) begin
+          walk_frame <= walk_frame + 1;
+          if (walk_frame == WALK_FRAMES_PER_DIR - 1) walk_frame <= 0;
         end
       end
     end
   end
 
+
   // ---------------------------------------------------------------------------
   // Sprite addressing
   // ---------------------------------------------------------------------------
-  logic [       SPRITE_ADDR_WIDTH-1:0] sprite_addr;
-  logic [                        11:0] sprite_rgb_raw;
-  logic [                        11:0] sprite_rgb_q;
-  logic                                player_sprite;
-  logic                                player_sprite_q;
+  logic [   WALK_SPRITE_ADDR_WIDTH-1:0] sprite_addr;
+  logic [                         11:0] sprite_rgb_raw;
+  logic [                         11:0] sprite_rgb_q;
+  logic                                 player_sprite;
+  logic                                 player_sprite_q;
 
-  logic [        $clog2(SPRITE_W)-1:0] sprite_local_x;
-  logic [        $clog2(SPRITE_H)-1:0] sprite_local_y;
-  logic [        $clog2(SPRITE_W)-1:0] sprite_x_in_rom;
-  logic [$clog2(NUM_FRAMES_TOTAL)-1:0] sprite_offset;
+  logic [         $clog2(SPRITE_W)-1:0] sprite_local_x;
+  logic [         $clog2(SPRITE_H)-1:0] sprite_local_y;
+  logic [         $clog2(SPRITE_W)-1:0] sprite_x_in_rom;
+  logic [$clog2(WALK_FRAMES_TOTAL)-1:0] sprite_offset;
 
   // Determine if current pixel is within player sprite bounds
   always_comb begin
@@ -131,10 +142,10 @@ module drawcon #(
   always_comb begin
     sprite_offset = '0;
     case (dir_t'(player_dir))
-      DIR_DOWN:  sprite_offset = 0*FRAMES_PER_DIR + anim_frame; // 0..2
-      DIR_LEFT:  sprite_offset = 1*FRAMES_PER_DIR + anim_frame; // 3..5
-      DIR_RIGHT: sprite_offset = 1*FRAMES_PER_DIR + anim_frame; // 3..5
-      DIR_UP:    sprite_offset = 2*FRAMES_PER_DIR + anim_frame; // 6..8
+      DIR_DOWN:  sprite_offset = 0*WALK_FRAMES_PER_DIR + walk_frame; // 0..2
+      DIR_LEFT:  sprite_offset = 1*WALK_FRAMES_PER_DIR + walk_frame; // 3..5
+      DIR_RIGHT: sprite_offset = 1*WALK_FRAMES_PER_DIR + walk_frame; // 3..5
+      DIR_UP:    sprite_offset = 2*WALK_FRAMES_PER_DIR + walk_frame; // 6..8
     endcase
   end
 
@@ -147,7 +158,7 @@ module drawcon #(
   // Calculate final sprite ROM address also in correlation to frame offset
   always_comb begin
     if (player_sprite) begin
-      sprite_addr = sprite_offset * SPR_PIXELS_PER_FRM + sprite_local_y * SPRITE_W + sprite_x_in_rom;
+      sprite_addr = sprite_offset * WALK_SPRITE_SIZE + sprite_local_y * SPRITE_W + sprite_x_in_rom;
     end else begin
       sprite_addr = '0;
     end
@@ -156,9 +167,9 @@ module drawcon #(
   sprite_rom #(
       .SPRITE_W     (SPRITE_W),
       .SPRITE_H     (SPRITE_H),
-      .NUM_FRAMES   (9),
+      .NUM_FRAMES   (WALK_FRAMES_TOTAL),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("player_1.mem")  // 9-frame sheet: DOWN,LR,UP cropped to 32x48
+      .MEM_INIT_FILE("player_1.mem")      // 9-frame sheet: DOWN,LR,UP cropped to 32x48
   ) bomberman_sprite_i (
       .clk (clk),
       .addr(sprite_addr),
