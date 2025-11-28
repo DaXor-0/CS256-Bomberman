@@ -60,10 +60,13 @@ module map_mem #(
     // -----------------------------
     // Random Obstacle Generator - Using Pbits
     // -----------------------------
+    logic place_dest_blk;
+    localparam int TEN_PCT = 32'h7FFFFFFF; // 50%
     pbit pbit_inst (
         .Dout(place_dest_blk), // generate block condition
-        .Din(ten_pct),    // 10% chance to output 1/True 
-        .clk(clk)
+        .Din(TEN_PCT),    // 10% chance to output 1/True 
+        .clk(clk),
+        .rst(rst)
     );
 
     // Simple FSM to copy ROM → RAM when rst is high
@@ -72,7 +75,10 @@ module map_mem #(
 
     logic [ADDR_WIDTH-1:0] copy_idx;
     logic [DATA_WIDTH-1:0] rom_val;
-    assign rom_val = init_rom[copy_idx];
+    
+    
+    always_comb
+      rom_val = init_rom[copy_idx];
 
     always_ff @(posedge clk) begin
         if (rst) begin
@@ -85,8 +91,8 @@ module map_mem #(
                 begin
                     
                     // If ROM says no_blk (0) and RNG is high → place destroyable block (2)
-                    if (rom_val == 2'd0 && ten_pct)
-                        map_ram[copy_idx] <= 2'd2;   // destroyable_blk
+                    if (rom_val == 2'd0 && place_dest_blk && (copy_idx != 20))
+                        map_ram[copy_idx] <= 2'h2;   // destroyable_blk
                     else
                         map_ram[copy_idx] <= rom_val;
 

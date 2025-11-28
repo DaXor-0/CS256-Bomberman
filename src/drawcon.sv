@@ -288,7 +288,7 @@ module drawcon #(
       .SPRITE_H     (BLK_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("dest_blk.mem")
+      .MEM_INIT_FILE("dest_block.mem")
   ) dest_blk_sprite_i (
       .clk (clk),
       .addr(dest_blk_addr),

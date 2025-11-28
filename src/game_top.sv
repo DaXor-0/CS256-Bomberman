@@ -35,7 +35,7 @@ module game_top (
   logic [3:0] dig0;
   multidigit multidigit_i (
       .clk   (CLK100MHZ),
-      .rst   (~CPU_RESETN),
+      .rst   (rst),
       .dig0  (dig0),
       .dig1  (4'd0),
       .dig2  (4'd0),
@@ -54,6 +54,7 @@ module game_top (
       .an    (AN)
   );
 
+  logic [$clog2(BOMB_TIME)-1:0] countdown;
   assign dig0 = countdown; // display the bomb countdown on the 7-seg
 
 // -------------------------------------------------------- //
@@ -85,7 +86,6 @@ module game_top (
   localparam int MAP_DEPTH = MAP_NUM_ROW * MAP_NUM_COL;
   localparam int MAP_ADDR_WIDTH = $clog2(MAP_DEPTH);
   localparam int MAP_MEM_WIDTH = 2;
-  localparam int BOMB_TIME = 3;
 
   // Logic for positioning rectangle control.
   logic [10:0] player_x, map_player_x;
@@ -140,7 +140,6 @@ module game_top (
   logic we, we_bomb, we_free;
 
   logic trigger_explosion, explode_signal, game_over, free_blks_signal;
-  logic [$clog2(BOMB_TIME)-1:0] countdown;
 
   // Write enable mux (very basic, with more bombs this needs to be an arbiter)
   assign we = (we_bomb || we_free);
