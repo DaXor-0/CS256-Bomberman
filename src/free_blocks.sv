@@ -1,4 +1,6 @@
-`timescale 1ns/1ps
+`timescale 1ns / 1ps
+
+`include "bomberman_dir.svh"
 
 /**
 * Module: free_blocks
@@ -6,64 +8,56 @@
 * then checks the blocks around the given address and writes over destroyable_blks to make them no_blk
 **/
 
-module free_blocks
-#(
+module free_blocks #(
     // ---- Map and tile geometry ----
-    parameter int NUM_ROW     = 11,
-    parameter int NUM_COL     = 19,
-    parameter int TILE_PX     = 64,
+    parameter int NUM_ROW       = 11,
+    parameter int NUM_COL       = 19,
+    parameter int TILE_PX       = 64,
     parameter int MAP_MEM_WIDTH = 2,
-    parameter int SPRITE_W  = 32,
-    parameter int SPRITE_H  = 48,
+    parameter int SPRITE_W      = 32,
+    parameter int SPRITE_H      = 48,
     // ---- Bomb Parameters ----
-    parameter int EXPLODE_TIME = 1,
+    parameter int EXPLODE_TIME  = 1,
 
     localparam int DEPTH      = NUM_ROW * NUM_COL,
     localparam int ADDR_WIDTH = $clog2(DEPTH),
     localparam int TILE_SHIFT = $clog2(TILE_PX)
 
-)(
-    input logic clk, rst, tick,
+) (
+    input logic clk,
+    rst,
+    tick,
     input logic free_blks_signal,
     input logic [ADDR_WIDTH-1:0] explosion_addr,
     input logic [MAP_MEM_WIDTH-1:0] map_mem_in,
     input logic read_granted,
 
-    output logic read_req, 
+    output logic read_req,
     output logic [ADDR_WIDTH-1:0] read_addr,
     output logic [ADDR_WIDTH-1:0] write_addr,
     output logic [MAP_MEM_WIDTH-1:0] write_data,
-    output logic write_en          
+    output logic write_en
 );
-
-  // Direction indices
-  localparam int UP    = 0;
-  localparam int DOWN  = 1;
-  localparam int LEFT  = 2;
-  localparam int RIGHT = 3;
 
   // -----------------------------------------------------------------
   // -- FSM for the explosion logic, explosion_state --
   // -----------------------------------------------------------------
-  typedef enum logic [1:0] { IDLE, REQ_READ, CHECK_BLKS, FREE_BLKS } bomb_state;
-
-  bomb_state st, nst;
+  free_blocks_state_t st, nst;
 
   // next state ff block
   always_ff @(posedge clk)
-    if (rst) st <= IDLE;
+    if (rst) st <= FREE_STATE_IDLE;
     else st <= nst;
 
   // Next state logic
-  always_comb
-  begin
-    nst = st; // State remains unchanged if no condition triggered.
+  always_comb begin
+    nst = st;  // State remains unchanged if no condition triggered.
     case (st)
-      IDLE: if (free_blks_signal) nst = REQ_READ;
-      REQ_READ: if (read_granted) nst = CHECK_BLKS;
-      CHECK_BLKS: if (check_done) nst = FREE_BLKS;
-      FREE_BLKS: if (free_done) nst = IDLE;
-      default: nst = IDLE;
+      FREE_STATE_IDLE: if (free_blks_signal) nst = FREE_STATE_REQ_READ;
+      FREE_STATE_REQ_READ: if (read_granted) nst = FREE_STATE_CHECK_BLOCKS;
+      FREE_STATE_CHECK_BLOCKS: if (check_done) nst = FREE_STATE_CLEAR_BLOCKS;
+      FREE_STATE_CLEAR_BLOCKS: if (free_done) nst = FREE_STATE_IDLE;
+      default: nst = FREE_STATE_IDLE;
     endcase
   end
 
@@ -75,60 +69,50 @@ module free_blocks
   logic [1:0] dir_cnt, dir_a;
 
 
-  always_ff @( posedge clk ) 
-    if (rst)
-    begin
+  always_ff @(posedge clk)
+    if (rst) begin
       saved_explosion_addr <= 0;
       dir_cnt <= 0;
       dir_a <= 0;
       blk_status <= 0;
-    end 
-    else
-    begin
+    end else begin
       case (st)
-        IDLE:
-        begin
-          if (free_blks_signal) 
-          begin
+        FREE_STATE_IDLE: begin
+          if (free_blks_signal) begin
             saved_explosion_addr <= explosion_addr;
-          end else 
-            dir_cnt <= 0;
-            blk_status <= 0;
+          end else dir_cnt <= 0;
+          blk_status <= 0;
         end
-        REQ_READ:
-        begin
+        FREE_STATE_REQ_READ: begin
           // Waiting for read to be granted
-          if (read_granted)
-          begin
+          if (read_granted) begin
             dir_cnt <= dir_cnt + 1;
-            dir_a <= dir_cnt;
+            dir_a   <= dir_cnt;
           end
         end
-        CHECK_BLKS:
-        begin
+        FREE_STATE_CHECK_BLOCKS: begin
           if (dir_cnt != 2'b0) dir_cnt <= dir_cnt + 1;
-          dir_a   <= dir_cnt;
-          if (map_mem_in == 2'd2) blk_status[dir_a] <= 1'b1; // Mark as needs to be free
+          dir_a <= dir_cnt;
+          if (map_mem_in == 2'd2) blk_status[dir_a] <= 1'b1;  // Mark as needs to be free
         end
-        FREE_BLKS:
-        begin
+        FREE_STATE_CLEAR_BLOCKS: begin
           dir_cnt <= dir_cnt + 1;
         end
       endcase
     end
 
-    assign read_addr = (dir_cnt == UP)    ? explosion_addr - NUM_COL :        // UP
-                       (dir_cnt == DOWN)  ? saved_explosion_addr + NUM_COL :  // DOWN
-                       (dir_cnt == LEFT)  ? saved_explosion_addr - 1 :        // LEFT
-                                            saved_explosion_addr + 1;         // RIGHT
-    assign write_addr =(dir_cnt == UP)   ? saved_explosion_addr - NUM_COL :        // UP
-                       (dir_cnt == DOWN)  ? saved_explosion_addr + NUM_COL :  // DOWN
-                       (dir_cnt == LEFT)  ? saved_explosion_addr - 1 :        // LEFT
-                                            saved_explosion_addr + 1;         // RIGHT
-    assign check_done = ((st==CHECK_BLKS) && (dir_cnt == 2'b00));
-    assign free_done  = ((st==FREE_BLKS)  && (dir_cnt == 2'b11));
-    assign write_data = 2'b0; // write a free_blk
-    assign write_en   = ((st==FREE_BLKS) && blk_status[dir_cnt]);
-    assign read_req   = ((st==REQ_READ) || (st==CHECK_BLKS));
+  assign read_addr = (dir_cnt == UP) ? explosion_addr - NUM_COL :  // UP
+      (dir_cnt == DOWN) ? saved_explosion_addr + NUM_COL :  // DOWN
+      (dir_cnt == LEFT) ? saved_explosion_addr - 1 :  // LEFT
+      saved_explosion_addr + 1;  // RIGHT
+  assign write_addr = (dir_cnt == UP) ? saved_explosion_addr - NUM_COL :  // UP
+      (dir_cnt == DOWN) ? saved_explosion_addr + NUM_COL :  // DOWN
+      (dir_cnt == LEFT) ? saved_explosion_addr - 1 :  // LEFT
+      saved_explosion_addr + 1;  // RIGHT
+  assign check_done = ((st == FREE_STATE_CHECK_BLOCKS) && (dir_cnt == 2'b00));
+  assign free_done = ((st == FREE_STATE_CLEAR_BLOCKS) && (dir_cnt == 2'b11));
+  assign write_data = 2'b0;  // write a free_blk
+  assign write_en = ((st == FREE_STATE_CLEAR_BLOCKS) && blk_status[dir_cnt]);
+  assign read_req = ((st == FREE_STATE_REQ_READ) || (st == FREE_STATE_CHECK_BLOCKS));
 
 endmodule

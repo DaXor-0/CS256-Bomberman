@@ -109,7 +109,6 @@ module drawcon #(
     end
   end
 
-
   // ---------------------------------------------------------------------------
   // Player sprite addressing
   // ---------------------------------------------------------------------------
@@ -239,14 +238,18 @@ module drawcon #(
           if (is_exploding(addr_next, explosion_addr) && explode_signal) {o_r, o_g, o_b} = 12'hF17;
           else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
         end
+
         PERM_BLK: {o_r, o_g, o_b} = perm_blk_rgb;
+
         DESTROYABLE_BLK: begin
           if (is_exploding(addr_next, explosion_addr) && explode_signal)
             {o_r, o_g, o_b} = 12'hF00; // Here, it should be changed with the reading from explosion ROM
           else {o_r, o_g, o_b} = 12'h00F;
         end
-        BOMB:     {o_r, o_g, o_b} = 12'h333;
-        default:  {o_r, o_g, o_b} = 12'hF0F;  // Magenta as error color
+
+        BOMB: {o_r, o_g, o_b} = 12'h333;
+
+        default: {o_r, o_g, o_b} = 12'hF0F;  // Magenta as error color
       endcase
     end
   end
