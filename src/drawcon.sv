@@ -218,7 +218,7 @@ module drawcon #(
       unique case (st_q)
         no_blk:
         begin
-          if (is_exploding(addr_next) && explode_signal)
+          if (is_exploding(addr_next, explosion_addr) && explode_signal)
             {o_r, o_g, o_b} = 12'hF17;
           else
             {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
@@ -226,7 +226,7 @@ module drawcon #(
         perm_blk:        {o_r, o_g, o_b} = perm_blk_rgb;
         destroyable_blk: 
         begin
-          if (is_exploding(addr_next) && explode_signal)
+          if (is_exploding(addr_next, explosion_addr) && explode_signal)
             {o_r, o_g, o_b} = 12'hF00; // Here, it should be changed with the reading from explosion ROM
           else 
             {o_r, o_g, o_b} = 12'h00F;

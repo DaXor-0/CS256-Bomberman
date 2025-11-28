@@ -141,7 +141,7 @@ module game_top (
     .explode_signal(explode_signal),
     .game_over(game_over),
     .free_blks_signal(free_blks_signal)
-  )
+  );
 
   // Free Blocks
   free_blocks free_blocks_i (
