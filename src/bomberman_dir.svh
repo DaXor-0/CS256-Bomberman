@@ -2,13 +2,15 @@
 `ifndef BOMBERMAN_DIR_SVH
 `define BOMBERMAN_DIR_SVH
 
+
 localparam int UP = 0;
 localparam int DOWN = 1;
 localparam int LEFT = 2;
 localparam int RIGHT = 3;
+localparam int BOMB_TIME = 3;
 
 // Percentages
-int ten_pct = 32'h1999999A; // 10%
+localparam int ten_pct = 32'h1999999A; // 10%
 
 typedef enum logic [3:0] {
   DIR_NONE  = 4'b0000,
