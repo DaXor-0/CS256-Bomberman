@@ -166,11 +166,33 @@ module drawcon #(
       .data(sprite_rgb_raw)
   );
 
-  // Align sprite presence with synchronous ROM output (1-cycle latency)
-  always_ff @(posedge clk) begin
-    player_sprite_q <= player_sprite;
-    sprite_rgb_q    <= sprite_rgb_raw;
+  // ---------------------------------------------------------------------------
+  // Border / map region detection
+  // ---------------------------------------------------------------------------
+  logic out_of_map;
+  logic out_of_map_q;
+  always_comb begin
+    out_of_map = (draw_x < BRD_H)               ||
+                 (draw_x >= SCREEN_W - BRD_H)   ||
+                 (draw_y < BRD_TOP)             ||
+                 (draw_y >= SCREEN_H - BRD_BOT);
   end
+
+  map_state_t st;
+  map_state_t st_q;
+  assign st = map_state_t'(map_tile_state);
+
+  // ---------------------------------------------------------------------------
+  // Static block sprite (64x64)
+  // ---------------------------------------------------------------------------
+  logic [BLK_W_LOG2-1:0] perm_blk_local_x, perm_blk_local_x_q;
+  logic [BLK_H_LOG2-1:0] perm_blk_local_y, perm_blk_local_y_q;
+  logic [BLK_W_LOG2-1:0] dest_blk_local_x, dest_blk_local_x_q;
+  logic [BLK_H_LOG2-1:0] dest_blk_local_y, dest_blk_local_y_q;
+  logic [BLK_ADDR_WIDTH-1:0] perm_blk_addr;
+  logic [              11:0] perm_blk_rgb;
+  logic [BLK_ADDR_WIDTH-1:0] dest_blk_addr;
+  logic [              11:0] dest_blk_rgb;
 
   // ----------------------------------------------------------------------------
   // Explosion detection: determine if current block is an explosion
@@ -186,42 +208,18 @@ module drawcon #(
   endfunction
 
   // ---------------------------------------------------------------------------
-  // Border / map region detection
-  // ---------------------------------------------------------------------------
-  logic out_of_map;
-  logic out_of_map_q;
-
-  always_comb begin
-    out_of_map = (draw_x < BRD_H)               ||
-                 (draw_x >= SCREEN_W - BRD_H)   ||
-                 (draw_y < BRD_TOP)             ||
-                 (draw_y >= SCREEN_H - BRD_BOT);
-  end
-
-  // ---------------------------------------------------------------------------
-  // Map state decoding
-  // ---------------------------------------------------------------------------
-  map_state_t st;
-  map_state_t st_q;
-  assign st = map_state_t'(map_tile_state);
-
-  // ---------------------------------------------------------------------------
-  // Permanent block sprite (64x64)
-  // ---------------------------------------------------------------------------
-  logic [BLK_W_LOG2-1:0] perm_blk_local_x, perm_blk_local_x_q;
-  logic [BLK_H_LOG2-1:0] perm_blk_local_y, perm_blk_local_y_q;
-  logic [BLK_ADDR_WIDTH-1:0] perm_blk_addr;
-  logic [              11:0] perm_blk_rgb;
-
-  // ---------------------------------------------------------------------------
   // Color output muxing
   // ---------------------------------------------------------------------------
   // Everything is pipelined by 1 cycle to line up with the synchronous sprite ROM.
   always_ff @(posedge clk) begin
     out_of_map_q       <= out_of_map;
     st_q               <= st;
+    player_sprite_q    <= player_sprite;
+    sprite_rgb_q       <= sprite_rgb_raw;
     perm_blk_local_x_q <= perm_blk_local_x;
     perm_blk_local_y_q <= perm_blk_local_y;
+    dest_blk_local_x_q <= dest_blk_local_x;
+    dest_blk_local_y_q <= dest_blk_local_y;
   end
 
   always_comb begin
@@ -244,7 +242,7 @@ module drawcon #(
         DESTROYABLE_BLK: begin
           if (is_exploding(addr_next, explosion_addr) && explode_signal)
             {o_r, o_g, o_b} = 12'hF00; // Here, it should be changed with the reading from explosion ROM
-          else {o_r, o_g, o_b} = 12'h00F;
+          else {o_r, o_g, o_b} = dest_blk_rgb;
         end
 
         BOMB: {o_r, o_g, o_b} = 12'h333;
@@ -267,7 +265,6 @@ module drawcon #(
 
   assign perm_blk_local_x = map_x[BLK_W_LOG2-1:0];
   assign perm_blk_local_y = map_y[BLK_H_LOG2-1:0];
-
   assign perm_blk_addr = {perm_blk_local_y_q, perm_blk_local_x_q};
 
   sprite_rom #(
@@ -280,6 +277,22 @@ module drawcon #(
       .clk (clk),
       .addr(perm_blk_addr),
       .data(perm_blk_rgb)
+  );
+
+  assign dest_blk_local_x = map_x[BLK_W_LOG2-1:0];
+  assign dest_blk_local_y = map_y[BLK_H_LOG2-1:0];
+  assign dest_blk_addr = {dest_blk_local_y_q, dest_blk_local_x_q};
+
+  sprite_rom #(
+      .SPRITE_W     (BLK_W),
+      .SPRITE_H     (BLK_H),
+      .NUM_FRAMES   (1),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("dest_blk.mem")
+  ) dest_blk_sprite_i (
+      .clk (clk),
+      .addr(dest_blk_addr),
+      .data(dest_blk_rgb)
   );
 
   always_comb begin
