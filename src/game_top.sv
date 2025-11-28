@@ -130,9 +130,9 @@ module game_top (
     .read_addr_req(read_addr_req),
     .read_addr(read_addr),
     .read_granted(read_granted)
-  )
+  );
 
-  assign read_req[1] = 0;
+  assign read_req[1] = 1'b0;
   assign read_addr_req[0] = map_addr_obst;
 
   // Map memory write controller (arbiter)

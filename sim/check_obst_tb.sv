@@ -7,7 +7,7 @@ module check_obst_tb;
   localparam int TILE_PX    = 64;
   localparam int SPRITE_W   = 32;
   localparam int SPRITE_H   = 48;
-  localparam string MAP_FILE = "maps/basic_map.mem";
+  localparam string MAP_FILE = "basic_map.mem";
 
   localparam int TILE_SHIFT = $clog2(TILE_PX);
   localparam int DEPTH      = NUM_ROW * NUM_COL;
@@ -30,6 +30,10 @@ module check_obst_tb;
   logic [1:0] map_mem [0:DEPTH-1];
   logic [ADDR_WIDTH-1:0] map_addr_d;
   logic obstacle_valid;
+  logic [1:0] read_req;
+  logic [ADDR_WIDTH-1:0] read_addr_req [0:1];
+  logic [ADDR_WIDTH-1:0] read_addr;
+  logic [1:0] read_granted;
 
   check_obst #(
       .NUM_ROW (NUM_ROW),
@@ -44,10 +48,32 @@ module check_obst_tb;
       .player_y(player_y),
       .map_mem_in(map_mem_in),
       .obstacles(obstacles),
-      .map_addr(map_addr),
+      .map_addr(read_addr_req[0]),
       .obstacle_dist(obstacle_dist),
-      .obstacles_valid(obstacle_valid)
+      .obstacles_valid(obstacle_valid),
+      .read_req(read_req[0]),
+      .read_granted(read_granted[0])
   );
+  
+  assign read_addr_req[1] = 0;
+  assign read_req[1] = 0;
+
+mem_read_controller
+#(
+    .NUM_ROW(NUM_ROW),
+    .NUM_COL(NUM_COL),
+    .TILE_PX(TILE_PX),
+    .MAP_MEM_WIDTH(ADDR_WIDTH),
+    .SPRITE_W(SPRITE_W),
+    .SPRITE_H(SPRITE_H)
+) uut (
+    .clk(clk),
+    .rst(rst),
+    .read_req(read_req),
+    .read_addr_req(read_addr_req),
+    .read_addr(map_addr),
+    .read_granted(read_granted)
+);
 
   always #(CLK_PERIOD / 2) clk = ~clk;
 
