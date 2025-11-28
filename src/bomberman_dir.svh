@@ -16,4 +16,13 @@ localparam int DOWN = 1;
 localparam int LEFT = 2;
 localparam int RIGHT = 3;
 
+
+typedef enum logic [1:0] {
+  NO_BLK          = 2'd0,
+  PERM_BLK        = 2'd1,
+  DESTROYABLE_BLK = 2'd2,
+  BOMB            = 2'd3
+} map_state_t;
+
+
 `endif

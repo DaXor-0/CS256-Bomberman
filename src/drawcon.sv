@@ -40,29 +40,30 @@ module drawcon #(
                           BG_B          = 4'h3,
 
     // Derived parameters (not overridable)
-    localparam DEPTH      = NUM_COL * NUM_ROW,
-    localparam ADDR_WIDTH = $clog2(DEPTH)       // bit-width of map_addr output
+    localparam DEPTH          = NUM_COL * NUM_ROW,
+    localparam MAP_ADDR_WIDTH = $clog2(DEPTH),         // bit-width of map_addr output
+    localparam BLK_W_LOG2     = $clog2(BLK_W),
+    localparam BLK_H_LOG2     = $clog2(BLK_H),
+    localparam BLK_ADDR_WIDTH = $clog2(BLK_W * BLK_H)
+
 ) (
     // Map Memory block state input
-    input logic clk,
-    input logic rst,
-    input logic tick,
-    input logic [MAP_MEM_WIDTH-1:0] map_tile_state,
-    input logic [10:0] draw_x,
-    input logic [9:0] draw_y,
-    input logic [10:0] player_x,
-    input logic [9:0] player_y,
-    input dir_t player_dir,
-    input logic explode_signal,
-    input logic [ADDR_WIDTH-1:0] explosion_addr,
-    output logic [3:0] o_r,
+    input  logic                      clk,
+    input  logic                      rst,
+    input  logic                      tick,
+    input  logic [ MAP_MEM_WIDTH-1:0] map_tile_state,
+    input  logic [              10:0] draw_x,
+    input  logic [               9:0] draw_y,
+    input  logic [              10:0] player_x,
+    input  logic [               9:0] player_y,
+    input  dir_t                      player_dir,
+    input  logic                      explode_signal,
+    input  logic [MAP_ADDR_WIDTH-1:0] explosion_addr,
+    output logic [               3:0] o_r,
     o_g,
     o_b,
-    output logic [ADDR_WIDTH-1:0] map_addr
+    output logic [MAP_ADDR_WIDTH-1:0] map_addr
 );
-
-  localparam int BLK_W_LOG2 = $clog2(BLK_W);
-  localparam int BLK_H_LOG2 = $clog2(BLK_H);
 
   // ---------------------------------------------------------------------------
   // Sprite sheet layout parameters
@@ -89,8 +90,6 @@ module drawcon #(
   // ---------------------------------------------------------------------------
   // Animation driver (runs a counter to select animation frame)
   // ---------------------------------------------------------------------------
-  // Selects animation frame based on movement
-
   logic [5:0] frame_cnt;  // fame counter to 60 fps
   logic [1:0] walk_frame;  // ranges 0,1,2
   always_ff @(posedge clk) begin
@@ -112,37 +111,32 @@ module drawcon #(
 
 
   // ---------------------------------------------------------------------------
-  // Sprite addressing
+  // Player sprite addressing
   // ---------------------------------------------------------------------------
+  // Sprite ROM interface signals
   logic [   WALK_SPRITE_ADDR_WIDTH-1:0] sprite_addr;
   logic [                         11:0] sprite_rgb_raw;
   logic [                         11:0] sprite_rgb_q;
+  // Sprite position and bounds checking
   logic                                 player_sprite;
   logic                                 player_sprite_q;
-
   logic [         $clog2(SPRITE_W)-1:0] sprite_local_x;
   logic [         $clog2(SPRITE_H)-1:0] sprite_local_y;
+  // Sprite frame selection
   logic [         $clog2(SPRITE_W)-1:0] sprite_x_in_rom;
   logic [$clog2(WALK_FRAMES_TOTAL)-1:0] sprite_offset;
 
-  logic [               ADDR_WIDTH-1:0] addr_next;
+  logic [           MAP_ADDR_WIDTH-1:0] addr_next;
 
-  // Determine if current pixel is within player sprite bounds
-  always_comb begin
-    player_sprite  = 1'b0;
-    sprite_local_x = draw_x - player_x;
-    sprite_local_y = draw_y - player_y;
-
-
-    if ((draw_x >= player_x) && (draw_x < player_x + SPRITE_W) &&
-        (draw_y >= player_y) && (draw_y < player_y + SPRITE_H)) begin
-      player_sprite = 1'b1;
-    end
-  end
-
-  // Determine which sprite frame to use based on player direction and animation frame
+  // Determine if current pixel is within player sprite bounds and
+  // which sprite frame to use based on player direction and animation frame
   always_comb begin
     sprite_offset = '0;
+    sprite_local_x = draw_x - player_x;
+    sprite_local_y = draw_y - player_y;
+    player_sprite = (draw_x >= player_x) && (draw_x < player_x + SPRITE_W) &&
+                    (draw_y >= player_y) && (draw_y < player_y + SPRITE_H);
+
     case (dir_t'(player_dir))
       DIR_DOWN:  sprite_offset = 0*WALK_FRAMES_PER_DIR + walk_frame; // 0..2
       DIR_LEFT:  sprite_offset = 1*WALK_FRAMES_PER_DIR + walk_frame; // 3..5
@@ -152,19 +146,14 @@ module drawcon #(
   end
 
   // If facing left, flip the right sprite horizontaly
-  always_comb begin
-    sprite_x_in_rom = sprite_local_x;
-    if (player_dir == DIR_LEFT) sprite_x_in_rom = SPRITE_W - 1 - sprite_local_x;
-  end
-
+  assign sprite_x_in_rom = (player_dir == DIR_LEFT) ?
+                           (SPRITE_W - 1 - sprite_local_x) :
+                            sprite_local_x;
   // Calculate final sprite ROM address also in correlation to frame offset
-  always_comb begin
-    if (player_sprite) begin
-      sprite_addr = sprite_offset * WALK_SPRITE_SIZE + sprite_local_y * SPRITE_W + sprite_x_in_rom;
-    end else begin
-      sprite_addr = '0;
-    end
-  end
+  assign sprite_addr = player_sprite ?
+                       (sprite_offset * WALK_SPRITE_SIZE +
+                        sprite_local_y * SPRITE_W + sprite_x_in_rom) :
+                       '0;
 
   sprite_rom #(
       .SPRITE_W     (SPRITE_W),
@@ -188,15 +177,14 @@ module drawcon #(
   // Explosion detection: determine if current block is an explosion
   // ----------------------------------------------------------------------------
   // Function to check if the draw block is exploding
-  function logic is_exploding(input logic [ADDR_WIDTH-1:0] blk_addr,
-                              input logic [ADDR_WIDTH-1:0] exp);
-    return   ((blk_addr == exp) ||
-            (blk_addr == exp - NUM_COL) ||
-            (blk_addr == exp + NUM_COL) ||
-            (blk_addr == exp - 1) ||
-            (blk_addr == exp + 1));
+  function logic is_exploding(input logic [MAP_ADDR_WIDTH-1:0] blk_addr,
+                              input logic [MAP_ADDR_WIDTH-1:0] exp);
+    return ((blk_addr == exp)          ||
+           (blk_addr == exp - NUM_COL) ||
+           (blk_addr == exp + NUM_COL) ||
+           (blk_addr == exp - 1)       ||
+           (blk_addr == exp + 1));
   endfunction
-
 
   // ---------------------------------------------------------------------------
   // Border / map region detection
@@ -205,35 +193,26 @@ module drawcon #(
   logic out_of_map_q;
 
   always_comb begin
-    out_of_map =
-        (draw_x < BRD_H)              ||
-        (draw_x >= SCREEN_W - BRD_H)  ||
-        (draw_y < BRD_TOP)            ||
-        (draw_y >= SCREEN_H - BRD_BOT);
+    out_of_map = (draw_x < BRD_H)               ||
+                 (draw_x >= SCREEN_W - BRD_H)   ||
+                 (draw_y < BRD_TOP)             ||
+                 (draw_y >= SCREEN_H - BRD_BOT);
   end
 
   // ---------------------------------------------------------------------------
   // Map state decoding
   // ---------------------------------------------------------------------------
-  typedef enum logic [1:0] {
-    no_blk          = 2'd0,
-    perm_blk        = 2'd1,
-    destroyable_blk = 2'd2,
-    bomb            = 2'd3
-  } map_state;
-
-  map_state st;
-  assign st = map_state'(map_tile_state);
-  map_state st_q;
+  map_state_t st;
+  map_state_t st_q;
+  assign st = map_state_t'(map_tile_state);
 
   // ---------------------------------------------------------------------------
   // Permanent block sprite (64x64)
   // ---------------------------------------------------------------------------
-  localparam int PERM_BLK_ADDR_WIDTH = $clog2(BLK_W * BLK_H);
   logic [BLK_W_LOG2-1:0] perm_blk_local_x, perm_blk_local_x_q;
   logic [BLK_H_LOG2-1:0] perm_blk_local_y, perm_blk_local_y_q;
-  logic [PERM_BLK_ADDR_WIDTH-1:0] perm_blk_addr;
-  logic [                   11:0] perm_blk_rgb;
+  logic [BLK_ADDR_WIDTH-1:0] perm_blk_addr;
+  logic [              11:0] perm_blk_rgb;
 
   // ---------------------------------------------------------------------------
   // Color output muxing
@@ -256,17 +235,17 @@ module drawcon #(
 
     end else begin
       unique case (st_q)
-        no_blk: begin
+        NO_BLK: begin
           if (is_exploding(addr_next, explosion_addr) && explode_signal) {o_r, o_g, o_b} = 12'hF17;
           else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
         end
-        perm_blk: {o_r, o_g, o_b} = perm_blk_rgb;
-        destroyable_blk: begin
+        PERM_BLK: {o_r, o_g, o_b} = perm_blk_rgb;
+        DESTROYABLE_BLK: begin
           if (is_exploding(addr_next, explosion_addr) && explode_signal)
             {o_r, o_g, o_b} = 12'hF00; // Here, it should be changed with the reading from explosion ROM
           else {o_r, o_g, o_b} = 12'h00F;
         end
-        bomb:     {o_r, o_g, o_b} = 12'h333;
+        BOMB:     {o_r, o_g, o_b} = 12'h333;
         default:  {o_r, o_g, o_b} = 12'hF0F;  // Magenta as error color
       endcase
     end
