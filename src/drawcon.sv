@@ -52,6 +52,8 @@ module drawcon #(
     input logic [9:0] player_y,
     input logic [1:0] anim_frame,
     input dir_t player_dir,
+    input logic explode_signal,
+    input logic [ADDR_WIDTH-1:0] explosion_addr,
     output logic [3:0] o_r,
     o_g,
     o_b,
@@ -142,6 +144,20 @@ module drawcon #(
     sprite_rgb_q    <= sprite_rgb_raw;
   end
 
+  // ----------------------------------------------------------------------------
+  // Explosion detection: determine if current block is an explosion
+  // ----------------------------------------------------------------------------
+  // Function to check if the draw block is exploding
+  function logic is_exploding(input logic [ADDR_WIDTH-1:0] blk_addr, 
+                              input logic [ADDR_WIDTH-1:0] exp);
+  return   ((blk_addr == exp) ||
+            (blk_addr == exp - NUM_COL) ||
+            (blk_addr == exp + NUM_COL) ||
+            (blk_addr == exp - 1) ||
+            (blk_addr == exp - 1));
+  endfunction
+
+
   // ---------------------------------------------------------------------------
   // Border / map region detection
   // ---------------------------------------------------------------------------
@@ -200,9 +216,21 @@ module drawcon #(
 
     end else begin
       unique case (st_q)
-        no_blk:          {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
+        no_blk:
+        begin
+          if (is_exploding(addr_next) && explode_signal)
+            {o_r, o_g, o_b} = 12'hF17;
+          else
+            {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
+        end
         perm_blk:        {o_r, o_g, o_b} = perm_blk_rgb;
-        destroyable_blk: {o_r, o_g, o_b} = 12'h00F;
+        destroyable_blk: 
+        begin
+          if (is_exploding(addr_next) && explode_signal)
+            {o_r, o_g, o_b} = 12'hF00; // Here, it should be changed with the reading from explosion ROM
+          else 
+            {o_r, o_g, o_b} = 12'h00F;
+        end
         bomb:            {o_r, o_g, o_b} = 12'h333;
         default:         {o_r, o_g, o_b} = 12'hF0F;  // Magenta as error color
       endcase

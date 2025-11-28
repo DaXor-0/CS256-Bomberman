@@ -51,6 +51,7 @@ module game_top (
   localparam int MAP_DEPTH = MAP_NUM_ROW * MAP_NUM_COL;
   localparam int MAP_ADDR_WIDTH = $clog2(MAP_DEPTH);
   localparam int MAP_MEM_WIDTH = 2;
+  localparam int BOMB_TIME = 3;
 
   // Logic for positioning rectangle control.
   logic [10:0] player_x, map_player_x;
@@ -97,11 +98,22 @@ module game_top (
       .read_req(read_req[0])
   );
 
+  // -------------------------------------------------------- //
+  // ----------------- BOMBS AND EXPLOSIONS ----------------- //
+  // -------------------------------------------------------- // 
+  logic [MAP_ADDR_WIDTH-1:0] wr_addr, wr_addr_bomb, wr_addr_free, saved_explosion_addr;
+  logic [MAP_MEM_WIDTH-1:0] write_data, write_data_bomb, write_data_free;
+  logic we, we_bomb, we_free;
 
-  // Bomb Logic
-  logic [MAP_ADDR_WIDTH-1:0] wr_addr;
-  logic [MAP_MEM_WIDTH-1:0] write_data;
-  logic we;
+  logic trigger_explosion, explode_signal, game_over, free_blks_signal;
+  logic [$clog2(BOMB_TIME)-1:0] countdown;
+
+  // Write enable mux (very basic, with more bombs this needs to be an arbiter)
+  assign we = (we_bomb || we_free);
+  assign wr_addr = we_bomb ? wr_addr_bomb : wr_addr_free;
+  assign write_data = we_bomb ? write_data_bomb : write_data_free;
+
+
   bomb_logic bomb_logic_i (
       .clk(pixclk),
       .rst(rst),
@@ -109,18 +121,43 @@ module game_top (
       .player_x(map_player_x),
       .player_y(map_player_y),
       .place_bomb(place_bomb),
-      .write_addr(wr_addr),
-      .write_data(write_data),
-      .write_en(we),
+      .write_addr(wr_addr_bomb),
+      .write_data(write_data_bomb),
+      .write_en(we_bomb),
       .trigger_explosion(trigger_explosion),
       .countdown(countdown)
   );
 
   // Explosion Logic
-
+  explode_logic explode_logic_i (
+    .clk(pixclk),
+    .rst(rst),
+    .tick(tick),
+    .trigger_explosion(trigger_explosion),
+    .explosion_addr(wr_addr_bomb),
+    .player_x(map_player_x),
+    .player_y(map_player_y),
+    .saved_explosion_addr(saved_explosion_addr),
+    .explode_signal(explode_signal),
+    .game_over(game_over),
+    .free_blks_signal(free_blks_signal)
+  )
 
   // Free Blocks
-
+  free_blocks free_blocks_i (
+    .clk(pixclk),
+    .rst(rst),
+    .tick(tick),
+    .free_blks_signal(free_blks_signal),
+    .explosion_addr(saved_explosion_addr),
+    .map_mem_in(map_tile_state_obst),
+    .read_granted(read_granted[1]),
+    .read_req(read_req[1]),
+    .read_addr(read_addr_req[1]),
+    .write_addr(wr_addr_free),
+    .write_data(write_data_free),
+    .write_en(we_free)          
+  );
 
   // Map memory read controller (arbiter)
   mem_read_controller r_arbiter (
@@ -197,6 +234,8 @@ module game_top (
       .player_y(player_y),
       .anim_frame(anim_frame),
       .player_dir(move_dir),
+      .explode_signal(explode_signal),
+      .explosion_addr(saved_explosion_addr),
       .o_r(drawcon_o_r),
       .o_g(drawcon_o_g),
       .o_b(drawcon_o_b),

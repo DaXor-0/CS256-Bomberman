@@ -100,7 +100,9 @@ module explode_logic
   assign explode_signal = (st == EXPLODE);
   assign free_blks_signal = (st == FREE_BLKS);
 
+  // -----------------------------------------------------------------
   // Game Over condition: a player comes in contact with an explosion
+  // -----------------------------------------------------------------
   logic [TILE_SHIFT:0] tile_offset_x;
   logic [TILE_SHIFT:0] tile_offset_y;
   logic [TILE_SHIFT:0] right_edge_offset;
@@ -127,10 +129,10 @@ module explode_logic
   // Function to check if the player's block is exploding
   function logic is_exploding(input logic [ADDR_WIDTH-1:0] blk_addr, 
                               input logic [ADDR_WIDTH-1:0] exp);
-    return ((blk_addr == saved_explosion_addr - NUM_COL)   ||
-            (blk_addr == saved_explosion_addr + NUM_COL) ||
-            (blk_addr == saved_explosion_addr - 1) ||
-            (blk_addr == saved_explosion_addr - 1));
+    return ((blk_addr == exp - NUM_COL)   ||
+            (blk_addr == exp + NUM_COL) ||
+            (blk_addr == exp - 1) ||
+            (blk_addr == exp - 1));
   endfunction
 
   // Game Over condition
