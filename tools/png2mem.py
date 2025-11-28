@@ -59,11 +59,15 @@ def main():
         bg_rgb = None
     elif args.background == "auto":
         bg_pixel = img.getpixel((0, 0))  # RGBA
+        if type(bg_pixel) is not tuple:
+            raise ValueError("Failed to get pixel for auto background detection")
         bg_rgb = bg_pixel[:3]
     else:
         bg_rgb = args.background
 
     pixels = img.load()
+    if pixels is None:
+        raise ValueError("Failed to load image pixels")
     lines = []
 
     for sprite_index in range(args.sprites):
@@ -75,7 +79,7 @@ def main():
                 r, g, b, a = px
 
                 if a == 0 or (r, g, b) == bg_rgb:
-                    lines.append("000")
+                    lines.append("F0F") # Account for transparency with a specific code
                 else:
                     lines.append(rgb_to_12bit_hex((r, g, b)))
 

@@ -193,15 +193,18 @@ module drawcon #(
   always_comb begin
     if (out_of_map_q) begin
       {o_r, o_g, o_b} = {BRD_R, BRD_G, BRD_B};
-    end else if (player_sprite_q) begin
+
+      // Player sprites have a color key (12'hF0F) for transparency
+    end else if (player_sprite_q && (sprite_rgb_q != 12'hF0F)) begin
       {o_r, o_g, o_b} = sprite_rgb_q;
+
     end else begin
       unique case (st_q)
         no_blk:          {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
         perm_blk:        {o_r, o_g, o_b} = perm_blk_rgb;
         destroyable_blk: {o_r, o_g, o_b} = 12'h00F;
         bomb:            {o_r, o_g, o_b} = 12'h333;
-        default:         {o_r, o_g, o_b} = 12'hFF0;  // bug state; yellow = error
+        default:         {o_r, o_g, o_b} = 12'hF0F;  // Magenta as error color
       endcase
     end
   end
@@ -228,7 +231,7 @@ module drawcon #(
       .SPRITE_H     (BLK_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("sprites/w1/mem/perm_blk.mem")
+      .MEM_INIT_FILE("perm_blk.mem")
   ) perm_blk_sprite_i (
       .clk (clk),
       .addr(perm_blk_addr),

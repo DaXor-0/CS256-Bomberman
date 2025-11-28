@@ -19,11 +19,8 @@ def parse_background(bg_string):
 def hex444_to_rgba(p, bg_rgb):
     """
     Convert a 3-hex-digit RGB444 string to 8-bit RGBA.
-    If p == '000':
-      - if bg_rgb is None: return transparent
-      - else: return bg_rgb, opaque
     """
-    if p == "000":
+    if p == "F0F":
         if bg_rgb is None:
             return (0, 0, 0, 0)  # transparent
         else:
