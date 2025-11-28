@@ -57,7 +57,7 @@ module game_top (
   logic [10:0] player_x, map_player_x;
   logic [9:0] player_y, map_player_y;
   logic [MAP_ADDR_WIDTH-1:0] map_addr_obst, map_addr_drawcon, read_addr;
-  logic [MAP_ADDR_WIDTH-1:0] read_addr_req [0:1];
+  logic [MAP_ADDR_WIDTH-1:0] read_addr_req[0:1];
   logic [1:0] read_req, read_granted;
   logic [MAP_MEM_WIDTH-1:0] map_tile_state_obst, map_tile_state_drawcon;
 
@@ -130,43 +130,43 @@ module game_top (
 
   // Explosion Logic
   explode_logic explode_logic_i (
-    .clk(pixclk),
-    .rst(rst),
-    .tick(tick),
-    .trigger_explosion(trigger_explosion),
-    .explosion_addr(wr_addr_bomb),
-    .player_x(map_player_x),
-    .player_y(map_player_y),
-    .saved_explosion_addr(saved_explosion_addr),
-    .explode_signal(explode_signal),
-    .game_over(game_over),
-    .free_blks_signal(free_blks_signal)
+      .clk(pixclk),
+      .rst(rst),
+      .tick(tick),
+      .trigger_explosion(trigger_explosion),
+      .explosion_addr(wr_addr_bomb),
+      .player_x(map_player_x),
+      .player_y(map_player_y),
+      .saved_explosion_addr(saved_explosion_addr),
+      .explode_signal(explode_signal),
+      .game_over(game_over),
+      .free_blks_signal(free_blks_signal)
   );
 
   // Free Blocks
   free_blocks free_blocks_i (
-    .clk(pixclk),
-    .rst(rst),
-    .tick(tick),
-    .free_blks_signal(free_blks_signal),
-    .explosion_addr(saved_explosion_addr),
-    .map_mem_in(map_tile_state_obst),
-    .read_granted(read_granted[1]),
-    .read_req(read_req[1]),
-    .read_addr(read_addr_req[1]),
-    .write_addr(wr_addr_free),
-    .write_data(write_data_free),
-    .write_en(we_free)          
+      .clk(pixclk),
+      .rst(rst),
+      .tick(tick),
+      .free_blks_signal(free_blks_signal),
+      .explosion_addr(saved_explosion_addr),
+      .map_mem_in(map_tile_state_obst),
+      .read_granted(read_granted[1]),
+      .read_req(read_req[1]),
+      .read_addr(read_addr_req[1]),
+      .write_addr(wr_addr_free),
+      .write_data(write_data_free),
+      .write_en(we_free)
   );
 
   // Map memory read controller (arbiter)
   mem_read_controller r_arbiter (
-    .clk(pixclk),
-    .rst(rst),
-    .read_req(read_req),
-    .read_addr_req(read_addr_req),
-    .read_addr(read_addr),
-    .read_granted(read_granted)
+      .clk(pixclk),
+      .rst(rst),
+      .read_req(read_req),
+      .read_addr_req(read_addr_req),
+      .read_addr(read_addr),
+      .read_granted(read_granted)
   );
 
   assign read_req[1] = 1'b0;
@@ -200,39 +200,16 @@ module game_top (
     curr_y_d <= curr_y;
   end
 
-  // Selects animation frame based on movement
-  localparam int ANIM_HOLD = 5;  // hold each frame for 5 ticks
-  localparam int NUM_FRAMES = 3;  // walking frames: 0,1,2
-
-  logic [7:0] frame_cnt;  // free counter
-  logic [1:0] anim_frame;  // final output (0,1,2)
-  always_ff @(posedge pixclk) begin
-    if (rst) begin
-      frame_cnt  <= 8'd0;
-      anim_frame <= 2'd0;
-    end else if (tick && move_dir != DIR_NONE) begin
-      if (frame_cnt == (ANIM_HOLD * NUM_FRAMES - 1)) begin
-        frame_cnt  <= 0;
-        anim_frame <= 0;
-      end else begin
-        frame_cnt <= frame_cnt + 1;
-        if ((frame_cnt + 1) % ANIM_HOLD == 0) anim_frame <= anim_frame + 1;
-        if (anim_frame == NUM_FRAMES - 1 && (frame_cnt + 1) % ANIM_HOLD == 0) begin
-          anim_frame <= 0;
-        end
-      end
-    end
-  end
-
   // drawcon now contains sequential due to map FSM.
   drawcon drawcon_i (
       .clk(pixclk),
+      .rst(rst),
+      .tick(tick),
       .map_tile_state(map_tile_state_drawcon),
       .draw_x(curr_x_d),
       .draw_y(curr_y_d),
       .player_x(player_x),
       .player_y(player_y),
-      .anim_frame(anim_frame),
       .player_dir(move_dir),
       .explode_signal(explode_signal),
       .explosion_addr(saved_explosion_addr),

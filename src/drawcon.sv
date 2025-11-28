@@ -45,12 +45,13 @@ module drawcon #(
 ) (
     // Map Memory block state input
     input logic clk,
+    input logic rst,
+    input logic tick,
     input logic [MAP_MEM_WIDTH-1:0] map_tile_state,
     input logic [10:0] draw_x,
     input logic [9:0] draw_y,
     input logic [10:0] player_x,
     input logic [9:0] player_y,
-    input logic [1:0] anim_frame,
     input dir_t player_dir,
     input logic explode_signal,
     input logic [ADDR_WIDTH-1:0] explosion_addr,
@@ -72,6 +73,32 @@ module drawcon #(
   localparam int SPR_PIXELS_PER_FRM = SPRITE_W * SPRITE_H;
   localparam int SPRITE_ROM_DEPTH = NUM_FRAMES_TOTAL * SPR_PIXELS_PER_FRM;
   localparam int SPRITE_ADDR_WIDTH = $clog2(SPRITE_ROM_DEPTH);
+  localparam int ANIM_HOLD = 5;  // hold each frame for 5 ticks
+
+  // ---------------------------------------------------------------------------
+  // Animation driver (runs a counter to select animation frame)
+  // ---------------------------------------------------------------------------
+  // Selects animation frame based on movement
+
+  logic [7:0] frame_cnt;  // free counter
+  logic [1:0] anim_frame;  // final output (0,1,2)
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      frame_cnt  <= 8'd0;
+      anim_frame <= 2'd0;
+    end else if (tick && player_dir != DIR_NONE) begin
+      if (frame_cnt == (ANIM_HOLD * FRAMES_PER_DIR - 1)) begin
+        frame_cnt  <= 0;
+        anim_frame <= 0;
+      end else begin
+        frame_cnt <= frame_cnt + 1;
+        if ((frame_cnt + 1) % ANIM_HOLD == 0) anim_frame <= anim_frame + 1;
+        if (anim_frame == FRAMES_PER_DIR - 1 && (frame_cnt + 1) % ANIM_HOLD == 0) begin
+          anim_frame <= 0;
+        end
+      end
+    end
+  end
 
   // ---------------------------------------------------------------------------
   // Sprite addressing
@@ -148,9 +175,9 @@ module drawcon #(
   // Explosion detection: determine if current block is an explosion
   // ----------------------------------------------------------------------------
   // Function to check if the draw block is exploding
-  function logic is_exploding(input logic [ADDR_WIDTH-1:0] blk_addr, 
+  function logic is_exploding(input logic [ADDR_WIDTH-1:0] blk_addr,
                               input logic [ADDR_WIDTH-1:0] exp);
-  return   ((blk_addr == exp) ||
+    return   ((blk_addr == exp) ||
             (blk_addr == exp - NUM_COL) ||
             (blk_addr == exp + NUM_COL) ||
             (blk_addr == exp - 1) ||
@@ -216,23 +243,18 @@ module drawcon #(
 
     end else begin
       unique case (st_q)
-        no_blk:
-        begin
-          if (is_exploding(addr_next, explosion_addr) && explode_signal)
-            {o_r, o_g, o_b} = 12'hF17;
-          else
-            {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
+        no_blk: begin
+          if (is_exploding(addr_next, explosion_addr) && explode_signal) {o_r, o_g, o_b} = 12'hF17;
+          else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
         end
-        perm_blk:        {o_r, o_g, o_b} = perm_blk_rgb;
-        destroyable_blk: 
-        begin
+        perm_blk: {o_r, o_g, o_b} = perm_blk_rgb;
+        destroyable_blk: begin
           if (is_exploding(addr_next, explosion_addr) && explode_signal)
             {o_r, o_g, o_b} = 12'hF00; // Here, it should be changed with the reading from explosion ROM
-          else 
-            {o_r, o_g, o_b} = 12'h00F;
+          else {o_r, o_g, o_b} = 12'h00F;
         end
-        bomb:            {o_r, o_g, o_b} = 12'h333;
-        default:         {o_r, o_g, o_b} = 12'hF0F;  // Magenta as error color
+        bomb:     {o_r, o_g, o_b} = 12'h333;
+        default:  {o_r, o_g, o_b} = 12'hF0F;  // Magenta as error color
       endcase
     end
   end
