@@ -104,11 +104,45 @@ module check_obst #(
   // ===========================================================================
   // Direction counter (iterates through UP/DOWN/LEFT/RIGHT)
   // ===========================================================================
+  
+  // adding two states: WAIT, CHECK for read arbitering logic
+  typedef enum logic { WAIT, CHECK } check_state;
+
+  check_state st, nst;
+  // next state ff block
+  always_ff @(posedge clk)
+  if (rst) st <= WAIT;
+  else st <= nst;
+
+  // Next state logic
+  always_comb
+  begin
+    nst = st; // State remains unchanged if no condition triggered.
+    case (st)
+      WAIT: if (read_granted) nst = CHECK;
+      CHECK: if (read_done) nst = WAIT;
+    endcase
+  end
+
+  assign read_done = (st == CHECK) && ~read_req;
+  assign read_req = (st == WAIT) || ((st == CHECK) && (dir_cnt != 2'b0));
+  
   logic [1:0] dir_cnt;
   always_ff @(posedge clk) begin
-    if (rst) dir_cnt <= 2'd0;
-    else if (read_granted) dir_cnt <= dir_cnt + 2'd1;
-  end
+    if (rst) begin dir_cnt <= 2'd0; end
+    else 
+    case (st)
+      WAIT: 
+      begin
+        if (read_granted) dir_cnt <= dir_cnt + 1;
+        else dir_cnt <= 2'd0;
+      end
+      CHECK: 
+      begin
+        dir_cnt <= dir_cnt + 2'd1;
+      end 
+    endcase 
+    end
 
   // ===========================================================================
   // Stage A: compute address & capture context for the current direction
@@ -119,11 +153,9 @@ module check_obst #(
     if (rst) begin
       dir_a           <= 2'd0;
       obstacles_valid <= 1'b0;
-      read_req        <= 1'b0;
     end else begin
       dir_a           <= dir_cnt;  // wait 1 cycle for correct map_mem_in to arrive from memory
-      obstacles_valid <= (dir_a == 2'b11);  // equivalent to dir_a == 2'b11 (2 cycle delay).
-      read_req        <= (dir_cnt == 2'b11);
+      obstacles_valid <= ((dir_a == 2'b11) && (st == CHECK));  // equivalent to dir_a == 2'b11 (2 cycle delay).
     end
   end
 
