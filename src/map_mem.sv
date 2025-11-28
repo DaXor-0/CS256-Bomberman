@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
 
+`include "bomberman_dir.svh"
+
 /**
 * Module: map_mem
 * Description: Simple synchronous tile map memory backed by block RAM.
@@ -54,11 +56,23 @@ module map_mem #(
     (* ram_style = "block" *)
     logic [DATA_WIDTH-1:0] map_ram [0:DEPTH-1];
 
+
+    // -----------------------------
+    // Random Obstacle Generator - Using Pbits
+    // -----------------------------
+    pbit pbit_inst (
+        .Dout(place_dest_blk), // generate block condition
+        .Din(ten_pct),    // 10% chance to output 1/True 
+        .clk(clk)
+    );
+
     // Simple FSM to copy ROM → RAM when rst is high
     typedef enum logic {IDLE, RESET_COPY} state_t;
     state_t state;
 
     logic [ADDR_WIDTH-1:0] copy_idx;
+    logic [DATA_WIDTH-1:0] rom_val;
+    assign rom_val = init_rom[copy_idx];
 
     always_ff @(posedge clk) begin
         if (rst) begin
@@ -67,13 +81,21 @@ module map_mem #(
         end
         else begin
             case (state)
-                RESET_COPY: begin
-                    map_ram[copy_idx] <= init_rom[copy_idx];
-                    copy_idx          <= copy_idx + 1;
+                RESET_COPY: 
+                begin
+                    
+                    // If ROM says no_blk (0) and RNG is high → place destroyable block (2)
+                    if (rom_val == 2'd0 && ten_pct)
+                        map_ram[copy_idx] <= 2'd2;   // destroyable_blk
+                    else
+                        map_ram[copy_idx] <= rom_val;
+
+                    copy_idx <= copy_idx + 1;
 
                     if (copy_idx == DEPTH-1)
                         state <= IDLE;
                 end
+
 
                 IDLE: begin
                     if (we)

@@ -36,7 +36,8 @@ module bomb_logic #(
     output logic [MAP_MEM_WIDTH-1:0] write_data,
     output logic write_en,
     trigger_explosion,
-    output logic [$clog2(BOMB_TIME)-1:0] countdown
+    output logic [$clog2(BOMB_TIME)-1:0] countdown,
+    output logic countdown_signal
 );
 
   // NOTE: This implementation can do 1 bomb only. For more bombs, each bomb should have its state-machine, and there should be an indexing between currently placed bombs.
@@ -130,6 +131,7 @@ module bomb_logic #(
   assign write_en = ((st == BOMB_LOGIC_PLACE) | (st == BOMB_LOGIC_EXPLODE));
   assign write_data = (trigger_explosion) ? 2'd0 : 2'd3;
   assign write_addr = (trigger_explosion) ? saved_addr : computed_addr; // free the same block that was placed to.
+  assign countdown_signal = (st == BOMB_LOGIC_COUNTDOWN);
 
   // ------------------------------
   // Determining Bomb placement address

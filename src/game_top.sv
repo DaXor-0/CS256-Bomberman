@@ -14,8 +14,12 @@ module game_top (
     o_pix_g,
     o_pix_b,
     output logic       o_hsync,
-    o_vsync
+    o_vsync,
+    output logic CA, CB, CC, CD, CE, CF, CG,
+    output logic [7:0] AN
 );
+
+
 
   wire pixclk, rst;
   assign rst = ~CPU_RESETN;  // the reset button is reversed (lost too much time on that :( )
@@ -25,6 +29,36 @@ module game_top (
       .clk_out1(pixclk)
   );
 
+// -------------------------------------------------------- //
+// -------------------- 7-SEG DISPLAY -------------------- //
+// -------------------------------------------------------- //
+  logic [3:0] dig0;
+  multidigit multidigit_i (
+      .clk   (CLK100MHZ),
+      .rst   (~CPU_RESETN),
+      .dig0  (dig0),
+      .dig1  (4'd0),
+      .dig2  (4'd0),
+      .dig3  (4'd0),
+      .dig4  (4'd0),
+      .dig5  (4'd0),
+      .dig6  (4'd0),
+      .dig7  (4'd0),
+      .a     (CA),
+      .b     (CB),
+      .c     (CC),
+      .d     (CD),
+      .e     (CE),
+      .f     (CF),
+      .g     (CG),
+      .an    (AN)
+  );
+
+  assign dig0 = countdown; // display the bomb countdown on the 7-seg
+
+// -------------------------------------------------------- //
+// ----------------------- VGA MODULE --------------------- //
+// -------------------------------------------------------- //
   // Get the VGA timing signals
   logic [10:0] curr_x;
   logic [ 9:0] curr_y;
@@ -125,7 +159,8 @@ module game_top (
       .write_data(write_data_bomb),
       .write_en(we_bomb),
       .trigger_explosion(trigger_explosion),
-      .countdown(countdown)
+      .countdown(countdown),
+      .countdown_signal(countdown_signal)
   );
 
   // Explosion Logic

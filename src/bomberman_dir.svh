@@ -7,6 +7,9 @@ localparam int DOWN = 1;
 localparam int LEFT = 2;
 localparam int RIGHT = 3;
 
+// Percentages
+int ten_pct = 32'h1999999A; // 10%
+
 typedef enum logic [3:0] {
   DIR_NONE  = 4'b0000,
   DIR_UP    = 4'b1000,
