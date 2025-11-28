@@ -32,12 +32,12 @@ module drawcon #(
     parameter             BLK_H         = 64,    // should be power of 2
     parameter             SPRITE_W      = 32,
     parameter             SPRITE_H      = 48,
-    parameter logic [3:0] BRD_R         = 4'h1,
-                          BRD_G         = 4'h7,
-                          BRD_B         = 4'h3,
-    parameter logic [3:0] BG_R          = 4'hF,
-                          BG_G          = 4'hF,
-                          BG_B          = 4'hF,
+    parameter logic [3:0] BRD_R         = 4'hF,
+                          BRD_G         = 4'hF,
+                          BRD_B         = 4'hF,
+    parameter logic [3:0] BG_R          = 4'h1,
+                          BG_G          = 4'h7,
+                          BG_B          = 4'h3,
 
     // Derived parameters (not overridable)
     localparam DEPTH      = NUM_COL * NUM_ROW,
@@ -125,6 +125,8 @@ module drawcon #(
   logic [         $clog2(SPRITE_W)-1:0] sprite_x_in_rom;
   logic [$clog2(WALK_FRAMES_TOTAL)-1:0] sprite_offset;
 
+  logic [               ADDR_WIDTH-1:0] addr_next;
+
   // Determine if current pixel is within player sprite bounds
   always_comb begin
     player_sprite  = 1'b0;
@@ -192,7 +194,7 @@ module drawcon #(
             (blk_addr == exp - NUM_COL) ||
             (blk_addr == exp + NUM_COL) ||
             (blk_addr == exp - 1) ||
-            (blk_addr == exp - 1));
+            (blk_addr == exp + 1));
   endfunction
 
 
@@ -276,7 +278,6 @@ module drawcon #(
   logic [10:0] map_x;
   logic [ 9:0] map_y;
   logic [4:0] row, col;
-  logic [ADDR_WIDTH-1:0] addr_next;
 
   // Accounting for the border offset so that indexing is done correctly.
   assign map_x = draw_x - BRD_H;

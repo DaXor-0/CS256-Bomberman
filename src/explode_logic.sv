@@ -132,7 +132,7 @@ module explode_logic
     return ((blk_addr == exp - NUM_COL)   ||
             (blk_addr == exp + NUM_COL) ||
             (blk_addr == exp - 1) ||
-            (blk_addr == exp - 1));
+            (blk_addr == exp + 1));
   endfunction
 
   // Game Over condition
