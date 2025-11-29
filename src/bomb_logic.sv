@@ -72,18 +72,18 @@ module bomb_logic #(
 
   // next state ff block
   always_ff @(posedge clk)
-    if (rst) st <= IDLE;
+    if (rst) st <= BOMB_LOGIC_IDLE;
     else st <= nst;
 
   // Next state logic
   always_comb begin
     nst = st;  // State remains unchanged if no condition triggered.
     case (st)
-      IDLE: if (place_pulse) nst = PLACE;
-      PLACE: nst = COUNTDOWN;
-      COUNTDOWN: if ((countdown == 1) && (second_cnt == 6'd59)) nst = EXPLODE;
-      EXPLODE: nst = IDLE;
-      default: nst = IDLE;
+      BOMB_LOGIC_IDLE: if (place_pulse) nst = BOMB_LOGIC_PLACE;
+      BOMB_LOGIC_PLACE: nst = BOMB_LOGIC_COUNTDOWN;
+      BOMB_LOGIC_COUNTDOWN: if ((countdown == 1) && (second_cnt == 6'd59)) nst = BOMB_LOGIC_EXPLODE;
+      BOMB_LOGIC_EXPLODE: nst = BOMB_LOGIC_IDLE;
+      default: nst = BOMB_LOGIC_IDLE;
     endcase
   end
 
@@ -98,18 +98,18 @@ module bomb_logic #(
       saved_addr <= 0;
     end else begin
       case (st)
-        IDLE: begin
+        BOMB_LOGIC_IDLE: begin
           max_bombs  <= 1;
           countdown  <= BOMB_TIME;
           second_cnt <= 0;
         end
-        PLACE: begin
+        BOMB_LOGIC_PLACE: begin
           saved_addr <= computed_addr;  // save the bomb address to be freed later.
           max_bombs  <= 0;
           countdown  <= BOMB_TIME;
           second_cnt <= 0;
         end
-        COUNTDOWN: // Countdown state, such that
+        BOMB_LOGIC_COUNTDOWN: // Countdown state, such that
         begin
           if (tick) begin
             if (second_cnt == 59) begin
@@ -127,11 +127,11 @@ module bomb_logic #(
       endcase
     end
 
-  assign trigger_explosion = (st == EXPLODE);
-  assign write_en = ((st == PLACE) | (st == EXPLODE));
+  assign trigger_explosion = (st == BOMB_LOGIC_EXPLODE);
+  assign write_en = ((st == BOMB_LOGIC_PLACE) | (st == BOMB_LOGIC_EXPLODE));
   assign write_data = (trigger_explosion) ? 2'd0 : 2'd3;
   assign write_addr = (trigger_explosion) ? saved_addr : computed_addr; // free the same block that was placed to.
-  assign countdown_signal = (st == COUNTDOWN);
+  assign countdown_signal = (st == BOMB_LOGIC_COUNTDOWN);
 
   // ------------------------------
   // Determining Bomb placement address

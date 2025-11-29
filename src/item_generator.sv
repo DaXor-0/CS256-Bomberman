@@ -64,7 +64,7 @@ module item_generator #(
     // ------------------------------
     always_ff @(posedge clk) begin
         if (rst)
-        st <= IDLE;
+        st <= ITEM_STATE_IDLE;
         else
         st <= nst;
     end
@@ -75,14 +75,14 @@ module item_generator #(
     always_comb begin
         nst = st;
         case (st)
-        IDLE: begin
+        ITEM_STATE_IDLE: begin
             if (we_in && (write_data_in == 2'd0) && generate_item) begin
-            nst = ACTIVE;
+            nst = ITEM_STATE_ACTIVE;
             end
         end
     
-        ACTIVE: begin
-            if ((countdown == 1) && (second_cnt == 6'd59)) nst = IDLE;
+        ITEM_STATE_ACTIVE: begin
+            if ((countdown == 1) && (second_cnt == 6'd59)) nst = ITEM_STATE_IDLE;
         end
     
         endcase
@@ -104,7 +104,7 @@ module item_generator #(
     end
     else
     case (st)
-      IDLE:
+      ITEM_STATE_IDLE:
       begin
         second_cnt <= 0;
         countdown  <= ITEM_TIME;
@@ -114,7 +114,7 @@ module item_generator #(
             second_cnt <= 0;
         end else saved_addr <= 0;
       end
-      ACTIVE:
+      ITEM_STATE_ACTIVE:
       begin
         if (tick) begin
           if (second_cnt == 59) begin
@@ -127,7 +127,7 @@ module item_generator #(
     // ------------------------------
     // -- output logic --
     // ------------------------------
-    assign item_active = (st == ACTIVE);
+    assign item_active = (st == ITEM_STATE_ACTIVE);
 
     // ------------------------------
     // -- player blk computation logic --

@@ -29,32 +29,31 @@ typedef enum logic [1:0] {
 
 
 typedef enum logic [1:0] {
-  IDLE,
-  ACTIVE,
-  FREE_BLOCKS
+  EXP_STATE_IDLE,
+  EXP_STATE_ACTIVE,
+  EXP_STATE_FREE_BLOCKS
 } bomb_explosion_state_t;
 
 
 typedef enum logic [1:0] {
-  IDLE,
-  REQ_READ,
-  BLOCKS,
-  CLEAR_BLOCKS
+  FREE_STATE_IDLE,
+  FREE_STATE_REQ_READ,
+  FREE_STATE_CHECK_BLOCKS,
+  FREE_STATE_CLEAR_BLOCKS
 } free_blocks_state_t;
 
 
 typedef enum logic [1:0] {
-  IDLE,
-  PLACE,
-  COUNTDOWN,
-  EXPLODE
+  BOMB_LOGIC_IDLE,
+  BOMB_LOGIC_PLACE,
+  BOMB_LOGIC_COUNTDOWN,
+  BOMB_LOGIC_EXPLODE
 } bomb_logic_state_t;
 
 typedef enum logic [1:0] {
-  IDLE,
-  ACTIVE 
+  ITEM_STATE_IDLE,
+  ITEM_STATE_PRESENT
 } item_state_t;
-
 
 
 `endif
