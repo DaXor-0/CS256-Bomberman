@@ -60,6 +60,8 @@ module drawcon #(
     input  dir_t                      player_dir,
     input  logic                      explode_signal,
     input  logic [MAP_ADDR_WIDTH-1:0] explosion_addr,
+    input  logic                      exit_present,
+    input  logic [MAP_ADDR_WIDTH-1:0] exit_addr,
     output logic [               3:0] o_r,
     o_g,
     o_b,
@@ -292,7 +294,7 @@ module drawcon #(
   );
 
   // ----------------------------------------------------------------------------
-  // Explosion detection: determine if current block is an explosion
+  // Detection: determine if current block is a given active tile
   // ----------------------------------------------------------------------------
   // Function to check if the draw block is exploding
   function logic is_exploding(input logic [MAP_ADDR_WIDTH-1:0] blk_addr,
@@ -303,6 +305,9 @@ module drawcon #(
            (blk_addr == exp - 1)       ||
            (blk_addr == exp + 1));
   endfunction
+
+  // Check if the draw block is currently an exit
+  assign is_exit = (addr_next == exit_addr) && (exit_present);
 
   // ---------------------------------------------------------------------------
   // Color output muxing
@@ -340,6 +345,10 @@ module drawcon #(
           if (is_exploding(addr_next, explosion_addr) && explode_signal) begin
             if (explode_sprite_rgb_q != TRANSPARENCY) {o_r, o_g, o_b} = explode_sprite_rgb_q;
             else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
+          end 
+          else if (is_exit)
+          begin
+            {o_r, o_g, o_b} = 12'h22F;
           end
           else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
         end
