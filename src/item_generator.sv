@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 
 `include "bomberman_dir.svh"
+`include "func_player_addr.svh"
 
 /**
 * Module: item_generator 
@@ -134,30 +135,30 @@ module item_generator #(
     // -- player blk computation logic --
     // ------------------------------
     // Player_x and Player_y in block (col, row)
-    logic [TILE_SHIFT:0] tile_offset_x;
-    logic [TILE_SHIFT:0] tile_offset_y;
-    logic [TILE_SHIFT:0] right_edge_offset;
-    logic [TILE_SHIFT:0] bottom_edge_offset;
-    assign tile_offset_x = {1'b0, player_x[TILE_SHIFT-1:0]};
-    assign tile_offset_y = {1'b0, player_y[TILE_SHIFT-1:0]};
-    assign right_edge_offset = tile_offset_x + (TILE_SHIFT + 1)'(SPRITE_W);
-    assign bottom_edge_offset = tile_offset_y + (TILE_SHIFT + 1)'(SPRITE_H);
-
-    // Player_x and Player_y in block (col, row)
-    logic [$clog2(NUM_ROW)-1:0] blockpos_row;
-    logic [$clog2(NUM_COL)-1:0] blockpos_col;
-    logic [$clog2(NUM_ROW)-1:0] blockpos_row2;
-    logic [$clog2(NUM_COL)-1:0] blockpos_col2;
-    assign blockpos_row = (player_y >> TILE_SHIFT);  // truncates to ROW_W
-    assign blockpos_col = (player_x >> TILE_SHIFT);  // truncates to COL_W
-    assign blockpos_row2 = (bottom_edge_offset > TILE_PX) ? blockpos_row + 1 : 0;  // Player between two blocks
-    assign blockpos_col2 = (right_edge_offset > TILE_PX) ? blockpos_col + 1 : 0;         // Player between two blocks
+//    logic [TILE_SHIFT:0] tile_offset_x;
+//    logic [TILE_SHIFT:0] tile_offset_y;
+//    logic [TILE_SHIFT:0] right_edge_offset;
+//    logic [TILE_SHIFT:0] bottom_edge_offset;
+//    assign tile_offset_x = {1'b0, player_x[TILE_SHIFT-1:0]};
+//    assign tile_offset_y = {1'b0, player_y[TILE_SHIFT-1:0]};
+//    assign right_edge_offset = tile_offset_x + (TILE_SHIFT + 1)'(SPRITE_W);
+//    assign bottom_edge_offset = tile_offset_y + (TILE_SHIFT + 1)'(SPRITE_H);
+//
+//    // Player_x and Player_y in block (col, row)
+//    logic [$clog2(NUM_ROW)-1:0] blockpos_row;
+//    logic [$clog2(NUM_COL)-1:0] blockpos_col;
+//    logic [$clog2(NUM_ROW)-1:0] blockpos_row2;
+//    logic [$clog2(NUM_COL)-1:0] blockpos_col2;
+//    assign blockpos_row = (player_y >> TILE_SHIFT);  // truncates to ROW_W
+//    assign blockpos_col = (player_x >> TILE_SHIFT);  // truncates to COL_W
+//    assign blockpos_row2 = (bottom_edge_offset > TILE_PX) ? blockpos_row + 1 : 0;  // Player between two blocks
+//    assign blockpos_col2 = (right_edge_offset > TILE_PX) ? blockpos_col + 1 : 0;         // Player between two blocks
 
     // player blocks addresses
     logic [ADDR_WIDTH-1:0] blk1_addr, blk2_addr;
-    assign blk1_addr = blockpos_row * NUM_COL + blockpos_col;
-    assign blk2_addr = blockpos_row2 * NUM_COL + blockpos_col2;
-
+//    assign blk1_addr = blockpos_row * NUM_COL + blockpos_col;
+//    assign blk2_addr = blockpos_row2 * NUM_COL + blockpos_col2;
+    compute_player_blocks(player_x, player_y, blk1_addr, blk2_addr);
 
     // ------------------------------
     // -- win condition --
