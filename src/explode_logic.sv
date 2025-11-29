@@ -49,17 +49,17 @@ module explode_logic #(
 
   // next state ff block
   always_ff @(posedge clk)
-    if (rst) st <= EXP_STATE_IDLE;
+    if (rst) st <= IDLE;
     else st <= nst;
 
   // Next state logic
   always_comb begin
     nst = st;  // State remains unchanged if no condition triggered.
     case (st)
-      EXP_STATE_IDLE: if (trigger_explosion) nst = EXP_STATE_ACTIVE;
-      EXP_STATE_ACTIVE: if (second_cnt == 6'd59) nst = EXP_STATE_FREE_BLOCKS;
-      EXP_STATE_FREE_BLOCKS: nst = EXP_STATE_IDLE;
-      default: nst = EXP_STATE_IDLE;
+      IDLE: if (trigger_explosion) nst = ACTIVE;
+      ACTIVE: if (second_cnt == 6'd59) nst = FREE_BLOCKS;
+      FREE_BLOCKS: nst = IDLE;
+      default: nst = IDLE;
     endcase
   end
 
@@ -72,20 +72,20 @@ module explode_logic #(
       second_cnt <= 0;
     end else begin
       case (st)
-        EXP_STATE_IDLE: begin
+        IDLE: begin
           second_cnt <= 0;
           if (trigger_explosion) begin
             saved_explosion_addr <= explosion_addr;
           end
         end
-        EXP_STATE_ACTIVE: begin
+        ACTIVE: begin
           if (tick) second_cnt <= second_cnt + 1;
         end
       endcase
     end
 
-  assign explode_signal   = (st == EXP_STATE_ACTIVE);
-  assign free_blks_signal = (st == EXP_STATE_FREE_BLOCKS);
+  assign explode_signal   = (st == ACTIVE);
+  assign free_blks_signal = (st == FREE_BLOCKS);
 
   // -----------------------------------------------------------------
   // Game Over condition: a player comes in contact with an explosion

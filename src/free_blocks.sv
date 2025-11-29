@@ -46,18 +46,18 @@ module free_blocks #(
 
   // next state ff block
   always_ff @(posedge clk)
-    if (rst) st <= FREE_STATE_IDLE;
+    if (rst) st <= IDLE;
     else st <= nst;
 
   // Next state logic
   always_comb begin
     nst = st;  // State remains unchanged if no condition triggered.
     case (st)
-      FREE_STATE_IDLE: if (free_blks_signal) nst = FREE_STATE_REQ_READ;
-      FREE_STATE_REQ_READ: if (read_granted) nst = FREE_STATE_CHECK_BLOCKS;
-      FREE_STATE_CHECK_BLOCKS: if (check_done) nst = FREE_STATE_CLEAR_BLOCKS;
-      FREE_STATE_CLEAR_BLOCKS: if (free_done) nst = FREE_STATE_IDLE;
-      default: nst = FREE_STATE_IDLE;
+      IDLE: if (free_blks_signal) nst = REQ_READ;
+      REQ_READ: if (read_granted) nst = CHECK_BLOCKS;
+      CHECK_BLOCKS: if (check_done) nst = CLEAR_BLOCKS;
+      CLEAR_BLOCKS: if (free_done) nst = IDLE;
+      default: nst = IDLE;
     endcase
   end
 
@@ -77,30 +77,31 @@ module free_blocks #(
       blk_status <= 0;
     end else begin
       case (st)
-        FREE_STATE_IDLE: begin
+        IDLE: begin
           if (free_blks_signal) begin
             saved_explosion_addr <= explosion_addr;
           end else dir_cnt <= 0;
           blk_status <= 0;
         end
-        FREE_STATE_REQ_READ: begin
+        REQ_READ: begin
           // Waiting for read to be granted
           if (read_granted) begin
             dir_cnt <= dir_cnt + 1;
             dir_a   <= dir_cnt;
           end
         end
-        FREE_STATE_CHECK_BLOCKS: begin
+        CHECK_BLOCKS: begin
           if (dir_cnt != 2'b0) dir_cnt <= dir_cnt + 1;
           dir_a <= dir_cnt;
           if (map_mem_in == 2'd2) blk_status[dir_a] <= 1'b1;  // Mark as needs to be free
         end
-        FREE_STATE_CLEAR_BLOCKS: begin
+        CLEAR_BLOCKS: begin
           dir_cnt <= dir_cnt + 1;
         end
       endcase
     end
 
+  // Addresses
   assign read_addr = (dir_cnt == UP) ? explosion_addr - NUM_COL :  // UP
       (dir_cnt == DOWN) ? saved_explosion_addr + NUM_COL :  // DOWN
       (dir_cnt == LEFT) ? saved_explosion_addr - 1 :  // LEFT
@@ -109,10 +110,11 @@ module free_blocks #(
       (dir_cnt == DOWN) ? saved_explosion_addr + NUM_COL :  // DOWN
       (dir_cnt == LEFT) ? saved_explosion_addr - 1 :  // LEFT
       saved_explosion_addr + 1;  // RIGHT
-  assign check_done = ((st == FREE_STATE_CHECK_BLOCKS) && (dir_cnt == 2'b00));
-  assign free_done = ((st == FREE_STATE_CLEAR_BLOCKS) && (dir_cnt == 2'b11));
+  // Control signals
+  assign check_done = ((st == CHECK_BLOCKS) && (dir_cnt == 2'b00));
+  assign free_done = ((st == CLEAR_BLOCKS) && (dir_cnt == 2'b11));
   assign write_data = 2'b0;  // write a free_blk
-  assign write_en = ((st == FREE_STATE_CLEAR_BLOCKS) && blk_status[dir_cnt]);
-  assign read_req = ((st == FREE_STATE_REQ_READ) || (st == FREE_STATE_CHECK_BLOCKS));
+  assign write_en = ((st == CLEAR_BLOCKS) && blk_status[dir_cnt]);
+  assign read_req = ((st == REQ_READ) || (st == CHECK_BLOCKS));
 
 endmodule
