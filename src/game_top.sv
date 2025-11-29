@@ -122,6 +122,7 @@ module game_top (
       .rst(rst),
       .tick(tick),
       .move_dir(move_dir),
+      .player_speed(player_speed),
       .map_mem_in(map_tile_state_obst),
       .map_addr(map_addr_obst),
       .player_x(player_x),
@@ -193,23 +194,50 @@ module game_top (
       .write_en(we_free)
   );
 
-  // ---- 
-  logic last_blk, exit_present, game_win;
-  logic [ADDR_WIDTH-1:0] exit_addr;
-  exit_generator exit_generator_i (
+  // ---- Exit / Win condition -- WIP
+//  logic last_blk, exit_present, game_win;
+//  logic [ADDR_WIDTH-1:0] exit_addr;
+//  exit_generator exit_generator_i (
+//      .clk(pixclk),
+//      .rst(rst),
+//      .free_blk_signal(free_blk_signal),
+//      .last_blk(last_blk),
+//      .explosion_addr(saved_explosion_addr),
+//      .player_x(player_x),
+//      .player_y(player_y),
+//      .exit_addr(exit_addr),
+//      .exit_present(exit_present),
+//      .game_win(game_win)
+//  );
+
+  // --------------------------------- //
+  // -------- Power-up Logic --------- //
+  // --------------------------------- //
+  logic [ADDR_WIDTH-1:0] item_addr [0:2];
+  logic item_active [0:2];
+  logic player_on_item [0:2];
+  logic [3:0] max_bombs;
+  logic [5:0] player_speed;
+  logic [3:0] bomb_range; 
+  power_up power_up_i (
       .clk(pixclk),
       .rst(rst),
-      .free_blk_signal(free_blk_signal),
-      .last_blk(last_blk),
-      .explosion_addr(saved_explosion_addr),
-      .player_x(player_x),
-      .player_y(player_y),
-      .exit_addr(exit_addr),
-      .exit_present(exit_present),
-      .game_win(game_win)
+      .tick(tick),
+      .we_in(we_free), // on free_blk, generate the exit with a 5% probability
+      .write_addr_in(wr_addr_free),
+      .write_data_in(write_data_free),
+      .player_x(map_player_x),  // map_player_x
+      .player_y(map_player_y),
+      .probability(32'h33333333), // ~20% probability
+      .item_addr(item_addr),
+      .item_active(item_active),
+      .player_on_item(player_on_item),
+      .max_bombs(max_bombs),
+      .player_speed(player_speed),
+      .bomb_range(bomb_range)
   );
 
-  assign last_blk = 1'b0; // until implemented, disable
+//  assign last_blk = 1'b0; // until implemented, disable
 
   // Map memory read controller (arbiter)
   mem_read_controller r_arbiter (
@@ -264,8 +292,10 @@ module game_top (
       .player_dir(move_dir),
       .explode_signal(explode_signal),
       .explosion_addr(saved_explosion_addr),
-      .exit_present(exit_present),
-      .exit_addr(exit_addr),
+      .exit_present(1'b0),
+      .exit_addr(1'b0),
+      .item_active(item_active),
+      .item_addr(item_addr),
       .o_r(drawcon_o_r),
       .o_g(drawcon_o_g),
       .o_b(drawcon_o_b),

@@ -62,6 +62,8 @@ module drawcon #(
     input  logic [MAP_ADDR_WIDTH-1:0] explosion_addr,
     input  logic                      exit_present,
     input  logic [MAP_ADDR_WIDTH-1:0] exit_addr,
+    input logic [MAP_ADDR_WIDTH-1:0] item_addr [0:2],
+    input logic item_active [0:2],
     output logic [               3:0] o_r,
     o_g,
     o_b,
@@ -308,6 +310,9 @@ module drawcon #(
 
   // Check if the draw block is currently an exit
   assign is_exit = (addr_next == exit_addr) && (exit_present);
+  assign is_speed_power_up = (addr_next == item_addr[0]) && item_active[0];
+  assign is_bomb_power_up  = (addr_next == item_addr[1]) && item_active[1];
+  assign is_range_power_up = (addr_next == item_addr[2]) && item_active[2];
 
   // ---------------------------------------------------------------------------
   // Color output muxing
@@ -346,7 +351,7 @@ module drawcon #(
             if (explode_sprite_rgb_q != TRANSPARENCY) {o_r, o_g, o_b} = explode_sprite_rgb_q;
             else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
           end 
-          else if (is_exit)
+          else if (is_speed_power_up)
           begin
             {o_r, o_g, o_b} = 12'h22F;
           end

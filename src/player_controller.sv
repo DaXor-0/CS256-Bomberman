@@ -24,7 +24,6 @@ module player_controller #(
     // ---- Player sprite ----
     parameter int SPRITE_W      = 32,
     parameter int SPRITE_H      = 48,
-    parameter int STEP_SIZE     = 4,
     // ---- Screen + HUD ----
     parameter int SCREEN_W      = 1280,
     parameter int SCREEN_H      = 800,
@@ -40,6 +39,7 @@ module player_controller #(
     input  logic                     rst,
     input  logic                     tick,
     input  dir_t                     move_dir,
+    input logic [5:0]                 player_speed,
     input  logic [MAP_MEM_WIDTH-1:0] map_mem_in,
     input logic read_granted,
 
@@ -117,7 +117,7 @@ module player_controller #(
   // ---- Max movement per direction ---
   logic [DIST_WIDTH-1:0] step[3:0];
   logic [DIST_WIDTH-1:0] step_req;
-  assign step_req = (STEP_SIZE > MAX_STEP) ? DIST_WIDTH'(MAX_STEP) : DIST_WIDTH'(STEP_SIZE);
+  assign step_req = (player_speed > MAX_STEP) ? DIST_WIDTH'(MAX_STEP) : DIST_WIDTH'(player_speed);
 
   assign step[UP]    = obstacles_r[UP]    ? '0 : ((obstacle_dist_r[UP]    < step_req) ? obstacle_dist_r[UP]    : step_req);
   assign step[DOWN]  = obstacles_r[DOWN]  ? '0 : ((obstacle_dist_r[DOWN]  < step_req) ? obstacle_dist_r[DOWN]  : step_req);
