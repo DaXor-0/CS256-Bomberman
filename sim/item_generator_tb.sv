@@ -104,16 +104,15 @@ module item_generator_tb;
 
         $display("\n========== TEST: Item should be generated on free block ==========\n");
 
-        repeat (3) @(posedge clk);
+        repeat (3) @(negedge clk);
 
         // Trigger item creation
         we_in = 1;
         write_data_in = 0;                 // must be free block
         write_addr_in = 20;
 
-        @(posedge clk);
+        @(negedge clk);
         we_in = 0;
-
         if (!item_active) begin
             $fatal("ERROR: Item should have become ACTIVE when free block written.");
         end else begin
@@ -136,11 +135,11 @@ module item_generator_tb;
         $display("\n========== TEST: Player collision ==========\n");
 
         // Create item again
-        repeat (10) @(posedge clk);
+        repeat (10) @(negedge clk);
         we_in = 1;
-        write_addr_in = 55;
+        write_addr_in = 20;
         write_data_in = 0;
-        @(posedge clk);
+        @(negedge clk);
         we_in = 0;
 
         if (!item_active)
@@ -148,7 +147,7 @@ module item_generator_tb;
 
 
 
-        repeat (5) @(posedge clk);
+        repeat (5) @(negedge clk);
 
         if (player_on_item)
             $display("PASS: Player detected on item.");

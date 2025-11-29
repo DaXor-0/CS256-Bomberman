@@ -207,7 +207,7 @@ module game_top (
       .exit_addr(exit_addr),
       .exit_present(exit_present),
       .game_win(game_win)
-  )
+  );
 
   assign last_blk = 1'b0; // until implemented, disable
 

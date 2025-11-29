@@ -49,6 +49,9 @@ module item_generator #(
     // -- saved_addr and player_addr
     logic [ADDR_WIDTH - 1:0] saved_addr;
     logic [ADDR_WIDTH - 1:0] player_addr;
+    
+    logic [5:0] second_cnt;
+    logic [$clog2(ITEM_TIME)-1:0] countdown;
 
 
     // p-bit instance for random item generation
@@ -92,8 +95,6 @@ module item_generator #(
     // ------------------------------
     // -- state-dependent logic --
     // ------------------------------
-    logic [5:0] second_cnt;
-    logic [$clog2(ITEM_TIME)-1:0] countdown;
     
     always_ff @(posedge clk)
     if (rst)

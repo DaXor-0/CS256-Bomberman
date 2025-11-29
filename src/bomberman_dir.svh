@@ -52,7 +52,7 @@ typedef enum logic [1:0] {
 
 typedef enum logic [1:0] {
   ITEM_STATE_IDLE,
-  ITEM_STATE_PRESENT
+  ITEM_STATE_ACTIVE
 } item_state_t;
 
 
