@@ -95,6 +95,13 @@ module drawcon #(
   localparam int DEST_TOTAL_ANIMATION_TIME = 60;  // 1 second at 60 fps
   localparam int DEST_FRAME_TIME = DEST_TOTAL_ANIMATION_TIME / DEST_FRAMES;
 
+  localparam int EXPL_FRAMES = 6;
+  localparam int EXPL_SPRITE_SIZE = BLK_W * BLK_H;
+  localparam int EXPL_SPRITE_ROM_DEPTH = EXPL_FRAMES * EXPL_SPRITE_SIZE;
+  localparam int EXPL_SPRITE_ADDR_WIDTH = $clog2(EXPL_SPRITE_ROM_DEPTH);
+  localparam int EXPL_TOTAL_ANIMATION_TIME = 60;  // 1 second at 60 fps
+  localparam int EXPL_FRAME_TIME = EXPL_TOTAL_ANIMATION_TIME / EXPL_FRAMES;
+
   // ---------------------------------------------------------------------------
   // Animation driver (runs a counter to select animation frame)
   // ---------------------------------------------------------------------------
@@ -243,9 +250,14 @@ module drawcon #(
   logic [                      11:0] bomb_sprite_rgb_q;
 
   // ---------------------------------------------------------------------------
-  // Block destruction animation sprite addressing
+  // Block destruction and explosion animation sprite addressing
   // ---------------------------------------------------------------------------
 
+  logic [BLK_W_LOG2-1:0] explode_local_x, explode_local_x_q;
+  logic [BLK_H_LOG2-1:0] explode_local_y, explode_local_y_q;
+  logic [EXPL_SPRITE_ADDR_WIDTH-1:0] explode_sprite_addr;
+  logic [                      11:0] explode_sprite_rgb;
+  logic [                      11:0] explode_sprite_rgb_q;
   logic [DEST_SPRITE_ADDR_WIDTH-1:0] dest_blk_anim_addr;
   logic [                      11:0] dest_blk_anim_rgb;
   logic [                      11:0] dest_blk_anim_rgb_q;
@@ -263,6 +275,20 @@ module drawcon #(
       .clk (clk),
       .addr(dest_blk_anim_addr),
       .data(dest_blk_anim_rgb)
+  );
+
+  assign explode_sprite_addr = {dest_frame, explode_local_y_q, explode_local_x_q};
+
+  sprite_rom #(
+      .SPRITE_W     (BLK_W),
+      .SPRITE_H     (BLK_H),
+      .NUM_FRAMES   (EXPL_FRAMES),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("explosion.mem")
+  ) explosion_sprite_i (
+      .clk (clk),
+      .addr(explode_sprite_addr),
+      .data(explode_sprite_rgb)
   );
 
   // ----------------------------------------------------------------------------
@@ -295,6 +321,9 @@ module drawcon #(
     bomb_local_x_q      <= bomb_local_x;
     bomb_local_y_q      <= bomb_local_y;
     bomb_sprite_rgb_q   <= bomb_sprite_rgb;
+    explode_local_x_q   <= dest_blk_local_x;
+    explode_local_y_q   <= dest_blk_local_y;
+    explode_sprite_rgb_q<= explode_sprite_rgb;
   end
 
   always_comb begin
@@ -308,7 +337,10 @@ module drawcon #(
     end else begin
       unique case (st_q)
         NO_BLK: begin
-          if (is_exploding(addr_next, explosion_addr) && explode_signal) {o_r, o_g, o_b} = 12'hF17;
+          if (is_exploding(addr_next, explosion_addr) && explode_signal) begin
+            if (explode_sprite_rgb_q != TRANSPARENCY) {o_r, o_g, o_b} = explode_sprite_rgb_q;
+            else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
+          end
           else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
         end
 
