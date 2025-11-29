@@ -124,7 +124,7 @@ module power_up_tb;
         we_in = 1;
         write_addr_in = 21;
         write_data_in = 0;
-        @(negedge clk);
+        repeat (2) @(negedge clk);
         we_in = 0;
 
         player_x = 128; // Move player to new block
@@ -143,7 +143,7 @@ module power_up_tb;
         we_in = 1;
         write_addr_in = 39;
         write_data_in = 0;
-        @(negedge clk);
+        repeat (2) @(negedge clk);
         we_in = 0;
 
         player_x = 64;
