@@ -35,6 +35,8 @@ module compute_player_blocks #(
     logic [$clog2(NUM_COL)-1:0] blockpos_col2;
 
     // --- Offsets inside current tile ---
+    always_comb
+    begin
     tile_offset_x = {1'b0, player_x[TILE_SHIFT-1:0]};
     tile_offset_y = {1'b0, player_y[TILE_SHIFT-1:0]};
     right_edge_offset  = tile_offset_x + SPRITE_W;
@@ -51,6 +53,6 @@ module compute_player_blocks #(
     // --- Block addresses ---
     blk1_addr = blockpos_row * NUM_COL + blockpos_col;
     blk2_addr = blockpos_row2 * NUM_COL + blockpos_col2;
-
+    end
 endmodule
 

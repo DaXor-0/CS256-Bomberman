@@ -1,7 +1,6 @@
 `timescale 1ns / 1ps
 
 `include "bomberman_dir.svh"
-`include "func_player_addr.svh"
 
 /**
 * Module: item_generator 
