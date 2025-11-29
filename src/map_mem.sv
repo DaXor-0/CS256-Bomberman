@@ -91,7 +91,7 @@ module map_mem #(
                 begin
                     
                     // If ROM says no_blk (0) and RNG is high → place destroyable block (2)
-                    if (rom_val == 2'd0 && place_dest_blk && (copy_idx != 20))
+                    if (rom_val == 2'd0 && place_dest_blk && (copy_idx != 20) && (copy_idx != 21) && (copy_idx != 39))
                         map_ram[copy_idx] <= 2'h2;   // destroyable_blk
                     else
                         map_ram[copy_idx] <= rom_val;

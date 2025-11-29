@@ -193,6 +193,24 @@ module game_top (
       .write_en(we_free)
   );
 
+  // ---- 
+  logic last_blk, exit_present, game_win;
+  logic [ADDR_WIDTH-1:0] exit_addr;
+  exit_generator exit_generator_i (
+      .clk(pixclk),
+      .rst(rst),
+      .free_blk_signal(free_blk_signal),
+      .last_blk(last_blk),
+      .explosion_addr(saved_explosion_addr),
+      .player_x(player_x),
+      .player_y(player_y),
+      .exit_addr(exit_addr),
+      .exit_present(exit_present),
+      .game_win(game_win)
+  )
+
+  assign last_blk = 1'b0; // until implemented, disable
+
   // Map memory read controller (arbiter)
   mem_read_controller r_arbiter (
       .clk(pixclk),
@@ -246,6 +264,8 @@ module game_top (
       .player_dir(move_dir),
       .explode_signal(explode_signal),
       .explosion_addr(saved_explosion_addr),
+      .exit_present(exit_present),
+      .exit_addr(exit_addr),
       .o_r(drawcon_o_r),
       .o_g(drawcon_o_g),
       .o_b(drawcon_o_b),

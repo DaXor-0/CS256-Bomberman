@@ -50,7 +50,10 @@ typedef enum logic [1:0] {
   BOMB_LOGIC_EXPLODE
 } bomb_logic_state_t;
 
-
+typedef enum logic [1:0] {
+  EXIT_STATE_IDLE,
+  EXIT_STATE_PRESENT
+  } exit_state_t;
 
 
 `endif
