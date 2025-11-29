@@ -158,7 +158,7 @@ module item_generator #(
     logic [ADDR_WIDTH-1:0] blk1_addr, blk2_addr;
 //    assign blk1_addr = blockpos_row * NUM_COL + blockpos_col;
 //    assign blk2_addr = blockpos_row2 * NUM_COL + blockpos_col2;
-    compute_player_blocks(player_x, player_y, blk1_addr, blk2_addr);
+    compute_player_blocks cpb_i (player_x, player_y, blk1_addr, blk2_addr);
 
     // ------------------------------
     // -- win condition --

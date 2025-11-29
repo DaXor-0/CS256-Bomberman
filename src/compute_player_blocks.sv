@@ -1,7 +1,21 @@
-`ifndef FUNC_PLAYER_ADDR_SVH
-`define FUNC_PLAYER_ADDR_SVH
+`timescale 1ns/1ps
 
-function automatic void compute_player_blocks (
+module compute_player_blocks #(
+    // ---- Map and tile geometry ----
+    parameter int NUM_ROW       = 11,
+    parameter int NUM_COL       = 19,
+    parameter int TILE_PX       = 64,
+    parameter int MAP_MEM_WIDTH = 2,
+    parameter int SPRITE_W      = 32,
+    parameter int SPRITE_H      = 48,
+    // ---- Bomb Parameters ----
+    parameter int ITEM_TIME  = 6,
+
+    localparam int DEPTH      = NUM_ROW * NUM_COL,
+    localparam int ADDR_WIDTH = $clog2(DEPTH),
+    localparam int TILE_SHIFT = $clog2(TILE_PX)
+
+) (
     input  logic [10:0] player_x,
     input  logic [ 9:0] player_y,
 
@@ -38,6 +52,5 @@ function automatic void compute_player_blocks (
     blk1_addr = blockpos_row * NUM_COL + blockpos_col;
     blk2_addr = blockpos_row2 * NUM_COL + blockpos_col2;
 
-endfunction
+endmodule
 
-`endif
