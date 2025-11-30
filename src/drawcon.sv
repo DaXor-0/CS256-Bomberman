@@ -66,10 +66,15 @@ module drawcon #(
     explode_signal_2,
     input  logic [MAP_ADDR_WIDTH-1:0] explosion_addr,
     explosion_addr_2,
-    input  logic                      exit_present,
-    input  logic [MAP_ADDR_WIDTH-1:0] exit_addr,
     input  logic [MAP_ADDR_WIDTH-1:0] item_addr     [0:2],
     input  logic                      item_active   [0:2],
+    // Upgrade levels: 0..3 for each item type
+    input  logic [               1:0] p1_bomb_level,
+    input  logic [               1:0] p1_range_level,
+    input  logic [               1:0] p1_speed_level,
+    input  logic [               1:0] p2_bomb_level,
+    input  logic [               1:0] p2_range_level,
+    input  logic [               1:0] p2_speed_level,
     output logic [               3:0] o_r,
     o_g,
     o_b,
@@ -94,8 +99,6 @@ module drawcon #(
   localparam int BOMB_SPRITE_ROM_DEPTH = BOMB_SPRITE_TOTAL * BOMB_SPRITE_SIZE;
   localparam int BOMB_SPRITE_ADDR_WIDTH = $clog2(BOMB_SPRITE_ROM_DEPTH);
   localparam int BOMB_TOTAL_ANIMATION_TIME = 180;  // 3 seconds at 60 fps
-  localparam int BOMB_SPRITE_BLACK_TIME = 120;
-  localparam int BOMB_SPRITE_RED_RIME = 60;
   localparam int BOMB_ANIM_TIME = 20;  // hold each frame for 20 ticks
 
   localparam int DEST_FRAMES = 6;
@@ -162,6 +165,11 @@ module drawcon #(
       HUD_RANGE_P1_ICON_Y + HUD_P1_TRACK_Y_OFFSET,
       HUD_SPEED_P1_ICON_Y + HUD_P1_TRACK_Y_OFFSET
   };
+  typedef enum int {
+    HUD_ITEM_BOMB  = 0,
+    HUD_ITEM_RANGE = 1,
+    HUD_ITEM_SPEED = 2
+  } hud_item_t;
 
   // Player 2 HUD uses the same layout shifted to the right.
   localparam int HUD_P2_X_OFFSET = 1088;
@@ -226,7 +234,7 @@ module drawcon #(
         end
       end
 
-      if (explode_signal) begin
+      if (explode_signal || explode_signal_2) begin
         dest_frame_cnt <= dest_frame_cnt + 1;
         if ((dest_frame_cnt + 1) % DEST_FRAME_TIME == 0) dest_frame <= dest_frame + 1;
         if (dest_frame_cnt == 6'd59) begin
@@ -457,65 +465,59 @@ module drawcon #(
   // ---------------------------------------------------------------------------
   // HUD icons
   // ---------------------------------------------------------------------------
+  `define HUD_HIT(name, X0, Y0, W, H)                    \
+  name = (draw_x >= (X0)) && (draw_x < (X0) + (W)) &&  \
+         (draw_y >= (Y0)) && (draw_y < (Y0) + (H));    \
+  name``_local_x = draw_x - (X0);                      \
+  name``_local_y = draw_y - (Y0);
+
   always_comb begin
-    hud_p1_icon = (draw_x >= HUD_P1_ICON_X) &&
-                      (draw_x < HUD_P1_ICON_X + HUD_PLAYER_ICON_W) &&
-                      (draw_y >= HUD_P1_ICON_Y) &&
-                      (draw_y < HUD_P1_ICON_Y + HUD_PLAYER_ICON_H);
-    hud_p1_icon_local_x = draw_x - HUD_P1_ICON_X;
-    hud_p1_icon_local_y = draw_y - HUD_P1_ICON_Y;
-    hud_p2_icon = (draw_x >= HUD_P2_ICON_X) &&
-                      (draw_x < HUD_P2_ICON_X + HUD_PLAYER_ICON_W) &&
-                      (draw_y >= HUD_P2_ICON_Y) &&
-                      (draw_y < HUD_P2_ICON_Y + HUD_PLAYER_ICON_H);
-    hud_p2_icon_local_x = draw_x - HUD_P2_ICON_X;
-    hud_p2_icon_local_y = draw_y - HUD_P2_ICON_Y;
+    `HUD_HIT(hud_p1_icon, HUD_P1_ICON_X, HUD_P1_ICON_Y, HUD_PLAYER_ICON_W, HUD_PLAYER_ICON_H)
+    `HUD_HIT(hud_p2_icon, HUD_P2_ICON_X, HUD_P2_ICON_Y, HUD_PLAYER_ICON_W, HUD_PLAYER_ICON_H)
+    `HUD_HIT(hud_bomb_p1, HUD_BOMB_P1_ICON_X, HUD_BOMB_P1_ICON_Y, HUD_SMALL_ICON_W,
+             HUD_SMALL_ICON_H)
+    `HUD_HIT(hud_bomb_p2, HUD_BOMB_P2_ICON_X, HUD_BOMB_P2_ICON_Y, HUD_SMALL_ICON_W,
+             HUD_SMALL_ICON_H)
+    `HUD_HIT(hud_range_p1, HUD_RANGE_P1_ICON_X, HUD_RANGE_P1_ICON_Y, HUD_SMALL_ICON_W,
+             HUD_SMALL_ICON_H)
+    `HUD_HIT(hud_range_p2, HUD_RANGE_P2_ICON_X, HUD_RANGE_P2_ICON_Y, HUD_SMALL_ICON_W,
+             HUD_SMALL_ICON_H)
+    `HUD_HIT(hud_speed_p1, HUD_SPEED_P1_ICON_X, HUD_SPEED_P1_ICON_Y, HUD_SMALL_ICON_W,
+             HUD_SMALL_ICON_H)
+    `HUD_HIT(hud_speed_p2, HUD_SPEED_P2_ICON_X, HUD_SPEED_P2_ICON_Y, HUD_SMALL_ICON_W,
+             HUD_SMALL_ICON_H)
 
-    hud_bomb_p1 = (draw_x >= HUD_BOMB_P1_ICON_X) &&
-                    (draw_x < HUD_BOMB_P1_ICON_X + HUD_SMALL_ICON_W) &&
-                    (draw_y >= HUD_BOMB_P1_ICON_Y) &&
-                    (draw_y < HUD_BOMB_P1_ICON_Y + HUD_SMALL_ICON_H);
-    hud_bomb_p1_local_x = draw_x - HUD_BOMB_P1_ICON_X;
-    hud_bomb_p1_local_y = draw_y - HUD_BOMB_P1_ICON_Y;
-    hud_bomb_p2 = (draw_x >= HUD_BOMB_P2_ICON_X) &&
-                    (draw_x < HUD_BOMB_P2_ICON_X + HUD_SMALL_ICON_W) &&
-                    (draw_y >= HUD_BOMB_P2_ICON_Y) &&
-                    (draw_y < HUD_BOMB_P2_ICON_Y + HUD_SMALL_ICON_H);
-    hud_bomb_p2_local_x = draw_x - HUD_BOMB_P2_ICON_X;
-    hud_bomb_p2_local_y = draw_y - HUD_BOMB_P2_ICON_Y;
+    // Drive track offsets from upgrade levels (0..3).
+    // Slots below the current level show the owned frame, the rest stay on frame 0.
+    for (int item = HUD_ITEM_BOMB; item <= HUD_ITEM_SPEED; item++) begin
+      int level_p1;
+      int level_p2;
 
-    hud_range_p1 = (draw_x >= HUD_RANGE_P1_ICON_X) &&
-                     (draw_x < HUD_RANGE_P1_ICON_X + HUD_SMALL_ICON_W) &&
-                     (draw_y >= HUD_RANGE_P1_ICON_Y) &&
-                     (draw_y < HUD_RANGE_P1_ICON_Y + HUD_SMALL_ICON_H);
-    hud_range_p1_local_x = draw_x - HUD_RANGE_P1_ICON_X;
-    hud_range_p1_local_y = draw_y - HUD_RANGE_P1_ICON_Y;
-    hud_range_p2 = (draw_x >= HUD_RANGE_P2_ICON_X) &&
-                     (draw_x < HUD_RANGE_P2_ICON_X + HUD_SMALL_ICON_W) &&
-                     (draw_y >= HUD_RANGE_P2_ICON_Y) &&
-                     (draw_y < HUD_RANGE_P2_ICON_Y + HUD_SMALL_ICON_H);
-    hud_range_p2_local_x = draw_x - HUD_RANGE_P2_ICON_X;
-    hud_range_p2_local_y = draw_y - HUD_RANGE_P2_ICON_Y;
+      unique case (item)
+        HUD_ITEM_BOMB: begin
+          level_p1 = p1_bomb_level;
+          level_p2 = p2_bomb_level;
+        end
+        HUD_ITEM_RANGE: begin
+          level_p1 = p1_range_level;
+          level_p2 = p2_range_level;
+        end
+        HUD_ITEM_SPEED: begin
+          level_p1 = p1_speed_level;
+          level_p2 = p2_speed_level;
+        end
+        default: begin
+          level_p1 = 0;
+          level_p2 = 0;
+        end
+      endcase
 
-    hud_speed_p1 = (draw_x >= HUD_SPEED_P1_ICON_X) &&
-                     (draw_x < HUD_SPEED_P1_ICON_X + HUD_SMALL_ICON_W) &&
-                     (draw_y >= HUD_SPEED_P1_ICON_Y) &&
-                     (draw_y < HUD_SPEED_P1_ICON_Y + HUD_SMALL_ICON_H);
-    hud_speed_p1_local_x = draw_x - HUD_SPEED_P1_ICON_X;
-    hud_speed_p1_local_y = draw_y - HUD_SPEED_P1_ICON_Y;
-    hud_speed_p2 = (draw_x >= HUD_SPEED_P2_ICON_X) &&
-                     (draw_x < HUD_SPEED_P2_ICON_X + HUD_SMALL_ICON_W) &&
-                     (draw_y >= HUD_SPEED_P2_ICON_Y) &&
-                     (draw_y < HUD_SPEED_P2_ICON_Y + HUD_SMALL_ICON_H);
-    hud_speed_p2_local_x = draw_x - HUD_SPEED_P2_ICON_X;
-    hud_speed_p2_local_y = draw_y - HUD_SPEED_P2_ICON_Y;
+      if (level_p1 > 3) level_p1 = 3;
+      if (level_p2 > 3) level_p2 = 3;
 
-    // Default tracker offsets to "not owned" (frame 0). Each slot can be driven
-    // independently later by gameplay logic.
-    for (int item = 0; item < 3; item++) begin
       for (int slot = 0; slot < 3; slot++) begin
-        hud_p1_track_offset[item][slot] = '0;
-        hud_p2_track_offset[item][slot] = '0;
+        hud_p1_track_offset[item][slot] = (slot < level_p1) ? HUD_TRACK_FRAME_OFFSET : '0;
+        hud_p2_track_offset[item][slot] = (slot < level_p2) ? HUD_TRACK_FRAME_OFFSET : '0;
       end
     end
 
@@ -524,7 +526,7 @@ module drawcon #(
     hud_p2_track_hit = 1'b0;
     hud_p2_track_addr_mux = '0;
 
-    for (int item = 0; item < 3; item++) begin
+    for (int item = HUD_ITEM_BOMB; item <= HUD_ITEM_SPEED; item++) begin
       for (int slot = 0; slot < 3; slot++) begin
         hud_p1_track_active[item][slot] =
             (draw_x >= HUD_P1_TRACK_X[slot]) &&
@@ -533,8 +535,9 @@ module drawcon #(
             (draw_y < HUD_P1_TRACK_Y[item] + HUD_TRACK_ICON_H);
         hud_p1_track_local_x[item][slot] = draw_x - HUD_P1_TRACK_X[slot];
         hud_p1_track_local_y[item][slot] = draw_y - HUD_P1_TRACK_Y[item];
-        hud_p1_track_addr[item][slot] = {hud_p1_track_local_y[item][slot], hud_p1_track_local_x[item][slot]} +
-                                     hud_p1_track_offset[item][slot];
+        hud_p1_track_addr[item][slot] = { hud_p1_track_local_y[item][slot],
+                                          hud_p1_track_local_x[item][slot]} +
+                                          hud_p1_track_offset[item][slot];
 
         if (hud_p1_track_active[item][slot]) begin
           hud_p1_track_hit = 1'b1;
@@ -543,7 +546,7 @@ module drawcon #(
       end
     end
 
-    for (int item = 0; item < 3; item++) begin
+    for (int item = HUD_ITEM_BOMB; item <= HUD_ITEM_SPEED; item++) begin
       for (int slot = 0; slot < 3; slot++) begin
         hud_p2_track_active[item][slot] =
             (draw_x >= HUD_P2_TRACK_X[slot]) &&
@@ -552,8 +555,9 @@ module drawcon #(
             (draw_y < HUD_P2_TRACK_Y[item] + HUD_TRACK_ICON_H);
         hud_p2_track_local_x[item][slot] = draw_x - HUD_P2_TRACK_X[slot];
         hud_p2_track_local_y[item][slot] = draw_y - HUD_P2_TRACK_Y[item];
-        hud_p2_track_addr[item][slot] = {hud_p2_track_local_y[item][slot], hud_p2_track_local_x[item][slot]} +
-                                     hud_p2_track_offset[item][slot];
+        hud_p2_track_addr[item][slot] = { hud_p2_track_local_y[item][slot],
+                                          hud_p2_track_local_x[item][slot]} +
+                                          hud_p2_track_offset[item][slot];
 
         if (hud_p2_track_active[item][slot]) begin
           hud_p2_track_hit = 1'b1;
@@ -690,10 +694,9 @@ module drawcon #(
            (local_y >= BLK_H - P_UP_BORDER_SIZE);
   endfunction
 
-  // Check if the draw block is currently an exit
-  assign is_exit = (addr_next == exit_addr) && (exit_present);
+  logic is_speed_power_up, is_bomb_power_up, is_range_power_up;
   assign is_speed_power_up = (addr_next == item_addr[0]) && item_active[0];
-  assign is_bomb_power_up = (addr_next == item_addr[1]) && item_active[1];
+  assign is_bomb_power_up  = (addr_next == item_addr[1]) && item_active[1];
   assign is_range_power_up = (addr_next == item_addr[2]) && item_active[2];
 
   // ---------------------------------------------------------------------------
@@ -782,7 +785,11 @@ module drawcon #(
         NO_BLK: begin
           {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
 
-          if (is_exploding(addr_next, explosion_addr) && explode_signal) begin
+          if ((is_exploding(
+                  addr_next, explosion_addr
+              ) && explode_signal) || (is_exploding(
+                  addr_next, explosion_addr_2
+              ) && explode_signal_2)) begin
             if (explode_sprite_rgb_q != TRANSPARENCY) {o_r, o_g, o_b} = explode_sprite_rgb_q;
 
           end else if (is_speed_power_up) begin
