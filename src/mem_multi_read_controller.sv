@@ -84,7 +84,8 @@ module mem_multi_read_controller
     
     always_ff @(posedge clk)
     if (rst) idx <= 1'b0;
-    else if ((read_granted[0]|read_granted[1]) && read_done) idx <= ~idx;
+    else if ((read_granted[0]) && read_done) idx <= 1;
+    else if ((read_granted[1]) && read_done) idx <= 0;
 
     // read_addr muxing based on which read_granted bit is high
     always_comb

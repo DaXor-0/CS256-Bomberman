@@ -40,12 +40,13 @@ module drawcon #(
                           BG_B          = 4'h3,
 
     // Derived parameters (not overridable)
-    localparam DEPTH          = NUM_COL * NUM_ROW,
-    localparam MAP_ADDR_WIDTH = $clog2(DEPTH),          // bit-width of map_addr output
-    localparam BLK_W_LOG2     = $clog2(BLK_W),
-    localparam BLK_H_LOG2     = $clog2(BLK_H),
-    localparam BLK_ADDR_WIDTH = $clog2(BLK_W * BLK_H),
-    localparam TRANSPARENCY   = 12'hF0F
+    localparam DEPTH           = NUM_COL * NUM_ROW,
+    localparam MAP_ADDR_WIDTH  = $clog2(DEPTH),          // bit-width of map_addr output
+    localparam BLK_W_LOG2      = $clog2(BLK_W),
+    localparam BLK_H_LOG2      = $clog2(BLK_H),
+    localparam BLK_ADDR_WIDTH  = $clog2(BLK_W * BLK_H),
+    localparam TRANSPARENCY    = 12'hF0F,
+    localparam P_UP_ANIM_COLOR = 12'h0E0
 
 ) (
     // Map Memory block state input
@@ -65,8 +66,8 @@ module drawcon #(
     input  logic [MAP_ADDR_WIDTH-1:0] explosion_addr,
     input  logic                      exit_present,
     input  logic [MAP_ADDR_WIDTH-1:0] exit_addr,
-    input logic [MAP_ADDR_WIDTH-1:0] item_addr [0:2],
-    input logic item_active [0:2],
+    input  logic [MAP_ADDR_WIDTH-1:0] item_addr     [0:2],
+    input  logic                      item_active   [0:2],
     output logic [               3:0] o_r,
     o_g,
     o_b,
@@ -109,6 +110,12 @@ module drawcon #(
   localparam int EXPL_TOTAL_ANIMATION_TIME = 60;  // 1 second at 60 fps
   localparam int EXPL_FRAME_TIME = EXPL_TOTAL_ANIMATION_TIME / EXPL_FRAMES;
 
+  localparam int P_UP_FRAMES = 2;
+  localparam int P_UP_SPRITE_SIZE = BLK_W * BLK_H;
+  localparam int P_UP_SPRITE_ADDR_WIDTH = $clog2(P_UP_SPRITE_SIZE);
+  localparam int P_UP_FRAME_TIME = 30;  // switch frame every 30 ticks
+  localparam int P_UP_BORDER_SIZE = 4;  // pixels
+
   // ---------------------------------------------------------------------------
   // Animation driver (runs a counter to select animation frame)
   // ---------------------------------------------------------------------------
@@ -118,6 +125,7 @@ module drawcon #(
   logic [2:0] dest_frame;  // ranges 0..5
   logic [7:0] bomb_frame_cnt;
   logic [2:0] bomb_frame;
+  logic       p_up_frame;
   always_ff @(posedge clk) begin
     if (rst) begin
       frame_cnt <= 6'd0;
@@ -126,6 +134,7 @@ module drawcon #(
       dest_frame <= 3'd0;
       bomb_frame_cnt <= 8'd0;
       bomb_frame <= 3'd0;
+      p_up_frame <= 1'b0;
     end else if (tick) begin
       frame_cnt <= frame_cnt + 1;
       if (frame_cnt == 6'd59) frame_cnt <= 0;
@@ -149,20 +158,21 @@ module drawcon #(
         dest_frame <= 3'd0;
       end
 
-      if (bomb_frame_cnt == BOMB_TOTAL_ANIMATION_TIME - 1) bomb_frame_cnt <= 8'd0;
-      else bomb_frame_cnt <= bomb_frame_cnt + 1;
+      p_up_frame <= (frame_cnt < P_UP_FRAME_TIME) ? 1'b0 : 1'b1;
+
+      bomb_frame_cnt <= (bomb_frame_cnt == BOMB_TOTAL_ANIMATION_TIME - 1) ?
+                        8'd0 : bomb_frame_cnt + 1;
 
       // Bomb animation: frames 0-2 repeat every 20 ticks for the first 120 ticks,
       // then frames 3-5 for the last 60 ticks (one every 20).
-      if (bomb_frame_cnt < BOMB_ANIM_TIME) bomb_frame <= 3'd0;
-      else if (bomb_frame_cnt < 2 * BOMB_ANIM_TIME) bomb_frame <= 3'd1;
-      else if (bomb_frame_cnt < 3 * BOMB_ANIM_TIME) bomb_frame <= 3'd2;
-      else if (bomb_frame_cnt < 4 * BOMB_ANIM_TIME) bomb_frame <= 3'd0;
-      else if (bomb_frame_cnt < 5 * BOMB_ANIM_TIME) bomb_frame <= 3'd1;
-      else if (bomb_frame_cnt < 6 * BOMB_ANIM_TIME) bomb_frame <= 3'd2;
-      else if (bomb_frame_cnt < 7 * BOMB_ANIM_TIME) bomb_frame <= 3'd3;
-      else if (bomb_frame_cnt < 8 * BOMB_ANIM_TIME) bomb_frame <= 3'd4;
-      else bomb_frame <= 3'd5;
+      unique case (bomb_frame_cnt / BOMB_ANIM_TIME)
+        4'd0, 4'd3: bomb_frame <= 3'd0;
+        4'd1, 4'd4: bomb_frame <= 3'd1;
+        4'd2, 4'd5: bomb_frame <= 3'd2;
+        4'd6:       bomb_frame <= 3'd3;
+        4'd7:       bomb_frame <= 3'd4;
+        4'd8:       bomb_frame <= 3'd5;
+      endcase
     end
   end
 
@@ -226,7 +236,77 @@ module drawcon #(
   );
 
   // ---------------------------------------------------------------------------
-  // Border / map region detection
+  // Static blocks, block destruction, explosion and power ups sprite addressing
+  // ---------------------------------------------------------------------------
+  logic [BLK_W_LOG2-1:0] perm_blk_local_x, perm_blk_local_x_q;
+  logic [BLK_H_LOG2-1:0] perm_blk_local_y, perm_blk_local_y_q;
+  logic [BLK_W_LOG2-1:0] dest_blk_local_x, dest_blk_local_x_q;
+  logic [BLK_H_LOG2-1:0] dest_blk_local_y, dest_blk_local_y_q;
+  logic [BLK_W_LOG2-1:0] explode_local_x, explode_local_x_q;
+  logic [BLK_H_LOG2-1:0] explode_local_y, explode_local_y_q;
+  logic [BLK_W_LOG2-1:0] bomb_local_x, bomb_local_x_q;
+  logic [BLK_H_LOG2-1:0] bomb_local_y, bomb_local_y_q;
+  logic [BLK_W_LOG2-1:0] p_up_speed_local_x, p_up_speed_local_x_q;
+  logic [BLK_H_LOG2-1:0] p_up_speed_local_y, p_up_speed_local_y_q;
+  logic [BLK_W_LOG2-1:0] p_up_bomb_local_x, p_up_bomb_local_x_q;
+  logic [BLK_H_LOG2-1:0] p_up_bomb_local_y, p_up_bomb_local_y_q;
+  logic [BLK_W_LOG2-1:0] p_up_range_local_x, p_up_range_local_x_q;
+  logic [BLK_H_LOG2-1:0] p_up_range_local_y, p_up_range_local_y_q;
+
+  // Animation outputs also have a "_q" version to line up with the pipelined logic
+  // that selects the correct block based on map state. Powerups are exceptions since
+  // the animation change is driven by a change in border color while the
+  // sprite ROM is static
+  logic [        BLK_ADDR_WIDTH-1:0] perm_blk_addr;
+  logic [                      11:0] perm_blk_rgb;
+  logic [        BLK_ADDR_WIDTH-1:0] dest_blk_addr;
+  logic [                      11:0] dest_blk_rgb;
+  logic [P_UP_SPRITE_ADDR_WIDTH-1:0] p_up_speed_sprite_addr;
+  logic [                      11:0] p_up_speed_sprite_rgb;
+  logic [P_UP_SPRITE_ADDR_WIDTH-1:0] p_up_bomb_sprite_addr;
+  logic [                      11:0] p_up_bomb_sprite_rgb;
+  logic [P_UP_SPRITE_ADDR_WIDTH-1:0] p_up_range_sprite_addr;
+  logic [                      11:0] p_up_range_sprite_rgb;
+  logic [EXPL_SPRITE_ADDR_WIDTH-1:0] explode_sprite_addr;
+  logic [                      11:0] explode_sprite_rgb;
+  logic [                      11:0] explode_sprite_rgb_q;
+  logic [BOMB_SPRITE_ADDR_WIDTH-1:0] bomb_sprite_addr;
+  logic [                      11:0] bomb_sprite_rgb;
+  logic [                      11:0] bomb_sprite_rgb_q;
+  logic [DEST_SPRITE_ADDR_WIDTH-1:0] dest_blk_anim_addr;
+  logic [                      11:0] dest_blk_anim_rgb;
+  logic [                      11:0] dest_blk_anim_rgb_q;
+
+  // Select animation frame + local pixel within the 64x64 block
+  assign dest_blk_anim_addr  = {dest_frame, dest_blk_local_y_q, dest_blk_local_x_q};
+  assign explode_sprite_addr = {dest_frame, explode_local_y_q, explode_local_x_q};
+
+  sprite_rom #(
+      .SPRITE_W     (BLK_W),
+      .SPRITE_H     (BLK_H),
+      .NUM_FRAMES   (DEST_FRAMES),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("dest_blk_anim.mem")
+  ) dest_blk_anim_i (
+      .clk (clk),
+      .addr(dest_blk_anim_addr),
+      .data(dest_blk_anim_rgb)
+  );
+
+  sprite_rom #(
+      .SPRITE_W     (BLK_W),
+      .SPRITE_H     (BLK_H),
+      .NUM_FRAMES   (EXPL_FRAMES),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("explosion.mem")
+  ) explosion_sprite_i (
+      .clk (clk),
+      .addr(explode_sprite_addr),
+      .data(explode_sprite_rgb)
+  );
+
+  // ---------------------------------------------------------------------------
+  // Map region detection
   // ---------------------------------------------------------------------------
   logic out_of_map;
   logic out_of_map_q;
@@ -241,68 +321,6 @@ module drawcon #(
   map_state_t st_q;
   assign st = map_state_t'(map_tile_state);
 
-  // ---------------------------------------------------------------------------
-  // Static block sprite (64x64)
-  // ---------------------------------------------------------------------------
-  logic [BLK_W_LOG2-1:0] perm_blk_local_x, perm_blk_local_x_q;
-  logic [BLK_H_LOG2-1:0] perm_blk_local_y, perm_blk_local_y_q;
-  logic [BLK_W_LOG2-1:0] dest_blk_local_x, dest_blk_local_x_q;
-  logic [BLK_H_LOG2-1:0] dest_blk_local_y, dest_blk_local_y_q;
-  logic [BLK_W_LOG2-1:0] bomb_local_x, bomb_local_x_q;
-  logic [BLK_H_LOG2-1:0] bomb_local_y, bomb_local_y_q;
-  logic [        BLK_ADDR_WIDTH-1:0] perm_blk_addr;
-  logic [                      11:0] perm_blk_rgb;
-  logic [        BLK_ADDR_WIDTH-1:0] dest_blk_addr;
-  logic [                      11:0] dest_blk_rgb;
-  logic [BOMB_SPRITE_ADDR_WIDTH-1:0] bomb_sprite_addr;
-  logic [                      11:0] bomb_sprite_rgb;
-  logic [                      11:0] bomb_sprite_rgb_q;
-
-  // ---------------------------------------------------------------------------
-  // Block destruction and explosion animation sprite addressing
-  // ---------------------------------------------------------------------------
-
-  logic [BLK_W_LOG2-1:0] explode_local_x, explode_local_x_q;
-  logic [BLK_H_LOG2-1:0] explode_local_y, explode_local_y_q;
-  logic [EXPL_SPRITE_ADDR_WIDTH-1:0] explode_sprite_addr;
-  logic [                      11:0] explode_sprite_rgb;
-  logic [                      11:0] explode_sprite_rgb_q;
-  logic [DEST_SPRITE_ADDR_WIDTH-1:0] dest_blk_anim_addr;
-  logic [                      11:0] dest_blk_anim_rgb;
-  logic [                      11:0] dest_blk_anim_rgb_q;
-
-  // Select animation frame + local pixel within the 64x64 block
-  assign dest_blk_anim_addr = {dest_frame, dest_blk_local_y_q, dest_blk_local_x_q};
-
-  sprite_rom #(
-      .SPRITE_W     (BLK_W),
-      .SPRITE_H     (BLK_H),
-      .NUM_FRAMES   (DEST_FRAMES),
-      .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("dest_blk_anim.mem")
-  ) dest_blk_anim_i (
-      .clk (clk),
-      .addr(dest_blk_anim_addr),
-      .data(dest_blk_anim_rgb)
-  );
-
-  assign explode_sprite_addr = {dest_frame, explode_local_y_q, explode_local_x_q};
-
-  sprite_rom #(
-      .SPRITE_W     (BLK_W),
-      .SPRITE_H     (BLK_H),
-      .NUM_FRAMES   (EXPL_FRAMES),
-      .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("explosion.mem")
-  ) explosion_sprite_i (
-      .clk (clk),
-      .addr(explode_sprite_addr),
-      .data(explode_sprite_rgb)
-  );
-
-  // ----------------------------------------------------------------------------
-  // Detection: determine if current block is a given active tile
-  // ----------------------------------------------------------------------------
   // Function to check if the draw block is exploding
   function logic is_exploding(input logic [MAP_ADDR_WIDTH-1:0] blk_addr,
                               input logic [MAP_ADDR_WIDTH-1:0] exp);
@@ -313,10 +331,19 @@ module drawcon #(
            (blk_addr == exp + 1));
   endfunction
 
+  // Function to check if the draw block is within the power-up border
+  function logic is_p_up_border(input logic [BLK_W_LOG2-1:0] local_x,
+                                input logic [BLK_H_LOG2-1:0] local_y);
+    return (local_x < P_UP_BORDER_SIZE)          ||
+           (local_x >= BLK_W - P_UP_BORDER_SIZE) ||
+           (local_y < P_UP_BORDER_SIZE)          ||
+           (local_y >= BLK_H - P_UP_BORDER_SIZE);
+  endfunction
+
   // Check if the draw block is currently an exit
   assign is_exit = (addr_next == exit_addr) && (exit_present);
   assign is_speed_power_up = (addr_next == item_addr[0]) && item_active[0];
-  assign is_bomb_power_up  = (addr_next == item_addr[1]) && item_active[1];
+  assign is_bomb_power_up = (addr_next == item_addr[1]) && item_active[1];
   assign is_range_power_up = (addr_next == item_addr[2]) && item_active[2];
 
   // ---------------------------------------------------------------------------
@@ -324,21 +351,27 @@ module drawcon #(
   // ---------------------------------------------------------------------------
   // Everything is pipelined by 1 cycle to line up with the synchronous sprite ROM.
   always_ff @(posedge clk) begin
-    out_of_map_q        <= out_of_map;
-    st_q                <= st;
-    player_sprite_q     <= player_sprite;
-    sprite_rgb_q        <= sprite_rgb_raw;
-    perm_blk_local_x_q  <= perm_blk_local_x;
-    perm_blk_local_y_q  <= perm_blk_local_y;
-    dest_blk_local_x_q  <= dest_blk_local_x;
-    dest_blk_local_y_q  <= dest_blk_local_y;
-    dest_blk_anim_rgb_q <= dest_blk_anim_rgb;
-    bomb_local_x_q      <= bomb_local_x;
-    bomb_local_y_q      <= bomb_local_y;
-    bomb_sprite_rgb_q   <= bomb_sprite_rgb;
-    explode_local_x_q   <= dest_blk_local_x;
-    explode_local_y_q   <= dest_blk_local_y;
-    explode_sprite_rgb_q<= explode_sprite_rgb;
+    out_of_map_q         <= out_of_map;
+    st_q                 <= st;
+    player_sprite_q      <= player_sprite;
+    sprite_rgb_q         <= sprite_rgb_raw;
+    perm_blk_local_x_q   <= perm_blk_local_x;
+    perm_blk_local_y_q   <= perm_blk_local_y;
+    dest_blk_local_x_q   <= dest_blk_local_x;
+    dest_blk_local_y_q   <= dest_blk_local_y;
+    p_up_bomb_local_y_q  <= p_up_bomb_local_y;
+    p_up_bomb_local_x_q  <= p_up_bomb_local_x;
+    p_up_range_local_x_q <= p_up_range_local_x;
+    p_up_range_local_y_q <= p_up_range_local_y;
+    p_up_speed_local_x_q <= p_up_speed_local_x;
+    p_up_speed_local_y_q <= p_up_speed_local_y;
+    dest_blk_anim_rgb_q  <= dest_blk_anim_rgb;
+    bomb_local_x_q       <= bomb_local_x;
+    bomb_local_y_q       <= bomb_local_y;
+    bomb_sprite_rgb_q    <= bomb_sprite_rgb;
+    explode_local_x_q    <= dest_blk_local_x;
+    explode_local_y_q    <= dest_blk_local_y;
+    explode_sprite_rgb_q <= explode_sprite_rgb;
   end
 
   always_comb begin
@@ -352,19 +385,36 @@ module drawcon #(
       {o_r, o_g, o_b} = 12'hF2F; 
     end else begin
       unique case (st_q)
+        // a map tile NO_BLK may contain:
+        // - nothing (empty background)
+        // - explosion
+        // - power-up (speed, bomb, range)
         NO_BLK: begin
+          {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
+
           if (is_exploding(addr_next, explosion_addr) && explode_signal) begin
             if (explode_sprite_rgb_q != TRANSPARENCY) {o_r, o_g, o_b} = explode_sprite_rgb_q;
-            else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
-          end 
-          else if (is_speed_power_up)
-          begin
-            {o_r, o_g, o_b} = 12'h22F;
+
+          end else if (is_speed_power_up) begin
+            if (p_up_frame && is_p_up_border(p_up_speed_local_x_q, p_up_speed_local_y_q))
+              {o_r, o_g, o_b} = P_UP_ANIM_COLOR;
+            else {o_r, o_g, o_b} = p_up_speed_sprite_rgb;
+
+          end else if (is_bomb_power_up) begin
+            if (p_up_frame && is_p_up_border(p_up_bomb_local_x_q, p_up_bomb_local_y_q))
+              {o_r, o_g, o_b} = P_UP_ANIM_COLOR;
+            else {o_r, o_g, o_b} = p_up_bomb_sprite_rgb;
+
+          end else if (is_range_power_up) begin
+            if (p_up_frame && is_p_up_border(p_up_range_local_x_q, p_up_range_local_y_q))
+              {o_r, o_g, o_b} = P_UP_ANIM_COLOR;
+            else {o_r, o_g, o_b} = p_up_range_sprite_rgb;
           end
-          else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
         end
 
-        PERM_BLK: {o_r, o_g, o_b} = perm_blk_rgb;
+        PERM_BLK: begin
+          {o_r, o_g, o_b} = perm_blk_rgb;
+        end
 
         DESTROYABLE_BLK: begin
           if (is_exploding(addr_next, explosion_addr) && explode_signal) begin
@@ -443,6 +493,55 @@ module drawcon #(
       .clk (clk),
       .addr(bomb_sprite_addr),
       .data(bomb_sprite_rgb)
+  );
+
+
+  assign p_up_speed_local_x = map_x[BLK_W_LOG2-1:0];
+  assign p_up_speed_local_y = map_y[BLK_H_LOG2-1:0];
+  assign p_up_speed_sprite_addr = {p_up_speed_local_y_q, p_up_speed_local_x_q};
+
+  sprite_rom #(
+      .SPRITE_W     (BLK_W),
+      .SPRITE_H     (BLK_H),
+      .NUM_FRAMES   (1),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("p_up_speed.mem")
+  ) p_up_speed_sprite_i (
+      .clk (clk),
+      .addr(p_up_speed_sprite_addr),
+      .data(p_up_speed_sprite_rgb)
+  );
+
+  assign p_up_bomb_local_x = map_x[BLK_W_LOG2-1:0];
+  assign p_up_bomb_local_y = map_y[BLK_H_LOG2-1:0];
+  assign p_up_bomb_sprite_addr = {p_up_bomb_local_y_q, p_up_bomb_local_x_q};
+
+  sprite_rom #(
+      .SPRITE_W     (BLK_W),
+      .SPRITE_H     (BLK_H),
+      .NUM_FRAMES   (1),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("p_up_bomb.mem")
+  ) p_up_bomb_sprite_i (
+      .clk (clk),
+      .addr(p_up_bomb_sprite_addr),
+      .data(p_up_bomb_sprite_rgb)
+  );
+
+  assign p_up_range_local_x = map_x[BLK_W_LOG2-1:0];
+  assign p_up_range_local_y = map_y[BLK_H_LOG2-1:0];
+  assign p_up_range_sprite_addr = {p_up_range_local_y_q, p_up_range_local_x_q};
+
+  sprite_rom #(
+      .SPRITE_W     (BLK_W),
+      .SPRITE_H     (BLK_H),
+      .NUM_FRAMES   (1),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("p_up_range.mem")
+  ) p_up_range_sprite_i (
+      .clk (clk),
+      .addr(p_up_range_sprite_addr),
+      .data(p_up_range_sprite_rgb)
   );
 
   always_comb begin
