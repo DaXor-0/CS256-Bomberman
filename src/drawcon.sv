@@ -56,9 +56,9 @@ module drawcon #(
     input  logic [ MAP_MEM_WIDTH-1:0] map_tile_state,
     input  logic [              10:0] draw_x,
     input  logic [               9:0] draw_y,
-    input  logic [              10:0] player_x,
-    input  logic [               9:0] player_y,
-    input  dir_t                      player_dir,
+    input  logic [              10:0] player_1_x,
+    input  logic [               9:0] player_1_y,
+    input  dir_t                      player_1_dir,
     input  logic [              10:0] player_2_x,
     input  logic [               9:0] player_2_y,
     input  dir_t                      player_2_dir,
@@ -120,7 +120,8 @@ module drawcon #(
   // Animation driver (runs a counter to select animation frame)
   // ---------------------------------------------------------------------------
   logic [5:0] frame_cnt;  // fame counter to 60 fps
-  logic [1:0] walk_frame;  // ranges 0,1,2
+  logic [1:0] walk_frame_1;  // ranges 0,1,2
+  logic [1:0] walk_frame_2;  // ranges 0,1,2
   logic [5:0] dest_frame_cnt;
   logic [2:0] dest_frame;  // ranges 0..5
   logic [7:0] bomb_frame_cnt;
@@ -129,7 +130,8 @@ module drawcon #(
   always_ff @(posedge clk) begin
     if (rst) begin
       frame_cnt <= 6'd0;
-      walk_frame <= 2'd0;
+      walk_frame_1 <= 2'd0;
+      walk_frame_2 <= 2'd0;
       dest_frame_cnt <= 6'd0;
       dest_frame <= 3'd0;
       bomb_frame_cnt <= 8'd0;
@@ -139,10 +141,17 @@ module drawcon #(
       frame_cnt <= frame_cnt + 1;
       if (frame_cnt == 6'd59) frame_cnt <= 0;
 
-      if (player_dir != DIR_NONE) begin
+      if (player_1_dir != DIR_NONE) begin
         if ((frame_cnt + 1) % WALK_ANIM_TIME == 0) begin
-          walk_frame <= walk_frame + 1;
-          if (walk_frame == WALK_FRAMES_PER_DIR - 1) walk_frame <= 0;
+          walk_frame_1 <= walk_frame_1 + 1;
+          if (walk_frame_1 == WALK_FRAMES_PER_DIR - 1) walk_frame_1 <= 0;
+        end
+      end
+
+      if (player_2_dir != DIR_NONE) begin
+        if ((frame_cnt + 1) % WALK_ANIM_TIME == 0) begin
+          walk_frame_2 <= walk_frame_2 + 1;
+          if (walk_frame_2 == WALK_FRAMES_PER_DIR - 1) walk_frame_2 <= 0;
         end
       end
 
@@ -180,48 +189,72 @@ module drawcon #(
   // Player sprite addressing
   // ---------------------------------------------------------------------------
   // Sprite ROM interface signals
-  logic [   WALK_SPRITE_ADDR_WIDTH-1:0] sprite_addr;
-  logic [                         11:0] sprite_rgb_raw;
-  logic [                         11:0] sprite_rgb_q;
+  logic [WALK_SPRITE_ADDR_WIDTH-1:0] player_1_sprite_addr;
+  logic [WALK_SPRITE_ADDR_WIDTH-1:0] player_2_sprite_addr;
+  logic [                      11:0] player_1_sprite_rgb_raw;
+  logic [                      11:0] player_2_sprite_rgb_raw;
+  logic [                      11:0] player_1_sprite_rgb_q;
+  logic [                      11:0] player_2_sprite_rgb_q;
   // Sprite position and bounds checking
-  logic                                 player_sprite, player_2_sprite;
-  logic                                 player_sprite_q;
-  logic [         $clog2(SPRITE_W)-1:0] sprite_local_x;
-  logic [         $clog2(SPRITE_H)-1:0] sprite_local_y;
+  logic player_1_sprite, player_2_sprite;
+  logic player_1_sprite_q, player_2_sprite_q;
+  logic [         $clog2(SPRITE_W)-1:0] player_1_sprite_local_x;
+  logic [         $clog2(SPRITE_H)-1:0] player_1_sprite_local_y;
+  logic [         $clog2(SPRITE_W)-1:0] player_2_sprite_local_x;
+  logic [         $clog2(SPRITE_H)-1:0] player_2_sprite_local_y;
   // Sprite frame selection
-  logic [         $clog2(SPRITE_W)-1:0] sprite_x_in_rom;
-  logic [$clog2(WALK_FRAMES_TOTAL)-1:0] sprite_offset;
+  logic [         $clog2(SPRITE_W)-1:0] player_1_sprite_x_in_rom;
+  logic [         $clog2(SPRITE_W)-1:0] player_2_sprite_x_in_rom;
+  logic [$clog2(WALK_FRAMES_TOTAL)-1:0] player_1_sprite_offset;
+  logic [$clog2(WALK_FRAMES_TOTAL)-1:0] player_2_sprite_offset;
 
   logic [           MAP_ADDR_WIDTH-1:0] addr_next;
 
   // Determine if current pixel is within player sprite bounds and
   // which sprite frame to use based on player direction and animation frame
   always_comb begin
-    sprite_offset = '0;
-    sprite_local_x = draw_x - player_x;
-    sprite_local_y = draw_y - player_y;
-    player_sprite = (draw_x >= player_x) && (draw_x < player_x + SPRITE_W) &&
-                    (draw_y >= player_y) && (draw_y < player_y + SPRITE_H);
+    player_1_sprite_offset = '0;
+    player_2_sprite_offset = '0;
+    player_1_sprite_local_x = draw_x - player_1_x;
+    player_1_sprite_local_y = draw_y - player_1_y;
+    player_2_sprite_local_x = draw_x - player_2_x;
+    player_2_sprite_local_y = draw_y - player_2_y;
+    player_1_sprite = (draw_x >= player_1_x) && (draw_x < player_1_x + SPRITE_W) &&
+                      (draw_y >= player_1_y) && (draw_y < player_1_y + SPRITE_H);
     player_2_sprite = (draw_x >= player_2_x) && (draw_x < player_2_x + SPRITE_W) &&
-                    (draw_y >= player_2_y) && (draw_y < player_2_y + SPRITE_H);
+                      (draw_y >= player_2_y) && (draw_y < player_2_y + SPRITE_H);
 
-    case (dir_t'(player_dir))
-      DIR_DOWN:  sprite_offset = 0*WALK_FRAMES_PER_DIR + walk_frame; // 0..2
-      DIR_LEFT:  sprite_offset = 1*WALK_FRAMES_PER_DIR + walk_frame; // 3..5
-      DIR_RIGHT: sprite_offset = 1*WALK_FRAMES_PER_DIR + walk_frame; // 3..5
-      DIR_UP:    sprite_offset = 2*WALK_FRAMES_PER_DIR + walk_frame; // 6..8
+    case (dir_t'(player_1_dir))
+      DIR_DOWN:  player_1_sprite_offset = 0*WALK_FRAMES_PER_DIR + walk_frame_1; // 0..2
+      DIR_LEFT:  player_1_sprite_offset = 1*WALK_FRAMES_PER_DIR + walk_frame_1; // 3..5
+      DIR_RIGHT: player_1_sprite_offset = 1*WALK_FRAMES_PER_DIR + walk_frame_1; // 3..5
+      DIR_UP:    player_1_sprite_offset = 2*WALK_FRAMES_PER_DIR + walk_frame_1; // 6..8
+    endcase
+
+    case (dir_t'(player_2_dir))
+      DIR_DOWN:  player_2_sprite_offset = 0*WALK_FRAMES_PER_DIR + walk_frame_2; // 0..2
+      DIR_LEFT:  player_2_sprite_offset = 1*WALK_FRAMES_PER_DIR + walk_frame_2; // 3..5
+      DIR_RIGHT: player_2_sprite_offset = 1*WALK_FRAMES_PER_DIR + walk_frame_2; // 3..5
+      DIR_UP:    player_2_sprite_offset = 2*WALK_FRAMES_PER_DIR + walk_frame_2; // 6..8
     endcase
   end
 
   // If facing left, flip the right sprite horizontaly
-  assign sprite_x_in_rom = (player_dir == DIR_LEFT) ?
-                           (SPRITE_W - 1 - sprite_local_x) :
-                            sprite_local_x;
+  assign player_1_sprite_x_in_rom = (player_1_dir == DIR_LEFT) ?
+                                    (SPRITE_W - 1 - player_1_sprite_local_x) :
+                                    player_1_sprite_local_x;
+  assign player_2_sprite_x_in_rom = (player_2_dir == DIR_LEFT) ?
+                                    (SPRITE_W - 1 - player_2_sprite_local_x) :
+                                    player_2_sprite_local_x;
   // Calculate final sprite ROM address also in correlation to frame offset
-  assign sprite_addr = player_sprite ?
-                       (sprite_offset * WALK_SPRITE_SIZE +
-                        sprite_local_y * SPRITE_W + sprite_x_in_rom) :
-                       '0;
+  assign player_1_sprite_addr = player_1_sprite ?
+                                (player_1_sprite_offset * WALK_SPRITE_SIZE +
+                                player_1_sprite_local_y * SPRITE_W + player_1_sprite_x_in_rom) :
+                                '0;
+  assign player_2_sprite_addr = player_2_sprite ?
+                                (player_2_sprite_offset * WALK_SPRITE_SIZE +
+                                player_2_sprite_local_y * SPRITE_W + player_2_sprite_x_in_rom) :
+                                '0;
 
   sprite_rom #(
       .SPRITE_W     (SPRITE_W),
@@ -229,10 +262,22 @@ module drawcon #(
       .NUM_FRAMES   (WALK_FRAMES_TOTAL),
       .DATA_WIDTH   (12),
       .MEM_INIT_FILE("player_1.mem")      // 9-frame sheet: DOWN,LR,UP cropped to 32x48
-  ) bomberman_sprite_i (
+  ) bomberman_1_sprite_i (
       .clk (clk),
-      .addr(sprite_addr),
-      .data(sprite_rgb_raw)
+      .addr(player_1_sprite_addr),
+      .data(player_1_sprite_rgb_raw)
+  );
+
+  sprite_rom #(
+      .SPRITE_W     (SPRITE_W),
+      .SPRITE_H     (SPRITE_H),
+      .NUM_FRAMES   (WALK_FRAMES_TOTAL),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("player_2.mem")      // mirrored structure for player 2
+  ) bomberman_2_sprite_i (
+      .clk (clk),
+      .addr(player_2_sprite_addr),
+      .data(player_2_sprite_rgb_raw)
   );
 
   // ---------------------------------------------------------------------------
@@ -351,27 +396,29 @@ module drawcon #(
   // ---------------------------------------------------------------------------
   // Everything is pipelined by 1 cycle to line up with the synchronous sprite ROM.
   always_ff @(posedge clk) begin
-    out_of_map_q         <= out_of_map;
-    st_q                 <= st;
-    player_sprite_q      <= player_sprite;
-    sprite_rgb_q         <= sprite_rgb_raw;
-    perm_blk_local_x_q   <= perm_blk_local_x;
-    perm_blk_local_y_q   <= perm_blk_local_y;
-    dest_blk_local_x_q   <= dest_blk_local_x;
-    dest_blk_local_y_q   <= dest_blk_local_y;
-    p_up_bomb_local_y_q  <= p_up_bomb_local_y;
-    p_up_bomb_local_x_q  <= p_up_bomb_local_x;
-    p_up_range_local_x_q <= p_up_range_local_x;
-    p_up_range_local_y_q <= p_up_range_local_y;
-    p_up_speed_local_x_q <= p_up_speed_local_x;
-    p_up_speed_local_y_q <= p_up_speed_local_y;
-    dest_blk_anim_rgb_q  <= dest_blk_anim_rgb;
-    bomb_local_x_q       <= bomb_local_x;
-    bomb_local_y_q       <= bomb_local_y;
-    bomb_sprite_rgb_q    <= bomb_sprite_rgb;
-    explode_local_x_q    <= dest_blk_local_x;
-    explode_local_y_q    <= dest_blk_local_y;
-    explode_sprite_rgb_q <= explode_sprite_rgb;
+    out_of_map_q          <= out_of_map;
+    st_q                  <= st;
+    player_1_sprite_q     <= player_1_sprite;
+    player_2_sprite_q     <= player_2_sprite;
+    player_1_sprite_rgb_q <= player_1_sprite_rgb_raw;
+    player_2_sprite_rgb_q <= player_2_sprite_rgb_raw;
+    perm_blk_local_x_q    <= perm_blk_local_x;
+    perm_blk_local_y_q    <= perm_blk_local_y;
+    dest_blk_local_x_q    <= dest_blk_local_x;
+    dest_blk_local_y_q    <= dest_blk_local_y;
+    p_up_bomb_local_y_q   <= p_up_bomb_local_y;
+    p_up_bomb_local_x_q   <= p_up_bomb_local_x;
+    p_up_range_local_x_q  <= p_up_range_local_x;
+    p_up_range_local_y_q  <= p_up_range_local_y;
+    p_up_speed_local_x_q  <= p_up_speed_local_x;
+    p_up_speed_local_y_q  <= p_up_speed_local_y;
+    dest_blk_anim_rgb_q   <= dest_blk_anim_rgb;
+    bomb_local_x_q        <= bomb_local_x;
+    bomb_local_y_q        <= bomb_local_y;
+    bomb_sprite_rgb_q     <= bomb_sprite_rgb;
+    explode_local_x_q     <= dest_blk_local_x;
+    explode_local_y_q     <= dest_blk_local_y;
+    explode_sprite_rgb_q  <= explode_sprite_rgb;
   end
 
   always_comb begin
@@ -379,10 +426,10 @@ module drawcon #(
       {o_r, o_g, o_b} = {BRD_R, BRD_G, BRD_B};
 
       // Player sprites have a color key (12'hF0F) for transparency
-    end else if (player_sprite_q && (sprite_rgb_q != TRANSPARENCY)) begin
-      {o_r, o_g, o_b} = sprite_rgb_q;
-    end else if (player_2_sprite) begin // replace with player_2 sprite
-      {o_r, o_g, o_b} = 12'hF2F; 
+    end else if (player_1_sprite_q && (player_1_sprite_rgb_q != TRANSPARENCY)) begin
+      {o_r, o_g, o_b} = player_1_sprite_rgb_q;
+    end else if (player_2_sprite_q && (player_2_sprite_rgb_q != TRANSPARENCY)) begin
+      {o_r, o_g, o_b} = player_2_sprite_rgb_q;
     end else begin
       unique case (st_q)
         // a map tile NO_BLK may contain:
