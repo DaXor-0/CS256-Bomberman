@@ -88,8 +88,8 @@ module mem_multi_read_controller_tb;
         print_status("First simultaneous grant");
 
         // Release whichever was granted
-        if (read_granted[0]) read_req[0] = 0;
-        else                 read_req[1] = 0;
+        read_req[0] = 0;
+        read_req[1] = 0;
 
         #30;
         print_status("After release (idx should toggle)");
@@ -102,7 +102,7 @@ module mem_multi_read_controller_tb;
 
         // Release again
         if (read_granted[0]) read_req[0] = 0;
-        else                 read_req[1] = 0;
+        else read_req[1] = 0;
 
         #30;
         print_status("After second release");
@@ -119,8 +119,8 @@ module mem_multi_read_controller_tb;
             print_status("Simultaneous grant");
 
             // release the granted one
-            if (read_granted[0]) read_req[0] = 0;
-            else                 read_req[1] = 0;
+            read_req[0] = 0;
+            read_req[1] = 0;
 
             #20;
             print_status("After release");
