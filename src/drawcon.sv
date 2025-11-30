@@ -12,11 +12,11 @@
  *  - NUM_ROW       : Number of rows in the map
  *  - NUM_COL       : Number of columns in the map
  *  - SCREEN_W/H    : Screen width / height in pixels
- *  - BRD_H         : Horizontal border thickness (left/right)
- *  - BRD_TOP/BOT   : Top / bottom border offsets
+ *  - HUD_H         : Horizontal border thickness (left/right)
+ *  - HUD_TOP/BOT   : Top / bottom hud offsets
  *  - BLK_W/H       : Block width / height in pixels (power of 2)
  *  - SPRITE_W/H    : Sprite width / height
- *  - BRD_*         : Border color (4-bit each)
+ *  - HUD_*         : HUD color (4-bit each)
  *  - BG_*          : Background color (4-bit each)
  */
 module drawcon #(
@@ -25,16 +25,16 @@ module drawcon #(
     parameter             NUM_COL       = 19,
     parameter             SCREEN_W      = 1280,
     parameter             SCREEN_H      = 800,
-    parameter             BRD_H         = 32,    // border thickness (left/right)
-    parameter             BRD_TOP       = 96,
-    parameter             BRD_BOT       = 0,
+    parameter             HUD_H         = 32,    // border thickness (left/right)
+    parameter             HUD_TOP       = 96,
+    parameter             HUD_BOT       = 0,
     parameter             BLK_W         = 64,    // should be power of 2
     parameter             BLK_H         = 64,    // should be power of 2
     parameter             SPRITE_W      = 32,
     parameter             SPRITE_H      = 48,
-    parameter logic [3:0] BRD_R         = 4'hF,
-                          BRD_G         = 4'hF,
-                          BRD_B         = 4'hF,
+    parameter logic [3:0] HUD_R         = 4'h0,
+                          HUD_G         = 4'h0,
+                          HUD_B         = 4'h0,
     parameter logic [3:0] BG_R          = 4'h1,
                           BG_G          = 4'h7,
                           BG_B          = 4'h3,
@@ -115,6 +115,51 @@ module drawcon #(
   localparam int P_UP_SPRITE_ADDR_WIDTH = $clog2(P_UP_SPRITE_SIZE);
   localparam int P_UP_FRAME_TIME = 30;  // switch frame every 30 ticks
   localparam int P_UP_BORDER_SIZE = 4;  // pixels
+
+  // HUD icon layout (positions are absolute screen coordinates)
+  localparam int HUD_PLAYER_ICON_W = 64;
+  localparam int HUD_PLAYER_ICON_H = 64;
+  localparam int HUD_SMALL_ICON_W = 16;
+  localparam int HUD_SMALL_ICON_H = 16;
+  localparam int HUD_TRACK_ICON_W = 8;
+  localparam int HUD_TRACK_ICON_H = 8;
+  localparam int HUD_PLAYER_ICON_W_LOG2 = $clog2(HUD_PLAYER_ICON_W);
+  localparam int HUD_PLAYER_ICON_H_LOG2 = $clog2(HUD_PLAYER_ICON_H);
+  localparam int HUD_SMALL_ICON_W_LOG2 = $clog2(HUD_SMALL_ICON_W);
+  localparam int HUD_SMALL_ICON_H_LOG2 = $clog2(HUD_SMALL_ICON_H);
+  localparam int HUD_TRACK_ICON_W_LOG2 = $clog2(HUD_TRACK_ICON_W);
+  localparam int HUD_TRACK_ICON_H_LOG2 = $clog2(HUD_TRACK_ICON_H);
+  localparam int HUD_PLAYER_ICON_ADDR_WIDTH = $clog2(HUD_PLAYER_ICON_W * HUD_PLAYER_ICON_H);
+  localparam int HUD_SMALL_ICON_ADDR_WIDTH = $clog2(HUD_SMALL_ICON_W * HUD_SMALL_ICON_H);
+  localparam int HUD_TRACK_TYPES = 2;  // owned / not owned
+  localparam int HUD_TRACK_ICON_ADDR_WIDTH = $clog2(
+      HUD_TRACK_TYPES * HUD_TRACK_ICON_W * HUD_TRACK_ICON_H
+  );
+  localparam int HUD_TRACK_FRAME_OFFSET = HUD_TRACK_ICON_W * HUD_TRACK_ICON_H;  // 64 entries per frame
+
+  localparam int HUD_P1_ICON_X = HUD_H;
+  localparam int HUD_P1_ICON_Y = 14;
+  localparam int HUD_BOMB_P1_ICON_X = HUD_P1_ICON_X + HUD_PLAYER_ICON_W + 8;
+  localparam int HUD_BOMB_P1_ICON_Y = HUD_P1_ICON_Y;
+  localparam int HUD_RANGE_P1_ICON_X = HUD_BOMB_P1_ICON_X;
+  localparam int HUD_RANGE_P1_ICON_Y = HUD_BOMB_P1_ICON_Y + HUD_SMALL_ICON_H + 8;
+  localparam int HUD_SPEED_P1_ICON_X = HUD_BOMB_P1_ICON_X;
+  localparam int HUD_SPEED_P1_ICON_Y = HUD_RANGE_P1_ICON_Y + HUD_SMALL_ICON_H + 8;
+  // Track icons: three 8x8 slots per upgrade. Each track sprite has two frames:
+  // frame 0 = not owned, frame 1 = owned.
+  localparam int HUD_P1_TRACK_X_START = HUD_BOMB_P1_ICON_X + HUD_SMALL_ICON_W + 8;
+  localparam int HUD_P1_TRACK_X_STEP = HUD_TRACK_ICON_W;
+  localparam int HUD_P1_TRACK_X[0:2] = '{
+      HUD_P1_TRACK_X_START,
+      HUD_P1_TRACK_X_START + HUD_P1_TRACK_X_STEP,
+      HUD_P1_TRACK_X_START + 2 * HUD_P1_TRACK_X_STEP
+  };
+  localparam int HUD_P1_TRACK_Y_OFFSET = 4;
+  localparam int HUD_P1_TRACK_Y[0:2] = '{
+      HUD_BOMB_P1_ICON_Y + HUD_P1_TRACK_Y_OFFSET,
+      HUD_RANGE_P1_ICON_Y + HUD_P1_TRACK_Y_OFFSET,
+      HUD_SPEED_P1_ICON_Y + HUD_P1_TRACK_Y_OFFSET
+  };
 
   // ---------------------------------------------------------------------------
   // Animation driver (runs a counter to select animation frame)
@@ -298,6 +343,26 @@ module drawcon #(
   logic [BLK_W_LOG2-1:0] p_up_range_local_x, p_up_range_local_x_q;
   logic [BLK_H_LOG2-1:0] p_up_range_local_y, p_up_range_local_y_q;
 
+  // HUD icon addressing helpers
+  logic [HUD_PLAYER_ICON_W_LOG2-1:0] hud_p1_icon_local_x;
+  logic [HUD_PLAYER_ICON_H_LOG2-1:0] hud_p1_icon_local_y;
+  logic [HUD_SMALL_ICON_W_LOG2-1:0] hud_bomb_p1_local_x, hud_range_p1_local_x, hud_speed_p1_local_x;
+  logic [HUD_SMALL_ICON_H_LOG2-1:0] hud_bomb_p1_local_y, hud_range_p1_local_y, hud_speed_p1_local_y;
+  logic [HUD_PLAYER_ICON_ADDR_WIDTH-1:0] hud_p1_icon_addr;
+  logic [HUD_SMALL_ICON_ADDR_WIDTH-1:0] hud_bomb_p1_addr, hud_range_p1_addr, hud_speed_p1_addr;
+  logic [11:0] hud_p1_icon_rgb, hud_bomb_p1_rgb, hud_range_p1_rgb, hud_speed_p1_rgb;
+  logic [11:0] hud_p1_icon_rgb_q, hud_bomb_p1_rgb_q, hud_range_p1_rgb_q, hud_speed_p1_rgb_q;
+  logic hud_p1_icon, hud_bomb_p1, hud_range_p1, hud_speed_p1;
+  logic hud_p1_icon_q, hud_bomb_p1_q, hud_range_p1_q, hud_speed_p1_q;
+  logic hud_p1_track_active[0:2][0:2];
+  logic [HUD_TRACK_ICON_W_LOG2-1:0] hud_p1_track_local_x[0:2][0:2];
+  logic [HUD_TRACK_ICON_H_LOG2-1:0] hud_p1_track_local_y[0:2][0:2];
+  logic [HUD_TRACK_ICON_ADDR_WIDTH-1:0] hud_p1_track_addr[0:2][0:2];
+  logic [HUD_TRACK_ICON_ADDR_WIDTH-1:0] hud_p1_track_offset[0:2][0:2];
+  logic hud_p1_track_hit, hud_p1_track_hit_q;
+  logic [HUD_TRACK_ICON_ADDR_WIDTH-1:0] hud_p1_track_addr_mux;
+  logic [11:0] hud_p1_track_rgb, hud_p1_track_rgb_q;
+
   // Animation outputs also have a "_q" version to line up with the pipelined logic
   // that selects the correct block based on map state. Powerups are exceptions since
   // the animation change is driven by a change in border color while the
@@ -351,15 +416,143 @@ module drawcon #(
   );
 
   // ---------------------------------------------------------------------------
+  // HUD icons
+  // ---------------------------------------------------------------------------
+  always_comb begin
+    hud_p1_icon = (draw_x >= HUD_P1_ICON_X) &&
+                      (draw_x < HUD_P1_ICON_X + HUD_PLAYER_ICON_W) &&
+                      (draw_y >= HUD_P1_ICON_Y) &&
+                      (draw_y < HUD_P1_ICON_Y + HUD_PLAYER_ICON_H);
+    hud_p1_icon_local_x = draw_x - HUD_P1_ICON_X;
+    hud_p1_icon_local_y = draw_y - HUD_P1_ICON_Y;
+
+    hud_bomb_p1 = (draw_x >= HUD_BOMB_P1_ICON_X) &&
+                    (draw_x < HUD_BOMB_P1_ICON_X + HUD_SMALL_ICON_W) &&
+                    (draw_y >= HUD_BOMB_P1_ICON_Y) &&
+                    (draw_y < HUD_BOMB_P1_ICON_Y + HUD_SMALL_ICON_H);
+    hud_bomb_p1_local_x = draw_x - HUD_BOMB_P1_ICON_X;
+    hud_bomb_p1_local_y = draw_y - HUD_BOMB_P1_ICON_Y;
+
+    hud_range_p1 = (draw_x >= HUD_RANGE_P1_ICON_X) &&
+                     (draw_x < HUD_RANGE_P1_ICON_X + HUD_SMALL_ICON_W) &&
+                     (draw_y >= HUD_RANGE_P1_ICON_Y) &&
+                     (draw_y < HUD_RANGE_P1_ICON_Y + HUD_SMALL_ICON_H);
+    hud_range_p1_local_x = draw_x - HUD_RANGE_P1_ICON_X;
+    hud_range_p1_local_y = draw_y - HUD_RANGE_P1_ICON_Y;
+
+    hud_speed_p1 = (draw_x >= HUD_SPEED_P1_ICON_X) &&
+                     (draw_x < HUD_SPEED_P1_ICON_X + HUD_SMALL_ICON_W) &&
+                     (draw_y >= HUD_SPEED_P1_ICON_Y) &&
+                     (draw_y < HUD_SPEED_P1_ICON_Y + HUD_SMALL_ICON_H);
+    hud_speed_p1_local_x = draw_x - HUD_SPEED_P1_ICON_X;
+    hud_speed_p1_local_y = draw_y - HUD_SPEED_P1_ICON_Y;
+
+    // Default tracker offsets to "not owned" (frame 0). Each slot can be driven
+    // independently later by gameplay logic.
+    for (int item = 0; item < 3; item++) begin
+      for (int slot = 0; slot < 3; slot++) begin
+        hud_p1_track_offset[item][slot] = '0;
+      end
+    end
+
+    hud_p1_track_hit = 1'b0;
+    hud_p1_track_addr_mux = '0;
+
+    for (int item = 0; item < 3; item++) begin
+      for (int slot = 0; slot < 3; slot++) begin
+        hud_p1_track_active[item][slot] =
+            (draw_x >= HUD_P1_TRACK_X[slot]) &&
+            (draw_x < HUD_P1_TRACK_X[slot] + HUD_TRACK_ICON_W) &&
+            (draw_y >= HUD_P1_TRACK_Y[item]) &&
+            (draw_y < HUD_P1_TRACK_Y[item] + HUD_TRACK_ICON_H);
+        hud_p1_track_local_x[item][slot] = draw_x - HUD_P1_TRACK_X[slot];
+        hud_p1_track_local_y[item][slot] = draw_y - HUD_P1_TRACK_Y[item];
+        hud_p1_track_addr[item][slot] = {hud_p1_track_local_y[item][slot], hud_p1_track_local_x[item][slot]} +
+                                     hud_p1_track_offset[item][slot];
+
+        if (hud_p1_track_active[item][slot]) begin
+          hud_p1_track_hit = 1'b1;
+          hud_p1_track_addr_mux = hud_p1_track_addr[item][slot];
+        end
+      end
+    end
+  end
+
+  assign hud_p1_icon_addr  = {hud_p1_icon_local_y, hud_p1_icon_local_x};
+  assign hud_bomb_p1_addr  = {hud_bomb_p1_local_y, hud_bomb_p1_local_x};
+  assign hud_range_p1_addr = {hud_range_p1_local_y, hud_range_p1_local_x};
+  assign hud_speed_p1_addr = {hud_speed_p1_local_y, hud_speed_p1_local_x};
+
+  sprite_rom #(
+      .SPRITE_W     (HUD_PLAYER_ICON_W),
+      .SPRITE_H     (HUD_PLAYER_ICON_H),
+      .NUM_FRAMES   (1),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("sprites/hud/mem/player_1_icon.mem")
+  ) hud_p1_icon_i (
+      .clk (clk),
+      .addr(hud_p1_icon_addr),
+      .data(hud_p1_icon_rgb)
+  );
+
+  sprite_rom #(
+      .SPRITE_W     (HUD_SMALL_ICON_W),
+      .SPRITE_H     (HUD_SMALL_ICON_H),
+      .NUM_FRAMES   (1),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("sprites/hud/mem/bomb_icon.mem")
+  ) hud_bomb_p1_i (
+      .clk (clk),
+      .addr(hud_bomb_p1_addr),
+      .data(hud_bomb_p1_rgb)
+  );
+
+  sprite_rom #(
+      .SPRITE_W     (HUD_SMALL_ICON_W),
+      .SPRITE_H     (HUD_SMALL_ICON_H),
+      .NUM_FRAMES   (1),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("sprites/hud/mem/range_icon.mem")
+  ) hud_range_p1_i (
+      .clk (clk),
+      .addr(hud_range_p1_addr),
+      .data(hud_range_p1_rgb)
+  );
+
+  sprite_rom #(
+      .SPRITE_W     (HUD_SMALL_ICON_W),
+      .SPRITE_H     (HUD_SMALL_ICON_H),
+      .NUM_FRAMES   (1),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("sprites/hud/mem/speed_icon.mem")
+  ) hud_speed_p1_i (
+      .clk (clk),
+      .addr(hud_speed_p1_addr),
+      .data(hud_speed_p1_rgb)
+  );
+
+  sprite_rom #(
+      .SPRITE_W     (HUD_TRACK_ICON_W),
+      .SPRITE_H     (HUD_TRACK_ICON_H),
+      .NUM_FRAMES   (HUD_TRACK_TYPES),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("sprites/hud/mem/track.mem")
+  ) hud_p1_track_i (
+      .clk (clk),
+      .addr(hud_p1_track_addr_mux),
+      .data(hud_p1_track_rgb)
+  );
+
+  // ---------------------------------------------------------------------------
   // Map region detection
   // ---------------------------------------------------------------------------
   logic out_of_map;
   logic out_of_map_q;
   always_comb begin
-    out_of_map = (draw_x < BRD_H)               ||
-                 (draw_x >= SCREEN_W - BRD_H)   ||
-                 (draw_y < BRD_TOP)             ||
-                 (draw_y >= SCREEN_H - BRD_BOT);
+    out_of_map = (draw_x < HUD_H)               ||
+                 (draw_x >= SCREEN_W - HUD_H)   ||
+                 (draw_y < HUD_TOP)             ||
+                 (draw_y >= SCREEN_H - HUD_BOT);
   end
 
   map_state_t st;
@@ -402,6 +595,16 @@ module drawcon #(
     player_2_sprite_q     <= player_2_sprite;
     player_1_sprite_rgb_q <= player_1_sprite_rgb_raw;
     player_2_sprite_rgb_q <= player_2_sprite_rgb_raw;
+    hud_p1_icon_q         <= hud_p1_icon;
+    hud_bomb_p1_q         <= hud_bomb_p1;
+    hud_range_p1_q        <= hud_range_p1;
+    hud_speed_p1_q        <= hud_speed_p1;
+    hud_p1_icon_rgb_q     <= hud_p1_icon_rgb;
+    hud_bomb_p1_rgb_q     <= hud_bomb_p1_rgb;
+    hud_range_p1_rgb_q    <= hud_range_p1_rgb;
+    hud_speed_p1_rgb_q    <= hud_speed_p1_rgb;
+    hud_p1_track_hit_q    <= hud_p1_track_hit;
+    hud_p1_track_rgb_q    <= hud_p1_track_rgb;
     perm_blk_local_x_q    <= perm_blk_local_x;
     perm_blk_local_y_q    <= perm_blk_local_y;
     dest_blk_local_x_q    <= dest_blk_local_x;
@@ -423,7 +626,19 @@ module drawcon #(
 
   always_comb begin
     if (out_of_map_q) begin
-      {o_r, o_g, o_b} = {BRD_R, BRD_G, BRD_B};
+      {o_r, o_g, o_b} = {HUD_R, HUD_G, HUD_B};
+
+      if (hud_p1_icon_q) begin
+        {o_r, o_g, o_b} = hud_p1_icon_rgb_q;
+      end else if (hud_bomb_p1_q) begin
+        {o_r, o_g, o_b} = hud_bomb_p1_rgb_q;
+      end else if (hud_range_p1_q) begin
+        {o_r, o_g, o_b} = hud_range_p1_rgb_q;
+      end else if (hud_speed_p1_q) begin
+        {o_r, o_g, o_b} = hud_speed_p1_rgb_q;
+      end else if (hud_p1_track_hit_q) begin
+        {o_r, o_g, o_b} = hud_p1_track_rgb_q;
+      end
 
       // Player sprites have a color key (12'hF0F) for transparency
     end else if (player_1_sprite_q && (player_1_sprite_rgb_q != TRANSPARENCY)) begin
@@ -491,8 +706,8 @@ module drawcon #(
   logic [4:0] row, col;
 
   // Accounting for the border offset so that indexing is done correctly.
-  assign map_x = draw_x - BRD_H;
-  assign map_y = draw_y - BRD_TOP;
+  assign map_x = draw_x - HUD_H;
+  assign map_y = draw_y - HUD_TOP;
 
   assign perm_blk_local_x = map_x[BLK_W_LOG2-1:0];
   assign perm_blk_local_y = map_y[BLK_H_LOG2-1:0];
