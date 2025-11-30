@@ -157,11 +157,11 @@ module game_top (
     case ({
       buttons[0], buttons[1], buttons[2], buttons[3]
     })
-      4'b1000: move_dir = DIR_UP;
-      4'b0100: move_dir = DIR_DOWN;
-      4'b0010: move_dir = DIR_LEFT;
-      4'b0001: move_dir = DIR_RIGHT;
-      default: move_dir = DIR_NONE;
+      4'b1000: move_dir2 = DIR_UP;
+      4'b0100: move_dir2 = DIR_DOWN;
+      4'b0010: move_dir2 = DIR_LEFT;
+      4'b0001: move_dir2 = DIR_RIGHT;
+      default: move_dir2 = DIR_NONE;
     endcase
   end
 
