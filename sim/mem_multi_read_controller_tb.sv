@@ -8,6 +8,7 @@ module mem_multi_read_controller_tb;
     localparam int NUM_COL     = 19;
     localparam int DEPTH       = NUM_ROW * NUM_COL;
     localparam int ADDR_WIDTH  = $clog2(DEPTH);
+    localparam int MAP_MEM_WIDTH = 2;
 
     // DUT signals
     logic clk;
@@ -16,8 +17,6 @@ module mem_multi_read_controller_tb;
     logic [ADDR_WIDTH-1:0]  read_addr_req [0:NUM_READERS-1];
     logic [ADDR_WIDTH-1:0]  read_addr;
     logic [NUM_READERS-1:0] read_granted;
-    logic [ADDR_WIDTH-1:0]  map_addr_1;
-    logic [ADDR_WIDTH-1:0]  map_addr_2;
     logic [MAP_MEM_WIDTH-1:0] map_mem_in;
     logic [MAP_MEM_WIDTH-1:0] map_mem [0:DEPTH-1];
 
@@ -39,8 +38,8 @@ module mem_multi_read_controller_tb;
     ) checker0 (
         .clk(clk),
         .rst(rst),
-        .player_x(11'h20),
-        .player_y(10'h20),
+        .player_x(11'h40),
+        .player_y(10'h40),
         .map_mem_in(map_mem_in),
         .read_granted(read_granted[0]),
         .read_req(read_req[0]),
@@ -54,8 +53,8 @@ module mem_multi_read_controller_tb;
     ) checker1 (
         .clk(clk),
         .rst(rst),
-        .player_x(11'h80),
-        .player_y(10'h20),
+        .player_x(11'd1088),
+        .player_y(10'd576),
         .map_mem_in(map_mem_in),
         .read_granted(read_granted[1]),
         .read_req(read_req[1]),
