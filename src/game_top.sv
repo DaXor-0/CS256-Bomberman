@@ -124,7 +124,7 @@ module game_top (
   // Logic for positioning rectangle control.
   logic [10:0] player_x, map_player_x, player_2_x, map_player_2_x;
   logic [9:0] player_y, map_player_y, player_2_y, map_player_2_y;
-  logic [MAP_ADDR_WIDTH-1:0] map_addr_obst, map_addr_drawcon, read_addr;
+  logic [MAP_ADDR_WIDTH-1:0] map_addr_obst, map_addr_obst_2, map_addr_drawcon, read_addr;
   // Player 1: idx 0, Player 2: idx 1, free_blks: idx 2-7
   logic [MAP_ADDR_WIDTH-1:0] read_addr_req[0:7];
   logic [7:0] read_req, read_granted;
@@ -362,11 +362,11 @@ module game_top (
       .map_tile_state(map_tile_state_drawcon),
       .draw_x(curr_x_d),
       .draw_y(curr_y_d),
-      .player_1_x(player_x),
-      .player_1_y(player_y),
+      .player_x(player_x),
+      .player_y(player_y),
       .player_2_x(player_2_x),
       .player_2_y(player_2_y),
-      .player_1_dir(move_dir),
+      .player_dir(move_dir),
       .player_2_dir(move_dir2),
       .explode_signal(explode_signal),
       .explosion_addr(saved_explosion_addr),
