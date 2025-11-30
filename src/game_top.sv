@@ -128,6 +128,7 @@ module game_top (
   logic [MAP_ADDR_WIDTH-1:0] read_addr_req[0:1];
   logic [1:0] read_req, read_granted;
   logic [MAP_MEM_WIDTH-1:0] map_tile_state_obst, map_tile_state_drawcon;
+  logic [5:0] player_speed;
 
   // one-cycle pulse, synchronous to pixclk
   logic tick;
@@ -150,8 +151,7 @@ module game_top (
 
   player_controller #(
       .INIT_X(64),
-      .INIT_Y(64),
-      .STEP_SIZE(4)
+      .INIT_Y(64)
   ) player_ctrl_i (
       .clk(pixclk),
       .rst(rst),
@@ -248,11 +248,10 @@ module game_top (
   // --------------------------------- //
   // -------- Power-up Logic --------- //
   // --------------------------------- //
-  logic [ADDR_WIDTH-1:0] item_addr [0:2];
+  logic [MAP_ADDR_WIDTH-1:0] item_addr [0:2];
   logic item_active [0:2];
   logic player_on_item [0:2];
   logic [3:0] max_bombs;
-  logic [5:0] player_speed;
   logic [3:0] bomb_range; 
   power_up power_up_i (
       .clk(pixclk),
