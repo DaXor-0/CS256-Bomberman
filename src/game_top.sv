@@ -10,6 +10,8 @@ module game_top (
     left,
     right,  // movement control
     input  logic       place_bomb,
+    input  wire uart_rx,
+    output logic [4:0] LED, // debug LEDs
     output logic [3:0] o_pix_r,
     o_pix_g,
     o_pix_b,
@@ -20,6 +22,38 @@ module game_top (
 );
 
 
+
+  // -------------------------------------------------------- //
+  // --------------------- UART_RX -------------------- //
+  // -------------------------------------------------------- //
+  wire [7:0] rx_byte;
+  wire       rx_done;
+
+  // UART receiver at 115200 baud, 100 MHz clock
+    uart_rx #(
+        .CLKS_PER_BIT(868)   // 100_000_000 / 115200 ≈ 868
+    ) uart_rx_inst (
+        .clk   (CLK100MHZ),
+        .rx    (uart_rx),
+        .rx_dv (rx_done),
+        .rx_byte(rx_byte)
+    );
+
+    // Latch last received byte
+    logic [7:0] buttons = 8'd0;
+
+    always_ff @(posedge CLK100MHZ) begin
+        if (rx_done) begin
+            buttons <= rx_byte;
+        end
+    end
+
+    // Map bits to LEDs: UP, DOWN, LEFT, RIGHT, ACTION
+    assign LED[0] = buttons[0];   // UP
+    assign LED[1] = buttons[1];   // DOWN
+    assign LED[2] = buttons[2];   // LEFT
+    assign LED[3] = buttons[3];   // RIGHT
+    assign LED[4] = buttons[4];   // ACTION (B button)
 
   wire pixclk, rst;
   assign rst = ~CPU_RESETN;  // the reset button is reversed (lost too much time on that :( )
@@ -103,7 +137,8 @@ module game_top (
   always_comb begin
     move_dir = DIR_NONE;
     case ({
-      up, down, left, right
+      // up, down, left, right
+      buttons[0], buttons[1], buttons[2], buttons[3]
     })
       4'b1000: move_dir = DIR_UP;
       4'b0100: move_dir = DIR_DOWN;
