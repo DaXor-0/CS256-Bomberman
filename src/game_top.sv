@@ -122,24 +122,25 @@ module game_top (
   localparam int MAP_MEM_WIDTH = 2;
 
   // Logic for positioning rectangle control.
-  logic [10:0] player_x, map_player_x;
-  logic [9:0] player_y, map_player_y;
+  logic [10:0] player_x, map_player_x, player_2_x, map_player_2_x;
+  logic [9:0] player_y, map_player_y, player_2_y, map_player_2_y;
   logic [MAP_ADDR_WIDTH-1:0] map_addr_obst, map_addr_drawcon, read_addr;
-  logic [MAP_ADDR_WIDTH-1:0] read_addr_req[0:1];
-  logic [1:0] read_req, read_granted;
+  // Player 1: idx 0, Player 2: idx 1, free_blks: idx 2-7
+  logic [MAP_ADDR_WIDTH-1:0] read_addr_req[0:7];
+  logic [7:0] read_req, read_granted;
   logic [MAP_MEM_WIDTH-1:0] map_tile_state_obst, map_tile_state_drawcon;
-  logic [5:0] player_speed;
+  logic [5:0] player_speed, player_2_speed;
 
   // one-cycle pulse, synchronous to pixclk
   logic tick;
   always_ff @(posedge pixclk) tick <= (curr_x == 0 && curr_y == 0);
 
+  // Player 1 Movement
   dir_t move_dir;
   always_comb begin
     move_dir = DIR_NONE;
     case ({
-      // up, down, left, right
-      buttons[0], buttons[1], buttons[2], buttons[3]
+      up, down, left, right
     })
       4'b1000: move_dir = DIR_UP;
       4'b0100: move_dir = DIR_DOWN;
@@ -149,6 +150,22 @@ module game_top (
     endcase
   end
 
+  // Player 2 Movement
+  dir_t move_dir2;
+  always_comb begin
+    move_dir2 = DIR_NONE;
+    case ({
+      buttons[0], buttons[1], buttons[2], buttons[3]
+    })
+      4'b1000: move_dir2 = DIR_UP;
+      4'b0100: move_dir2 = DIR_DOWN;
+      4'b0010: move_dir2 = DIR_LEFT;
+      4'b0001: move_dir2 = DIR_RIGHT;
+      default: move_dir2 = DIR_NONE;
+    endcase
+  end
+
+  // Player 1 Controller
   player_controller #(
       .INIT_X(64),
       .INIT_Y(64)
@@ -167,6 +184,28 @@ module game_top (
       .read_granted(read_granted[0]),
       .read_req(read_req[0])
   );
+
+  player_controller #(
+      .INIT_X(1088),
+      .INIT_Y(576)
+  ) player_ctrl_2 (
+      .clk(pixclk),
+      .rst(rst),
+      .tick(tick),
+      .move_dir(move_dir2),
+      .player_speed(player_2_speed),
+      .map_mem_in(map_tile_state_obst),
+      .map_addr(map_addr_obst_2),
+      .player_x(player_2_x),
+      .player_y(player_2_y),
+      .map_player_x(map_player_2_x),
+      .map_player_y(map_player_2_y),
+      .read_granted(read_granted[1]),
+      .read_req(read_req[1])
+  );
+
+  // TBD Functionalities
+  assign player_2_speed = 4;
 
   // -------------------------------------------------------- //
   // ----------------- BOMBS AND EXPLOSIONS ----------------- //
@@ -187,9 +226,9 @@ module game_top (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
-      .player_x(map_player_x),
-      .player_y(map_player_y),
-      .place_bomb(place_bomb),
+      .player_x(map_player_2_x),
+      .player_y(map_player_2_y),
+      .place_bomb(buttons[4]), // ACTION button
       .write_addr(wr_addr_bomb),
       .write_data(write_data_bomb),
       .write_en(we_bomb),
@@ -221,9 +260,9 @@ module game_top (
       .free_blks_signal(free_blks_signal),
       .explosion_addr(saved_explosion_addr),
       .map_mem_in(map_tile_state_obst),
-      .read_granted(read_granted[1]),
-      .read_req(read_req[1]),
-      .read_addr(read_addr_req[1]),
+      .read_granted(read_granted[2]),
+      .read_req(read_req[2]),
+      .read_addr(read_addr_req[2]),
       .write_addr(wr_addr_free),
       .write_data(write_data_free),
       .write_en(we_free)
@@ -274,7 +313,8 @@ module game_top (
 //  assign last_blk = 1'b0; // until implemented, disable
 
   // Map memory read controller (arbiter)
-  mem_read_controller r_arbiter (
+  // TBD: implement N readers.
+  mem_multi_read_controller r_arbiter (
       .clk(pixclk),
       .rst(rst),
       .read_req(read_req),
@@ -284,6 +324,7 @@ module game_top (
   );
 
   assign read_addr_req[0] = map_addr_obst;
+  assign read_addr_req[1] = map_addr_obst_2;
 
   // Map memory write controller (arbiter)
 
@@ -323,7 +364,10 @@ module game_top (
       .draw_y(curr_y_d),
       .player_x(player_x),
       .player_y(player_y),
+      .player_2_x(player_2_x),
+      .player_2_y(player_2_y),
       .player_dir(move_dir),
+      .player_2_dir(move_dir2),
       .explode_signal(explode_signal),
       .explosion_addr(saved_explosion_addr),
       .exit_present(1'b0),
