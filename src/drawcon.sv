@@ -62,8 +62,10 @@ module drawcon #(
     input  logic [              10:0] player_2_x,
     input  logic [               9:0] player_2_y,
     input  dir_t                      player_2_dir,
-    input  logic                      explode_signal, explode_signal_2,
-    input  logic [MAP_ADDR_WIDTH-1:0] explosion_addr, explosion_addr_2,
+    input  logic                      explode_signal,
+    explode_signal_2,
+    input  logic [MAP_ADDR_WIDTH-1:0] explosion_addr,
+    explosion_addr_2,
     input  logic                      exit_present,
     input  logic [MAP_ADDR_WIDTH-1:0] exit_addr,
     input  logic [MAP_ADDR_WIDTH-1:0] item_addr     [0:2],
@@ -159,6 +161,30 @@ module drawcon #(
       HUD_BOMB_P1_ICON_Y + HUD_P1_TRACK_Y_OFFSET,
       HUD_RANGE_P1_ICON_Y + HUD_P1_TRACK_Y_OFFSET,
       HUD_SPEED_P1_ICON_Y + HUD_P1_TRACK_Y_OFFSET
+  };
+
+  // Player 2 HUD uses the same layout shifted to the right.
+  localparam int HUD_P2_X_OFFSET = 1088;
+  localparam int HUD_P2_ICON_X = HUD_P1_ICON_X + HUD_P2_X_OFFSET;
+  localparam int HUD_P2_ICON_Y = HUD_P1_ICON_Y;
+  localparam int HUD_BOMB_P2_ICON_X = HUD_BOMB_P1_ICON_X + HUD_P2_X_OFFSET;
+  localparam int HUD_BOMB_P2_ICON_Y = HUD_BOMB_P1_ICON_Y;
+  localparam int HUD_RANGE_P2_ICON_X = HUD_RANGE_P1_ICON_X + HUD_P2_X_OFFSET;
+  localparam int HUD_RANGE_P2_ICON_Y = HUD_RANGE_P1_ICON_Y;
+  localparam int HUD_SPEED_P2_ICON_X = HUD_SPEED_P1_ICON_X + HUD_P2_X_OFFSET;
+  localparam int HUD_SPEED_P2_ICON_Y = HUD_SPEED_P1_ICON_Y;
+  localparam int HUD_P2_TRACK_X_START = HUD_P1_TRACK_X_START + HUD_P2_X_OFFSET;
+  localparam int HUD_P2_TRACK_X_STEP = HUD_P1_TRACK_X_STEP;
+  localparam int HUD_P2_TRACK_X[0:2] = '{
+      HUD_P2_TRACK_X_START,
+      HUD_P2_TRACK_X_START + HUD_P2_TRACK_X_STEP,
+      HUD_P2_TRACK_X_START + 2 * HUD_P2_TRACK_X_STEP
+  };
+  localparam int HUD_P2_TRACK_Y_OFFSET = HUD_P1_TRACK_Y_OFFSET;
+  localparam int HUD_P2_TRACK_Y[0:2] = '{
+      HUD_BOMB_P2_ICON_Y + HUD_P2_TRACK_Y_OFFSET,
+      HUD_RANGE_P2_ICON_Y + HUD_P2_TRACK_Y_OFFSET,
+      HUD_SPEED_P2_ICON_Y + HUD_P2_TRACK_Y_OFFSET
   };
 
   // ---------------------------------------------------------------------------
@@ -344,24 +370,37 @@ module drawcon #(
   logic [BLK_H_LOG2-1:0] p_up_range_local_y, p_up_range_local_y_q;
 
   // HUD icon addressing helpers
-  logic [HUD_PLAYER_ICON_W_LOG2-1:0] hud_p1_icon_local_x;
-  logic [HUD_PLAYER_ICON_H_LOG2-1:0] hud_p1_icon_local_y;
+  logic [HUD_PLAYER_ICON_W_LOG2-1:0] hud_p1_icon_local_x, hud_p2_icon_local_x;
+  logic [HUD_PLAYER_ICON_H_LOG2-1:0] hud_p1_icon_local_y, hud_p2_icon_local_y;
   logic [HUD_SMALL_ICON_W_LOG2-1:0] hud_bomb_p1_local_x, hud_range_p1_local_x, hud_speed_p1_local_x;
+  logic [HUD_SMALL_ICON_W_LOG2-1:0] hud_bomb_p2_local_x, hud_range_p2_local_x, hud_speed_p2_local_x;
   logic [HUD_SMALL_ICON_H_LOG2-1:0] hud_bomb_p1_local_y, hud_range_p1_local_y, hud_speed_p1_local_y;
-  logic [HUD_PLAYER_ICON_ADDR_WIDTH-1:0] hud_p1_icon_addr;
+  logic [HUD_SMALL_ICON_H_LOG2-1:0] hud_bomb_p2_local_y, hud_range_p2_local_y, hud_speed_p2_local_y;
+  logic [HUD_PLAYER_ICON_ADDR_WIDTH-1:0] hud_p1_icon_addr, hud_p2_icon_addr;
   logic [HUD_SMALL_ICON_ADDR_WIDTH-1:0] hud_bomb_p1_addr, hud_range_p1_addr, hud_speed_p1_addr;
-  logic [11:0] hud_p1_icon_rgb, hud_bomb_p1_rgb, hud_range_p1_rgb, hud_speed_p1_rgb;
-  logic [11:0] hud_p1_icon_rgb_q, hud_bomb_p1_rgb_q, hud_range_p1_rgb_q, hud_speed_p1_rgb_q;
+  logic [HUD_SMALL_ICON_ADDR_WIDTH-1:0] hud_bomb_p2_addr, hud_range_p2_addr, hud_speed_p2_addr;
+  logic [HUD_SMALL_ICON_ADDR_WIDTH-1:0] hud_bomb_addr_mux, hud_range_addr_mux, hud_speed_addr_mux;
+  logic [11:0] hud_p1_icon_rgb, hud_p2_icon_rgb;
+  logic [11:0] hud_bomb_rgb, hud_range_rgb, hud_speed_rgb;
+  logic [11:0] hud_p1_icon_rgb_q, hud_p2_icon_rgb_q;
+  logic [11:0] hud_bomb_rgb_q, hud_range_rgb_q, hud_speed_rgb_q;
   logic hud_p1_icon, hud_bomb_p1, hud_range_p1, hud_speed_p1;
+  logic hud_p2_icon, hud_bomb_p2, hud_range_p2, hud_speed_p2;
   logic hud_p1_icon_q, hud_bomb_p1_q, hud_range_p1_q, hud_speed_p1_q;
-  logic hud_p1_track_active[0:2][0:2];
+  logic hud_p2_icon_q, hud_bomb_p2_q, hud_range_p2_q, hud_speed_p2_q;
+  logic hud_p1_track_active[0:2][0:2], hud_p2_track_active[0:2][0:2];
   logic [HUD_TRACK_ICON_W_LOG2-1:0] hud_p1_track_local_x[0:2][0:2];
+  logic [HUD_TRACK_ICON_W_LOG2-1:0] hud_p2_track_local_x[0:2][0:2];
   logic [HUD_TRACK_ICON_H_LOG2-1:0] hud_p1_track_local_y[0:2][0:2];
+  logic [HUD_TRACK_ICON_H_LOG2-1:0] hud_p2_track_local_y[0:2][0:2];
   logic [HUD_TRACK_ICON_ADDR_WIDTH-1:0] hud_p1_track_addr[0:2][0:2];
+  logic [HUD_TRACK_ICON_ADDR_WIDTH-1:0] hud_p2_track_addr[0:2][0:2];
   logic [HUD_TRACK_ICON_ADDR_WIDTH-1:0] hud_p1_track_offset[0:2][0:2];
-  logic hud_p1_track_hit, hud_p1_track_hit_q;
-  logic [HUD_TRACK_ICON_ADDR_WIDTH-1:0] hud_p1_track_addr_mux;
-  logic [11:0] hud_p1_track_rgb, hud_p1_track_rgb_q;
+  logic [HUD_TRACK_ICON_ADDR_WIDTH-1:0] hud_p2_track_offset[0:2][0:2];
+  logic hud_p1_track_hit, hud_p2_track_hit, hud_p1_track_hit_q, hud_p2_track_hit_q;
+  logic [HUD_TRACK_ICON_ADDR_WIDTH-1:0] hud_p1_track_addr_mux, hud_p2_track_addr_mux;
+  logic [HUD_TRACK_ICON_ADDR_WIDTH-1:0] hud_track_addr_mux;
+  logic [11:0] hud_track_rgb, hud_track_rgb_q;
 
   // Animation outputs also have a "_q" version to line up with the pipelined logic
   // that selects the correct block based on map state. Powerups are exceptions since
@@ -425,6 +464,12 @@ module drawcon #(
                       (draw_y < HUD_P1_ICON_Y + HUD_PLAYER_ICON_H);
     hud_p1_icon_local_x = draw_x - HUD_P1_ICON_X;
     hud_p1_icon_local_y = draw_y - HUD_P1_ICON_Y;
+    hud_p2_icon = (draw_x >= HUD_P2_ICON_X) &&
+                      (draw_x < HUD_P2_ICON_X + HUD_PLAYER_ICON_W) &&
+                      (draw_y >= HUD_P2_ICON_Y) &&
+                      (draw_y < HUD_P2_ICON_Y + HUD_PLAYER_ICON_H);
+    hud_p2_icon_local_x = draw_x - HUD_P2_ICON_X;
+    hud_p2_icon_local_y = draw_y - HUD_P2_ICON_Y;
 
     hud_bomb_p1 = (draw_x >= HUD_BOMB_P1_ICON_X) &&
                     (draw_x < HUD_BOMB_P1_ICON_X + HUD_SMALL_ICON_W) &&
@@ -432,6 +477,12 @@ module drawcon #(
                     (draw_y < HUD_BOMB_P1_ICON_Y + HUD_SMALL_ICON_H);
     hud_bomb_p1_local_x = draw_x - HUD_BOMB_P1_ICON_X;
     hud_bomb_p1_local_y = draw_y - HUD_BOMB_P1_ICON_Y;
+    hud_bomb_p2 = (draw_x >= HUD_BOMB_P2_ICON_X) &&
+                    (draw_x < HUD_BOMB_P2_ICON_X + HUD_SMALL_ICON_W) &&
+                    (draw_y >= HUD_BOMB_P2_ICON_Y) &&
+                    (draw_y < HUD_BOMB_P2_ICON_Y + HUD_SMALL_ICON_H);
+    hud_bomb_p2_local_x = draw_x - HUD_BOMB_P2_ICON_X;
+    hud_bomb_p2_local_y = draw_y - HUD_BOMB_P2_ICON_Y;
 
     hud_range_p1 = (draw_x >= HUD_RANGE_P1_ICON_X) &&
                      (draw_x < HUD_RANGE_P1_ICON_X + HUD_SMALL_ICON_W) &&
@@ -439,6 +490,12 @@ module drawcon #(
                      (draw_y < HUD_RANGE_P1_ICON_Y + HUD_SMALL_ICON_H);
     hud_range_p1_local_x = draw_x - HUD_RANGE_P1_ICON_X;
     hud_range_p1_local_y = draw_y - HUD_RANGE_P1_ICON_Y;
+    hud_range_p2 = (draw_x >= HUD_RANGE_P2_ICON_X) &&
+                     (draw_x < HUD_RANGE_P2_ICON_X + HUD_SMALL_ICON_W) &&
+                     (draw_y >= HUD_RANGE_P2_ICON_Y) &&
+                     (draw_y < HUD_RANGE_P2_ICON_Y + HUD_SMALL_ICON_H);
+    hud_range_p2_local_x = draw_x - HUD_RANGE_P2_ICON_X;
+    hud_range_p2_local_y = draw_y - HUD_RANGE_P2_ICON_Y;
 
     hud_speed_p1 = (draw_x >= HUD_SPEED_P1_ICON_X) &&
                      (draw_x < HUD_SPEED_P1_ICON_X + HUD_SMALL_ICON_W) &&
@@ -446,17 +503,26 @@ module drawcon #(
                      (draw_y < HUD_SPEED_P1_ICON_Y + HUD_SMALL_ICON_H);
     hud_speed_p1_local_x = draw_x - HUD_SPEED_P1_ICON_X;
     hud_speed_p1_local_y = draw_y - HUD_SPEED_P1_ICON_Y;
+    hud_speed_p2 = (draw_x >= HUD_SPEED_P2_ICON_X) &&
+                     (draw_x < HUD_SPEED_P2_ICON_X + HUD_SMALL_ICON_W) &&
+                     (draw_y >= HUD_SPEED_P2_ICON_Y) &&
+                     (draw_y < HUD_SPEED_P2_ICON_Y + HUD_SMALL_ICON_H);
+    hud_speed_p2_local_x = draw_x - HUD_SPEED_P2_ICON_X;
+    hud_speed_p2_local_y = draw_y - HUD_SPEED_P2_ICON_Y;
 
     // Default tracker offsets to "not owned" (frame 0). Each slot can be driven
     // independently later by gameplay logic.
     for (int item = 0; item < 3; item++) begin
       for (int slot = 0; slot < 3; slot++) begin
         hud_p1_track_offset[item][slot] = '0;
+        hud_p2_track_offset[item][slot] = '0;
       end
     end
 
     hud_p1_track_hit = 1'b0;
     hud_p1_track_addr_mux = '0;
+    hud_p2_track_hit = 1'b0;
+    hud_p2_track_addr_mux = '0;
 
     for (int item = 0; item < 3; item++) begin
       for (int slot = 0; slot < 3; slot++) begin
@@ -476,12 +542,46 @@ module drawcon #(
         end
       end
     end
+
+    for (int item = 0; item < 3; item++) begin
+      for (int slot = 0; slot < 3; slot++) begin
+        hud_p2_track_active[item][slot] =
+            (draw_x >= HUD_P2_TRACK_X[slot]) &&
+            (draw_x < HUD_P2_TRACK_X[slot] + HUD_TRACK_ICON_W) &&
+            (draw_y >= HUD_P2_TRACK_Y[item]) &&
+            (draw_y < HUD_P2_TRACK_Y[item] + HUD_TRACK_ICON_H);
+        hud_p2_track_local_x[item][slot] = draw_x - HUD_P2_TRACK_X[slot];
+        hud_p2_track_local_y[item][slot] = draw_y - HUD_P2_TRACK_Y[item];
+        hud_p2_track_addr[item][slot] = {hud_p2_track_local_y[item][slot], hud_p2_track_local_x[item][slot]} +
+                                     hud_p2_track_offset[item][slot];
+
+        if (hud_p2_track_active[item][slot]) begin
+          hud_p2_track_hit = 1'b1;
+          hud_p2_track_addr_mux = hud_p2_track_addr[item][slot];
+        end
+      end
+    end
+
+    // Select the HUD sprite address to feed the shared ROMs
+    hud_bomb_addr_mux  = hud_bomb_p1_addr;
+    hud_range_addr_mux = hud_range_p1_addr;
+    hud_speed_addr_mux = hud_speed_p1_addr;
+    hud_track_addr_mux = hud_p1_track_addr_mux;
+
+    if (hud_bomb_p2) hud_bomb_addr_mux = hud_bomb_p2_addr;
+    if (hud_range_p2) hud_range_addr_mux = hud_range_p2_addr;
+    if (hud_speed_p2) hud_speed_addr_mux = hud_speed_p2_addr;
+    if (hud_p2_track_hit) hud_track_addr_mux = hud_p2_track_addr_mux;
   end
 
   assign hud_p1_icon_addr  = {hud_p1_icon_local_y, hud_p1_icon_local_x};
+  assign hud_p2_icon_addr  = {hud_p2_icon_local_y, hud_p2_icon_local_x};
   assign hud_bomb_p1_addr  = {hud_bomb_p1_local_y, hud_bomb_p1_local_x};
+  assign hud_bomb_p2_addr  = {hud_bomb_p2_local_y, hud_bomb_p2_local_x};
   assign hud_range_p1_addr = {hud_range_p1_local_y, hud_range_p1_local_x};
+  assign hud_range_p2_addr = {hud_range_p2_local_y, hud_range_p2_local_x};
   assign hud_speed_p1_addr = {hud_speed_p1_local_y, hud_speed_p1_local_x};
+  assign hud_speed_p2_addr = {hud_speed_p2_local_y, hud_speed_p2_local_x};
 
   sprite_rom #(
       .SPRITE_W     (HUD_PLAYER_ICON_W),
@@ -496,15 +596,27 @@ module drawcon #(
   );
 
   sprite_rom #(
+      .SPRITE_W     (HUD_PLAYER_ICON_W),
+      .SPRITE_H     (HUD_PLAYER_ICON_H),
+      .NUM_FRAMES   (1),
+      .DATA_WIDTH   (12),
+      .MEM_INIT_FILE("player_2_icon.mem")
+  ) hud_p2_icon_i (
+      .clk (clk),
+      .addr(hud_p2_icon_addr),
+      .data(hud_p2_icon_rgb)
+  );
+
+  sprite_rom #(
       .SPRITE_W     (HUD_SMALL_ICON_W),
       .SPRITE_H     (HUD_SMALL_ICON_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
       .MEM_INIT_FILE("bomb_icon.mem")
-  ) hud_bomb_p1_i (
+  ) hud_bomb_icon_i (
       .clk (clk),
-      .addr(hud_bomb_p1_addr),
-      .data(hud_bomb_p1_rgb)
+      .addr(hud_bomb_addr_mux),
+      .data(hud_bomb_rgb)
   );
 
   sprite_rom #(
@@ -513,10 +625,10 @@ module drawcon #(
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
       .MEM_INIT_FILE("range_icon.mem")
-  ) hud_range_p1_i (
+  ) hud_range_icon_i (
       .clk (clk),
-      .addr(hud_range_p1_addr),
-      .data(hud_range_p1_rgb)
+      .addr(hud_range_addr_mux),
+      .data(hud_range_rgb)
   );
 
   sprite_rom #(
@@ -525,10 +637,10 @@ module drawcon #(
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
       .MEM_INIT_FILE("speed_icon.mem")
-  ) hud_speed_p1_i (
+  ) hud_speed_icon_i (
       .clk (clk),
-      .addr(hud_speed_p1_addr),
-      .data(hud_speed_p1_rgb)
+      .addr(hud_speed_addr_mux),
+      .data(hud_speed_rgb)
   );
 
   sprite_rom #(
@@ -537,10 +649,10 @@ module drawcon #(
       .NUM_FRAMES   (HUD_TRACK_TYPES),
       .DATA_WIDTH   (12),
       .MEM_INIT_FILE("track.mem")
-  ) hud_p1_track_i (
+  ) hud_track_i (
       .clk (clk),
-      .addr(hud_p1_track_addr_mux),
-      .data(hud_p1_track_rgb)
+      .addr(hud_track_addr_mux),
+      .data(hud_track_rgb)
   );
 
   // ---------------------------------------------------------------------------
@@ -596,15 +708,21 @@ module drawcon #(
     player_1_sprite_rgb_q <= player_1_sprite_rgb_raw;
     player_2_sprite_rgb_q <= player_2_sprite_rgb_raw;
     hud_p1_icon_q         <= hud_p1_icon;
+    hud_p2_icon_q         <= hud_p2_icon;
     hud_bomb_p1_q         <= hud_bomb_p1;
+    hud_bomb_p2_q         <= hud_bomb_p2;
     hud_range_p1_q        <= hud_range_p1;
+    hud_range_p2_q        <= hud_range_p2;
     hud_speed_p1_q        <= hud_speed_p1;
+    hud_speed_p2_q        <= hud_speed_p2;
     hud_p1_icon_rgb_q     <= hud_p1_icon_rgb;
-    hud_bomb_p1_rgb_q     <= hud_bomb_p1_rgb;
-    hud_range_p1_rgb_q    <= hud_range_p1_rgb;
-    hud_speed_p1_rgb_q    <= hud_speed_p1_rgb;
+    hud_p2_icon_rgb_q     <= hud_p2_icon_rgb;
+    hud_bomb_rgb_q        <= hud_bomb_rgb;
+    hud_range_rgb_q       <= hud_range_rgb;
+    hud_speed_rgb_q       <= hud_speed_rgb;
     hud_p1_track_hit_q    <= hud_p1_track_hit;
-    hud_p1_track_rgb_q    <= hud_p1_track_rgb;
+    hud_p2_track_hit_q    <= hud_p2_track_hit;
+    hud_track_rgb_q       <= hud_track_rgb;
     perm_blk_local_x_q    <= perm_blk_local_x;
     perm_blk_local_y_q    <= perm_blk_local_y;
     dest_blk_local_x_q    <= dest_blk_local_x;
@@ -630,14 +748,24 @@ module drawcon #(
 
       if (hud_p1_icon_q) begin
         {o_r, o_g, o_b} = hud_p1_icon_rgb_q;
+      end else if (hud_p2_icon_q) begin
+        {o_r, o_g, o_b} = hud_p2_icon_rgb_q;
       end else if (hud_bomb_p1_q) begin
-        {o_r, o_g, o_b} = hud_bomb_p1_rgb_q;
+        {o_r, o_g, o_b} = hud_bomb_rgb_q;
+      end else if (hud_bomb_p2_q) begin
+        {o_r, o_g, o_b} = hud_bomb_rgb_q;
       end else if (hud_range_p1_q) begin
-        {o_r, o_g, o_b} = hud_range_p1_rgb_q;
+        {o_r, o_g, o_b} = hud_range_rgb_q;
+      end else if (hud_range_p2_q) begin
+        {o_r, o_g, o_b} = hud_range_rgb_q;
       end else if (hud_speed_p1_q) begin
-        {o_r, o_g, o_b} = hud_speed_p1_rgb_q;
+        {o_r, o_g, o_b} = hud_speed_rgb_q;
+      end else if (hud_speed_p2_q) begin
+        {o_r, o_g, o_b} = hud_speed_rgb_q;
       end else if (hud_p1_track_hit_q) begin
-        {o_r, o_g, o_b} = hud_p1_track_rgb_q;
+        {o_r, o_g, o_b} = hud_track_rgb_q;
+      end else if (hud_p2_track_hit_q) begin
+        {o_r, o_g, o_b} = hud_track_rgb_q;
       end
 
       // Player sprites have a color key (12'hF0F) for transparency
@@ -679,8 +807,11 @@ module drawcon #(
         end
 
         DESTROYABLE_BLK: begin
-          if ((is_exploding(addr_next, explosion_addr) && explode_signal)||
-              (is_exploding(addr_next, explosion_addr_2) && explode_signal_2)) begin
+          if ((is_exploding(
+                  addr_next, explosion_addr
+              ) && explode_signal) || (is_exploding(
+                  addr_next, explosion_addr_2
+              ) && explode_signal_2)) begin
             if (dest_blk_anim_rgb_q != TRANSPARENCY) {o_r, o_g, o_b} = dest_blk_anim_rgb_q;
             else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
           end else begin
