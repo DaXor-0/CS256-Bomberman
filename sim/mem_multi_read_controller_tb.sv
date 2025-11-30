@@ -16,6 +16,11 @@ module mem_multi_read_controller_tb;
     logic [ADDR_WIDTH-1:0]  read_addr_req [0:NUM_READERS-1];
     logic [ADDR_WIDTH-1:0]  read_addr;
     logic [NUM_READERS-1:0] read_granted;
+    logic [ADDR_WIDTH-1:0]  map_addr_1;
+    logic [ADDR_WIDTH-1:0]  map_addr_2;
+    logic [MAP_MEM_WIDTH-1:0] map_mem_in;
+    logic [MAP_MEM_WIDTH-1:0] map_mem [0:DEPTH-1];
+
 
     // Instantiate DUT
     mem_multi_read_controller dut (
@@ -26,6 +31,51 @@ module mem_multi_read_controller_tb;
         .read_addr(read_addr),
         .read_granted(read_granted)
     );
+
+    // Two Checkers
+    check_obst #(
+        .NUM_ROW(NUM_ROW),
+        .NUM_COL(NUM_COL)
+    ) checker0 (
+        .clk(clk),
+        .rst(rst),
+        .player_x(11'h20),
+        .player_y(10'h20),
+        .map_mem_in(map_mem_in),
+        .read_granted(read_granted[0]),
+        .read_req(read_req[0]),
+        .map_addr(read_addr_req[0]),
+        .obstacles_valid(obstacles_valid1)
+    );
+
+    check_obst #(
+        .NUM_ROW(NUM_ROW),
+        .NUM_COL(NUM_COL)
+    ) checker1 (
+        .clk(clk),
+        .rst(rst),
+        .player_x(11'h80),
+        .player_y(10'h20),
+        .map_mem_in(map_mem_in),
+        .read_granted(read_granted[1]),
+        .read_req(read_req[1]),
+        .map_addr(read_addr_req[1]),
+        .obstacles_valid(obstacles_valid2)
+    );
+    
+
+    // Load map
+    initial begin
+      $readmemh("basic_map.mem", map_mem);
+    end
+
+    always_ff @(posedge clk) begin
+    if (rst) begin
+      map_mem_in <= '0;
+    end else begin
+      map_mem_in <= map_mem[read_addr];
+    end
+    end
 
     // Clock
     always #5 clk = ~clk;
@@ -43,7 +93,7 @@ module mem_multi_read_controller_tb;
         read_req = '0;
 
         // Initialize read addresses
-        for (int i = 0; i < NUM_READERS; i++)
+        for (int i = 2; i < NUM_READERS; i++)
             read_addr_req[i] = i * 10;
 
         #20;
@@ -53,83 +103,83 @@ module mem_multi_read_controller_tb;
         // ============================================================
         // TEST 1: Single request from reader 0
         // ============================================================
-        $display("\nTEST 1: Request from reader 0 only");
-        read_req[0] = 1;
-        #20;
-        print_status("Reader0 granted");
+//        $display("\nTEST 1: Request from reader 0 only");
+//        read_req[0] = 1;
+//        #20;
+//        print_status("Reader0 granted");
 
-        // Release request
-        read_req[0] = 0;
-        #20;
-        print_status("Reader0 released");
+//        // Release request
+//        read_req[0] = 0;
+//        #20;
+//        print_status("Reader0 released");
 
-        // ============================================================
-        // TEST 2: Single request from reader 1
-        // ============================================================
-        $display("\nTEST 2: Request from reader 1 only");
-        read_req[1] = 1;
-        #20;
-        print_status("Reader1 granted");
+//        // ============================================================
+//        // TEST 2: Single request from reader 1
+//        // ============================================================
+//        $display("\nTEST 2: Request from reader 1 only");
+//        read_req[1] = 1;
+//        #20;
+//        print_status("Reader1 granted");
 
-        read_req[1] = 0;
-        #20;
-        print_status("Reader1 released");
+//        read_req[1] = 0;
+//        #20;
+//        print_status("Reader1 released");
 
-        // ============================================================
-        // TEST 3: Both readers 0 and 1 request at the same time — test round robin
-        // ============================================================
-        $display("\nTEST 3: Readers 0 and 1 request simultaneously — test idx toggle");
+//        // ============================================================
+//        // TEST 3: Both readers 0 and 1 request at the same time — test round robin
+//        // ============================================================
+//        $display("\nTEST 3: Readers 0 and 1 request simultaneously — test idx toggle");
 
-        // First simultaneous request
-        read_req = '0;
-        read_req[0] = 1;
-        read_req[1] = 1;
-        #20;
-        print_status("First simultaneous grant");
+//        // First simultaneous request
+//        read_req = '0;
+//        read_req[0] = 1;
+//        read_req[1] = 1;
+//        #20;
+//        print_status("First simultaneous grant");
 
-        // Release whichever was granted
-        read_req[0] = 0;
-        read_req[1] = 0;
+//        // Release whichever was granted
+//        read_req[0] = 0;
+//        read_req[1] = 0;
 
-        #30;
-        print_status("After release (idx should toggle)");
+//        #30;
+//        print_status("After release (idx should toggle)");
 
-        // Second simultaneous request
-        read_req[0] = 1;
-        read_req[1] = 1;
-        #20;
-        print_status("Second simultaneous grant (should alternate)");
+//        // Second simultaneous request
+//        read_req[0] = 1;
+//        read_req[1] = 1;
+//        #20;
+//        print_status("Second simultaneous grant (should alternate)");
 
-        // Release again
-        if (read_granted[0]) read_req[0] = 0;
-        else read_req[1] = 0;
+//        // Release again
+//        if (read_granted[0]) read_req[0] = 0;
+//        else read_req[1] = 0;
 
-        #30;
-        print_status("After second release");
+//        #30;
+//        print_status("After second release");
 
-        // ============================================================
+//        // ============================================================
         // TEST 4: Longer alternating sequence
         // ============================================================
-        $display("\nTEST 4: 4 consecutive simultaneous requests");
+//        $display("\nTEST 4: 4 consecutive simultaneous requests");
 
-        repeat (4) begin
-            read_req[0] = 1;
-            read_req[1] = 1;
-            #20;
-            print_status("Simultaneous grant");
+//        repeat (8) begin
+//            read_req[0] = 1;
+//            read_req[1] = 1;
+//            #20;
+//            print_status("Simultaneous grant");
 
-            // release the granted one
-            read_req[0] = 0;
-            read_req[1] = 0;
+//            // release the granted one
+//            read_req[0] = 0;
+//            read_req[1] = 0;
 
-            #20;
-            print_status("After release");
-        end
+//            #20;
+//            print_status("After release");
+//        end
 
-        // End simulation
-        $display("\nSimulation complete.\n");
-        #20;
-        $finish;
+//        // End simulation
+//        $display("\nSimulation complete.\n");
+//        #20;
+//        $finish;
     end
 
 endmodule
