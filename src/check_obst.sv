@@ -107,7 +107,7 @@ module check_obst #(
   logic [1:0] dir_cnt;
   
   // adding two states: WAIT, CHECK for read arbitering logic
-  typedef enum logic { WAIT, CHECK } check_state;
+  typedef enum logic { WAIT, CHECK, DONE } check_state;
 
   check_state st, nst;
   // next state ff block
@@ -122,6 +122,7 @@ module check_obst #(
     case (st)
       WAIT: if (read_granted) nst = CHECK;
       CHECK: if (read_done) nst = WAIT;
+      DONE: nst = WAIT;
     endcase
   end
 
@@ -141,6 +142,10 @@ module check_obst #(
       begin
         dir_cnt <= dir_cnt + 2'd1;
       end 
+      DONE:
+      begin
+        dir_cnt <= 2'd0;
+      end
     endcase 
     end
 
@@ -155,7 +160,7 @@ module check_obst #(
       obstacles_valid <= 1'b0;
     end else begin
       dir_a           <= dir_cnt;  // wait 1 cycle for correct map_mem_in to arrive from memory
-      obstacles_valid <= ((dir_a == 2'b11) && (st == CHECK));  // equivalent to dir_a == 2'b11 (2 cycle delay).
+      obstacles_valid <= (st == DONE);  // equivalent to dir_a == 2'b11 (2 cycle delay).
     end
   end
 
