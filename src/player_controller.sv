@@ -35,20 +35,20 @@ module player_controller #(
     localparam int DEPTH      = NUM_ROW * NUM_COL,
     localparam int ADDR_WIDTH = $clog2(DEPTH)
 ) (
-    input  logic                     clk,
-    input  logic                     rst,
-    input  logic                     tick,
-    input  dir_t                     move_dir,
-    input logic [5:0]                 player_speed,
-    input  logic [MAP_MEM_WIDTH-1:0] map_mem_in,
-    input logic read_granted,
+    input logic                     clk,
+    input logic                     rst,
+    input logic                     tick,
+    input dir_t                     move_dir,
+    input logic [              5:0] player_speed,
+    input logic [MAP_MEM_WIDTH-1:0] map_mem_in,
+    input logic                     read_granted,
 
-    output logic read_req,
-    output logic [             10:0] player_x,      // screen-space
-    output logic [              9:0] player_y,      // screen-space
-    output logic [             10:0] map_player_x,
-    output logic [              9:0] map_player_y,
-    output logic [   ADDR_WIDTH-1:0] map_addr
+    output logic                  read_req,
+    output logic [          10:0] player_x,      // screen-space
+    output logic [           9:0] player_y,      // screen-space
+    output logic [          10:0] map_player_x,
+    output logic [           9:0] map_player_y,
+    output logic [ADDR_WIDTH-1:0] map_addr
 );
   // ---- Derived geometry ----
   localparam int MAP_W_PX = NUM_COL * TILE_PX;  // 19 * 64 = 1216
@@ -66,8 +66,8 @@ module player_controller #(
 
   // ---- Convert player position to map-space (remove HUD offsets) ----
   always_comb begin
-    map_player_x = (player_x > HUD_SIDE_PX) ? (player_x - HUD_SIDE_PX) : 11'd64; // (64,64) is pos of first free block, (0,0) is perm_block
-    map_player_y = (player_y > HUD_TOP_PX) ? (player_y - HUD_TOP_PX) : 10'd64;
+    map_player_x = (player_x > HUD_SIDE_PX) ? (player_x - HUD_SIDE_PX) : 11'(INIT_X);
+    map_player_y = (player_y > HUD_TOP_PX) ? (player_y - HUD_TOP_PX) : 10'(INIT_Y);
   end
 
   // ---- Obstacle detection in map-space ----
