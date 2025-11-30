@@ -62,8 +62,8 @@ module drawcon #(
     input  logic [              10:0] player_2_x,
     input  logic [               9:0] player_2_y,
     input  dir_t                      player_2_dir,
-    input  logic                      explode_signal,
-    input  logic [MAP_ADDR_WIDTH-1:0] explosion_addr,
+    input  logic                      explode_signal, explode_signal_2,
+    input  logic [MAP_ADDR_WIDTH-1:0] explosion_addr, explosion_addr_2,
     input  logic                      exit_present,
     input  logic [MAP_ADDR_WIDTH-1:0] exit_addr,
     input  logic [MAP_ADDR_WIDTH-1:0] item_addr     [0:2],
@@ -679,7 +679,8 @@ module drawcon #(
         end
 
         DESTROYABLE_BLK: begin
-          if (is_exploding(addr_next, explosion_addr) && explode_signal) begin
+          if ((is_exploding(addr_next, explosion_addr) && explode_signal)||
+              (is_exploding(addr_next, explosion_addr_2) && explode_signal_2)) begin
             if (dest_blk_anim_rgb_q != TRANSPARENCY) {o_r, o_g, o_b} = dest_blk_anim_rgb_q;
             else {o_r, o_g, o_b} = {BG_R, BG_G, BG_B};
           end else begin

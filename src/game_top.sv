@@ -74,7 +74,7 @@ module game_top (
       .dig1  (4'd0),
       .dig2  (4'd0),
       .dig3  (4'd0),
-      .dig4  (4'd0),
+      .dig4  (dig4),
       .dig5  (4'd0),
       .dig6  (4'd0),
       .dig7  (4'd0),
@@ -88,9 +88,9 @@ module game_top (
       .an    (AN)
   );
 
-  logic [$clog2(BOMB_TIME)-1:0] countdown;
-  assign dig0 = countdown; // display the bomb countdown on the 7-seg
-
+  logic [$clog2(BOMB_TIME)-1:0] countdown, countdown_2;
+  assign dig0 = countdown && countdown_signal; // display the bomb countdown on the 7-seg
+  assign dig4 = countdown_2 && countdown_signal_2; // display the bomb countdown on the 7-seg
 // -------------------------------------------------------- //
 // ----------------------- VGA MODULE --------------------- //
 // -------------------------------------------------------- //
@@ -211,24 +211,27 @@ module game_top (
   // ----------------- BOMBS AND EXPLOSIONS ----------------- //
   // -------------------------------------------------------- // 
   logic [MAP_ADDR_WIDTH-1:0] wr_addr, wr_addr_bomb, wr_addr_free, saved_explosion_addr;
+  logic [MAP_ADDR_WIDTH-1:0] wr_addr_bomb_2, saved_explosion_addr_2;
   logic [MAP_MEM_WIDTH-1:0] write_data, write_data_bomb, write_data_free;
-  logic we, we_bomb, we_free;
+  logic [MAP_MEM_WIDTH-1:0] write_data_bomb_2;
+  logic we, we_bomb, we_bomb_2, we_free;
 
   logic trigger_explosion, explode_signal, game_over, free_blks_signal;
+  logic trigger_explosion_2, explode_signal_2, game_over_2, free_blks_signal_2;
 
   // Write enable mux (very basic, with more bombs this needs to be an arbiter)
-  assign we = (we_bomb || we_free);
-  assign wr_addr = we_bomb ? wr_addr_bomb : wr_addr_free;
-  assign write_data = we_bomb ? write_data_bomb : write_data_free;
+  assign we = (we_bomb || we_bomb_2 || we_free);
+  assign wr_addr = we_bomb ? wr_addr_bomb : ((we_bomb_2) ? we_bomb_2 : wr_addr_free);
+  assign write_data = we_bomb ? write_data_bomb : ((we_bomb_2) ? write_data_bomb_2 : write_data_free);
 
 
   bomb_logic bomb_logic_i (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
-      .player_x(map_player_2_x),
-      .player_y(map_player_2_y),
-      .place_bomb(buttons[4]), // ACTION button
+      .player_x(map_player_x),
+      .player_y(map_player_y),
+      .place_bomb(place_bomb), // ACTION button
       .write_addr(wr_addr_bomb),
       .write_data(write_data_bomb),
       .write_en(we_bomb),
@@ -267,6 +270,41 @@ module game_top (
       .write_data(write_data_free),
       .write_en(we_free)
   );
+
+  // ------------------------------------------------- //
+  // ----------- Player 2 Bomb Logic ----------- //
+  // ------------------------------------------------- //
+
+  bomb_logic bomb_logic_2 (
+      .clk(pixclk),
+      .rst(rst),
+      .tick(tick),
+      .player_x(map_player_2_x),
+      .player_y(map_player_2_y),
+      .place_bomb(buttons[4]), // ACTION button
+      .write_addr(wr_addr_bomb_2),
+      .write_data(write_data_bomb_2),
+      .write_en(we_bomb_2),
+      .trigger_explosion(trigger_explosion_2),
+      .countdown(countdown_2),
+      .countdown_signal(countdown_signal_2)
+  );
+
+  // Explosion Logic
+  explode_logic explode_logic_2 (
+      .clk(pixclk),
+      .rst(rst),
+      .tick(tick),
+      .trigger_explosion(trigger_explosion_2),
+      .explosion_addr(wr_addr_bomb_2),
+      .player_x(map_player_2_x),
+      .player_y(map_player_2_y),
+      .saved_explosion_addr(saved_explosion_addr_2),
+      .explode_signal(explode_signal_2),
+      .game_over(game_over_2),
+      .free_blks_signal(free_blks_signal_2)
+  );
+
 
   // ---- Exit / Win condition -- WIP
 //  logic last_blk, exit_present, game_win;
@@ -369,7 +407,9 @@ module game_top (
       .player_1_dir(move_dir),
       .player_2_dir(move_dir2),
       .explode_signal(explode_signal),
+      .explode_signal_2(explode_signal_2),
       .explosion_addr(saved_explosion_addr),
+      .explosion_addr_2(saved_explosion_addr_2),
       .exit_present(1'b0),
       .exit_addr(1'b0),
       .item_active(item_active),
