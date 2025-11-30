@@ -58,6 +58,9 @@ module drawcon #(
     input  logic [              10:0] player_x,
     input  logic [               9:0] player_y,
     input  dir_t                      player_dir,
+    input  logic [              10:0] player_2_x,
+    input  logic [               9:0] player_2_y,
+    input  dir_t                      player_2_dir,
     input  logic                      explode_signal,
     input  logic [MAP_ADDR_WIDTH-1:0] explosion_addr,
     input  logic                      exit_present,
@@ -171,7 +174,7 @@ module drawcon #(
   logic [                         11:0] sprite_rgb_raw;
   logic [                         11:0] sprite_rgb_q;
   // Sprite position and bounds checking
-  logic                                 player_sprite;
+  logic                                 player_sprite, player_2_sprite;
   logic                                 player_sprite_q;
   logic [         $clog2(SPRITE_W)-1:0] sprite_local_x;
   logic [         $clog2(SPRITE_H)-1:0] sprite_local_y;
@@ -189,6 +192,8 @@ module drawcon #(
     sprite_local_y = draw_y - player_y;
     player_sprite = (draw_x >= player_x) && (draw_x < player_x + SPRITE_W) &&
                     (draw_y >= player_y) && (draw_y < player_y + SPRITE_H);
+    player_2_sprite = (draw_x >= player_2_x) && (draw_x < player_2_x + SPRITE_W) &&
+                    (draw_y >= player_2_y) && (draw_y < player_2_y + SPRITE_H);
 
     case (dir_t'(player_dir))
       DIR_DOWN:  sprite_offset = 0*WALK_FRAMES_PER_DIR + walk_frame; // 0..2
@@ -343,7 +348,8 @@ module drawcon #(
       // Player sprites have a color key (12'hF0F) for transparency
     end else if (player_sprite_q && (sprite_rgb_q != TRANSPARENCY)) begin
       {o_r, o_g, o_b} = sprite_rgb_q;
-
+    end else if (player_2_sprite) begin // replace with player_2 sprite
+      {o_r, o_g, o_b} = 12'hF2F; 
     end else begin
       unique case (st_q)
         NO_BLK: begin
