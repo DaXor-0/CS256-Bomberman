@@ -107,7 +107,7 @@ module check_obst #(
   logic [1:0] dir_cnt;
   
   // adding two states: WAIT, CHECK for read arbitering logic
-  typedef enum logic { WAIT, CHECK, DONE } check_state;
+  typedef enum logic [1:0] { WAIT, CHECK, DONE } check_state;
 
   check_state st, nst;
   // next state ff block
@@ -121,7 +121,7 @@ module check_obst #(
     nst = st; // State remains unchanged if no condition triggered.
     case (st)
       WAIT: if (read_granted) nst = CHECK;
-      CHECK: if (read_done) nst = WAIT;
+      CHECK: if (read_done) nst = DONE;
       DONE: nst = WAIT;
     endcase
   end
