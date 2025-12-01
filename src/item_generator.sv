@@ -17,7 +17,7 @@ module item_generator #(
     parameter int SPRITE_W      = 32,
     parameter int SPRITE_H      = 48,
     // ---- Bomb Parameters ----
-    parameter int ITEM_TIME  = 6,
+    parameter int ITEM_TIME  = 8,
 
     localparam int DEPTH      = NUM_ROW * NUM_COL,
     localparam int ADDR_WIDTH = $clog2(DEPTH),
@@ -33,13 +33,16 @@ module item_generator #(
     input logic [MAP_MEM_WIDTH-1:0] write_data_in,
 
     // input logic increase_explode_length :: to be integrated with implementation of power-up
-    input logic [10:0] player_x,  // map_player_x
-    input logic [ 9:0] player_y,  // map_player_y
+    input logic [10:0] player_1_x,  // map_player_x
+    input logic [ 9:0] player_1_y,  // map_player_y
+    input logic [10:0] player_2_x,  // map_player_x
+    input logic [ 9:0] player_2_y,  // map_player_y
     input logic [31:0] probability,
 
     output logic [ADDR_WIDTH-1:0] item_addr,
     output logic item_active,  // To be used by drawcon to draw the explosion
-    output logic player_on_item
+    output logic player_1_on_item,
+    output logic player_2_on_item
 );
     
     // state defined in bomberman_dir header
@@ -49,7 +52,8 @@ module item_generator #(
     logic generate_item;
     // -- saved_addr and player_addr
     logic [ADDR_WIDTH - 1:0] saved_addr;
-    logic [ADDR_WIDTH - 1:0] player_addr;
+    logic [ADDR_WIDTH - 1:0] player_1_addr;
+    logic [ADDR_WIDTH - 1:0] player_2_addr;
     
     logic [5:0] second_cnt;
     logic [$clog2(ITEM_TIME)-1:0] countdown;
@@ -72,6 +76,9 @@ module item_generator #(
         else
         st <= nst;
     end
+
+    logic player_on_item;
+    assign player_on_item = player_1_on_item | player_2_on_item;
     
     // ------------------------------
     // -- next state logic --
@@ -136,16 +143,20 @@ module item_generator #(
     // ------------------------------
     // Player_x and Player_y in block (col, row)
     // player blocks addresses
-    logic [ADDR_WIDTH-1:0] blk1_addr, blk2_addr;
-    compute_player_blocks cpb_i (player_x, player_y, blk1_addr, blk2_addr);
+    logic [ADDR_WIDTH-1:0] p1_blk1_addr, p1_blk2_addr, p2_blk1_addr, p2_blk2_addr;
+    compute_player_blocks cpb_i (player_1_x, player_1_y, p1_blk1_addr, p1_blk2_addr);
+    compute_player_blocks cpb_2 (player_2_x, player_2_y, p2_blk1_addr, p2_blk2_addr);
 
     // ------------------------------
     // -- win condition --
     // ------------------------------
-    assign player_on_item = (item_active && 
-                       ((blk1_addr == item_addr) ||
-                        (blk2_addr == item_addr))); // Player wins when exit is present
-    
+    assign player_1_on_item = (item_active && 
+                       ((p1_blk1_addr == item_addr) ||
+                        (p1_blk2_addr == item_addr))); // Player wins when exit is present
+    assign player_2_on_item = (item_active && 
+                       ((p2_blk1_addr == item_addr) ||
+                        (p2_blk2_addr == item_addr))); // Player wins when exit is present
+
     // Exit address is the same as explosion address
     assign item_addr = saved_addr;
 

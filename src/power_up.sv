@@ -33,16 +33,26 @@ module power_up #(
     input logic [MAP_MEM_WIDTH-1:0] write_data_in,
 
     // input logic increase_explode_length :: to be integrated with implementation of power-up
-    input logic [10:0] player_x,  // map_player_x
-    input logic [ 9:0] player_y,  // map_player_y
+    input logic [10:0] player_1_x,  // map_player_x
+    input logic [ 9:0] player_1_y,  // map_player_y
+    input logic [10:0] player_2_x,  // map_player_x
+    input logic [ 9:0] player_2_y,  // map_player_y
     input logic [31:0] probability,
 
     output logic [ADDR_WIDTH-1:0] item_addr [0:2], // Max 3 power-ups at a time
-    output logic item_active [0:2],  // To be used by drawcon to draw the explosion
-    output logic player_on_item [0:2],
-    output logic [1:0] max_bombs,
-    output logic [5:0] player_speed,
-    output logic [1:0] bomb_range 
+    output logic [2:0] item_active,  // To be used by drawcon to draw the explosion
+    output logic [1:0] max_bombs_p1,
+    output logic [5:0] player_speed_p1,
+    output logic [1:0] bomb_range_p1,
+    output logic [1:0] max_bombs_p2,
+    output logic [5:0] player_speed_p2,
+    output logic [1:0] bomb_range_p2,
+    output logic [1:0] p1_bomb_level,
+    output logic [1:0] p2_bomb_level,
+    output logic [1:0] p1_speed_level,
+    output logic [1:0] p2_speed_level,
+    output logic [1:0] p1_range_level,
+    output logic [1:0] p2_range_level
 );
 
     // ------------------------------
@@ -50,6 +60,7 @@ module power_up #(
     // ------------------------------
     logic [1:0] idx;
     logic [2:0] we_in_internal;
+    logic [2:0] player_1_on_item, player_2_on_item; 
     always_ff @(posedge clk) begin
         if (rst || game_over) begin
             idx <= 2'd0;
@@ -69,24 +80,70 @@ module power_up #(
     // ------------------------------
     always_ff @(posedge clk) begin
         if (rst || game_over) begin
-            max_bombs   <= 2'd1; // Initial max bombs
-            player_speed <= 6'd4; // Initial speed
-            bomb_range  <= 2'd1; // Initial bomb range
+            max_bombs_p1   <= 2'd1; // Initial max bombs
+            player_speed_p1 <= 6'd4; // Initial speed
+            bomb_range_p1  <= 2'd1; // Initial bomb range
+            
+            max_bombs_p2   <= 2'd1; // Initial max bombs
+            player_speed_p2 <= 6'd4; // Initial speed
+            bomb_range_p2  <= 2'd1; // Initial bomb range
+
+            p1_bomb_level <= 2'd0;
+            p1_speed_level <= 2'd0;
+            p1_range_level <= 2'd0;
+
+            p2_bomb_level <= 2'd0;
+            p2_speed_level <= 2'd0;
+            p2_range_level <= 2'd0;
+
         end else begin
             // Speed up power-up
-            if (player_on_item[0]) begin
-                if (player_speed < 6'd25) // Cap speed increase
-                    player_speed <= player_speed + 6'd4;
+            if (player_1_on_item[0]) begin
+                if (p1_speed_level < 2'd3) // Cap speed increase
+                    begin
+                    player_speed_p1 <= player_speed_p1 + 6'd4;
+                    p1_speed_level <= p1_speed_level + 2'd1;
+                    end
             end
             // Extra bomb power-up
-            if (player_on_item[1]) begin
-                if (max_bombs < 4'd9) // Cap max bombs
-                    max_bombs <= max_bombs + 4'd1;
+            if (player_1_on_item[1]) begin
+                if (p1_bomb_level < 2'd3) // Cap max bombs
+                    begin
+                    max_bombs_p1 <= max_bombs_p1 + 2'd1;
+                    p1_bomb_level <= p1_bomb_level + 2'd1;
+                    end
             end
             // Bomb range power-up
-            if (player_on_item[2]) begin
-                if (bomb_range < 4'd9) // Cap bomb range
-                    bomb_range <= bomb_range + 4'd1;
+            if (player_1_on_item[2]) begin
+                if (p1_range_level < 2'd3) // Cap bomb range
+                    begin
+                    bomb_range_p1 <= bomb_range_p1 + 2'd1;
+                    p1_range_level <= p1_range_level + 2'd1;
+                    end
+            end
+            // Speed up power-up
+            if (player_2_on_item[0]) begin
+                if (p2_speed_level < 2'd3) // Cap speed increase
+                    begin
+                    player_speed_p2 <= player_speed_p2 + 6'd4;
+                    p2_speed_level <= p2_speed_level + 2'd1;
+                    end
+            end
+            // Extra bomb power-up
+            if (player_2_on_item[1]) begin
+                if (p2_bomb_level < 2'd3) // Cap max bombs
+                    begin
+                    max_bombs_p2 <= max_bombs_p2 + 2'd1;
+                    p2_bomb_level <= p2_bomb_level + 2'd1;
+                    end
+            end
+            // Bomb range power-up
+            if (player_2_on_item[2]) begin
+                if (p2_range_level < 2'd3) // Cap bomb range
+                    begin
+                    bomb_range_p2 <= bomb_range_p2 + 2'd1;
+                    p2_range_level <= p2_range_level + 2'd1;
+                    end
             end
         end
     end
@@ -102,15 +159,18 @@ module power_up #(
         .rst(rst),
         .tick(tick),
         .game_over(game_over),
-        .we_in(we_in),
+        .we_in(we_in_internal[0]),
         .write_addr_in(write_addr_in),
         .write_data_in(write_data_in),
-        .player_x(player_x),
-        .player_y(player_y),
+        .player_1_x(player_1_x),
+        .player_1_y(player_1_y),
+        .player_2_x(player_2_x),
+        .player_2_y(player_2_y),
         .probability(probability),
         .item_addr(item_addr[0]),
         .item_active(item_active[0]),
-        .player_on_item(player_on_item[0])
+        .player_1_on_item(player_1_on_item[0]),
+        .player_2_on_item(player_2_on_item[0])
     );
 
     item_generator item_gen_extra_bomb (
@@ -118,15 +178,18 @@ module power_up #(
         .rst(rst),
         .tick(tick),
         .game_over(game_over),
-        .we_in(1'b0),
+        .we_in(we_in_internal[1]),
         .write_addr_in(write_addr_in),
         .write_data_in(write_data_in),
-        .player_x(player_x),
-        .player_y(player_y),
+        .player_1_x(player_1_x),
+        .player_1_y(player_1_y),
+        .player_2_x(player_2_x),
+        .player_2_y(player_2_y),
         .probability(probability),
         .item_addr(item_addr[1]),
         .item_active(item_active[1]),
-        .player_on_item(player_on_item[1])
+        .player_1_on_item(player_1_on_item[1]),
+        .player_2_on_item(player_2_on_item[1])
     );
 
     item_generator item_gen_bomb_range (
@@ -134,15 +197,18 @@ module power_up #(
         .rst(rst),
         .tick(tick),
         .game_over(game_over),
-        .we_in(1'b0),
+        .we_in(we_in_internal[2]),
         .write_addr_in(write_addr_in),
         .write_data_in(write_data_in),
-        .player_x(player_x),
-        .player_y(player_y),
+        .player_1_x(player_1_x),
+        .player_1_y(player_1_y),
+        .player_2_x(player_2_x),
+        .player_2_y(player_2_y),
         .probability(probability),
         .item_addr(item_addr[2]),
         .item_active(item_active[2]),
-        .player_on_item(player_on_item[2])
+        .player_1_on_item(player_1_on_item[2]),
+        .player_2_on_item(player_2_on_item[2])
     );
 
 endmodule

@@ -23,7 +23,11 @@ module game_top (
 );
 
 
-
+  logic [MAP_ADDR_WIDTH-1:0] item_addr [0:2];
+  logic [2:0] item_active;
+  logic [1:0] max_bombs_p1, bomb_range_p1, max_bombs_p2, bomb_range_p2; 
+  logic [5:0] player_speed_p1, player_speed_p2;
+  logic [1:0] p1_bomb_level, p2_bomb_level, p1_speed_level, p2_speed_level, p1_range_level, p2_range_level; 
   // -------------------------------------------------------- //
   // --------------------- UART_RX -------------------- //
   // -------------------------------------------------------- //
@@ -123,8 +127,8 @@ module game_top (
   localparam int MAP_MEM_WIDTH = 2;
 
   // Logic for positioning rectangle control.
-  logic [10:0] player_x, map_player_x, player_2_x, map_player_2_x;
-  logic [9:0] player_y, map_player_y, player_2_y, map_player_2_y;
+  logic [10:0] player_1_x, map_player_1_x, player_2_x, map_player_2_x;
+  logic [9:0] player_1_y, map_player_1_y, player_2_y, map_player_2_y;
   logic [MAP_ADDR_WIDTH-1:0] map_addr_obst, map_addr_obst_2, map_addr_drawcon, read_addr;
   // Player 1: idx 0, Player 2: idx 1, free_blks: idx 2-7
   logic [MAP_ADDR_WIDTH-1:0] read_addr_req[0:7];
@@ -179,10 +183,10 @@ module game_top (
       .player_speed(player_speed),
       .map_mem_in(map_tile_state_obst),
       .map_addr(map_addr_obst),
-      .player_x(player_x),
-      .player_y(player_y),
-      .map_player_x(map_player_x),
-      .map_player_y(map_player_y),
+      .player_1_x(player_1_x),
+      .player_1_y(player_1_y),
+      .map_player_1_x(map_player_1_x),
+      .map_player_1_y(map_player_1_y),
       .read_granted(read_granted[0]),
       .read_req(read_req[0])
   );
@@ -234,8 +238,8 @@ module game_top (
       .rst(rst),
       .tick(tick),
       .game_over(game_over),
-      .player_x(map_player_x),
-      .player_y(map_player_y),
+      .player_x(map_player_1_x),
+      .player_y(map_player_1_y),
       .place_bomb(place_bomb && ~game_over), // ACTION button
       .write_addr(wr_addr_bomb),
       .write_data(write_data_bomb),
@@ -253,8 +257,8 @@ module game_top (
       .game_over(game_over),
       .trigger_explosion(trigger_explosion),
       .explosion_addr(wr_addr_bomb),
-      .player_x(map_player_x),
-      .player_y(map_player_y),
+      .player_x(map_player_1_x),
+      .player_y(map_player_1_y),
       .saved_explosion_addr(saved_explosion_addr[0]),
       .explode_signal(explode_signal),
       .game_over_fake(game_over_fake), // will delete later 
@@ -334,28 +338,34 @@ module game_top (
   // --------------------------------- //
   // -------- Power-up Logic --------- //
   // --------------------------------- //
-  logic [MAP_ADDR_WIDTH-1:0] item_addr [0:2];
-  logic item_active [0:2];
-  logic player_on_item [0:2];
-  logic [1:0] max_bombs;
-  logic [1:0] bomb_range; 
+ 
   power_up power_up_i (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
       .game_over(game_over),
-      .we_in(we_free), // on free_blk, generate the exit with a 5% probability
-      .write_addr_in(wr_addr_free),
-      .write_data_in(write_data_free),
-      .player_x(map_player_x),  // map_player_x
-      .player_y(map_player_y),
+      .we_in(we), // on free_blk, generate the exit with a 5% probability
+      .write_addr_in(wr_addr),
+      .write_data_in(write_data),
+      .player_1_x(map_player_1_x),  // map_player_1_x
+      .player_1_y(map_player_1_y),
+      .player_2_x(map_player_2_x),  // map_player_2_x
+      .player_2_y(map_player_2_y),
       .probability(32'h33333333), // ~20% probability
       .item_addr(item_addr),
       .item_active(item_active),
-      .player_on_item(player_on_item),
-      .max_bombs(max_bombs),
-      .player_speed(player_speed),
-      .bomb_range(bomb_range)
+      .max_bombs_p1(max_bombs_p1),
+      .player_speed_p1(player_speed_p1),
+      .bomb_range_p1(bomb_range_p1),
+      .max_bombs_p2(max_bombs_p2),
+      .player_speed_p2(player_speed_p2),
+      .bomb_range_p2(bomb_range_p2),
+      .p1_bomb_level(p1_bomb_level),
+      .p2_bomb_level(p2_bomb_level),
+      .p1_speed_level(p1_speed_level),
+      .p2_speed_level(p2_speed_level),
+      .p1_range_level(p1_range_level),
+      .p2_range_level(p2_range_level)
   );
 
 //  assign last_blk = 1'b0; // until implemented, disable
@@ -372,8 +382,8 @@ module game_top (
     .explosion_addr_2({saved_explosion_addr_2[0], '0, '0}),
     .exp_range_1(bomb_range),
     .exp_range_2(bomb_range),
-    .player_1_x(map_player_x),
-    .player_1_y(map_player_y),
+    .player_1_x(map_player_1_x),
+    .player_1_y(map_player_1_y),
     .player_2_x(map_player_2_x),
     .player_2_y(map_player_2_y),
     .start_over_button(place_bomb),
@@ -433,8 +443,8 @@ module game_top (
       .map_tile_state(map_tile_state_drawcon),
       .draw_x(curr_x_d),
       .draw_y(curr_y_d),
-      .player_1_x(player_x),
-      .player_1_y(player_y),
+      .player_1_x(player_1_x),
+      .player_1_y(player_1_y),
       .player_2_x(player_2_x),
       .player_2_y(player_2_y),
       .player_1_dir(move_dir),
@@ -443,12 +453,12 @@ module game_top (
       .explode_signal_2(explode_signal_2),
       .explosion_addr(saved_explosion_addr[0]),
       .explosion_addr_2(saved_explosion_addr_2[0]),
-      .p1_bomb_level(2'd0),
-      .p1_range_level(2'd0),
-      .p1_speed_level(2'd0),
-      .p2_bomb_level(2'd0),
-      .p2_range_level(2'd0),
-      .p2_speed_level(2'd0),
+      .p1_bomb_level(p1_bomb_level),
+      .p1_range_level(p1_range_level),
+      .p1_speed_level(p1_speed_level),
+      .p2_bomb_level(p2_bomb_level),
+      .p2_range_level(p2_range_level),
+      .p2_speed_level(p2_speed_level),
       .item_active(item_active),
       .item_addr(item_addr),
       .o_r(drawcon_o_r),
