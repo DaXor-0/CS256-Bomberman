@@ -57,6 +57,7 @@ module drawcon #(
     input  logic [ MAP_MEM_WIDTH-1:0] map_tile_state,
     input  logic [              10:0] draw_x,
     input  logic [               9:0] draw_y,
+    input  logic                      game_over_screen,
     input  logic [              10:0] player_1_x,
     input  logic [               9:0] player_1_y,
     input  dir_t                      player_1_dir,
@@ -243,6 +244,8 @@ module drawcon #(
   logic [DEST_SPRITE_ADDR_WIDTH-1:0] dest_blk_anim_addr;
   logic [                      11:0] dest_blk_anim_rgb;
   logic [                      11:0] dest_blk_anim_rgb_q;
+  logic                              go_overlay_active_q;
+  logic [                      11:0] go_overlay_rgb_q;
 
   // Select animation frame + local pixel within the 64x64 block
   assign dest_blk_anim_addr  = {dest_frame, dest_blk_local_y_q, dest_blk_local_x_q};
@@ -347,6 +350,21 @@ module drawcon #(
   assign is_range_power_up = (addr_next == item_addr[2]) && item_active[2];
 
   // ---------------------------------------------------------------------------
+  // Game-over overlay (separate submodule)
+  // ---------------------------------------------------------------------------
+  drawcon_gameover #(
+      .SCREEN_W(SCREEN_W),
+      .SCREEN_H(SCREEN_H)
+  ) drawcon_gameover_i (
+      .clk             (clk),
+      .game_over_screen(game_over_screen),
+      .draw_x          (draw_x),
+      .draw_y          (draw_y),
+      .go_active_q     (go_overlay_active_q),
+      .go_rgb_q        (go_overlay_rgb_q)
+  );
+
+  // ---------------------------------------------------------------------------
   // Color output muxing
   // ---------------------------------------------------------------------------
   // Everything is pipelined by 1 cycle to line up with the synchronous sprite ROM.
@@ -373,7 +391,9 @@ module drawcon #(
   end
 
   always_comb begin
-    if (out_of_map_q) begin
+    if (go_overlay_active_q) begin
+      {o_r, o_g, o_b} = go_overlay_rgb_q;
+    end else if (out_of_map_q) begin
       {o_r, o_g, o_b} = {HUD_R, HUD_G, HUD_B};
 
       if (hud_p1_icon_q) begin

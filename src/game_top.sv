@@ -443,6 +443,7 @@ module game_top (
       .map_tile_state(map_tile_state_drawcon),
       .draw_x(curr_x_d),
       .draw_y(curr_y_d),
+      .game_over_screen(game_over),
       .player_1_x(player_1_x),
       .player_1_y(player_1_y),
       .player_2_x(player_2_x),
