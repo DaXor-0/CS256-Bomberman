@@ -2,6 +2,7 @@
 
 /**
  * Draws the centered game-over overlay (960x512) using 64x64 border tiles.
+ * Game-over art is 288x224 (matches the halved game_over.mem asset).
  * Produces a 1-cycle-latent color/active signal aligned to sprite_rom latency.
  */
 module drawcon_gameover #(
@@ -10,8 +11,8 @@ module drawcon_gameover #(
     parameter  int    GO_W          = 960,
     parameter  int    GO_H          = 512,
     parameter  int    GO_TILE       = 64,
-    parameter  int    SPRITE_W      = 576,
-    parameter  int    SPRITE_H      = 448,
+    parameter  int    SPRITE_W      = 288,
+    parameter  int    SPRITE_H      = 224,
     parameter  string MEM_INIT_FILE = "border_tiles.mem",
     parameter  string SPRITE_MEM    = "game_over.mem",
     localparam int    GO_TILES_X    = GO_W / GO_TILE,                 // 15
