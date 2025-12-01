@@ -116,7 +116,8 @@ module explode_logic #(
   // Function to check if the player's block is exploding
   function logic is_exploding(input logic [ADDR_WIDTH-1:0] blk_addr,
                               input logic [ADDR_WIDTH-1:0] exp);
-    return ((blk_addr == exp - NUM_COL)   ||
+    return ((blk_addr == exp) ||
+            (blk_addr == exp - NUM_COL)   ||
             (blk_addr == exp + NUM_COL) ||
             (blk_addr == exp - 1) ||
             (blk_addr == exp + 1));

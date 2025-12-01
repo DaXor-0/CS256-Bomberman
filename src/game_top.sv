@@ -211,18 +211,18 @@ module game_top (
   // ----------------- BOMBS AND EXPLOSIONS ----------------- //
   // -------------------------------------------------------- // 
   logic [MAP_ADDR_WIDTH-1:0] wr_addr, wr_addr_bomb, wr_addr_free, saved_explosion_addr;
-  logic [MAP_ADDR_WIDTH-1:0] wr_addr_bomb_2, saved_explosion_addr_2;
-  logic [MAP_MEM_WIDTH-1:0] write_data, write_data_bomb, write_data_free;
+  logic [MAP_ADDR_WIDTH-1:0] wr_addr_bomb_2, wr_addr_free_2, saved_explosion_addr_2;
+  logic [MAP_MEM_WIDTH-1:0] write_data, write_data_bomb, write_data_free, write_data_free_2;
   logic [MAP_MEM_WIDTH-1:0] write_data_bomb_2;
-  logic we, we_bomb, we_bomb_2, we_free;
+  logic we, we_bomb, we_bomb_2, we_free, we_free_2;
 
   logic trigger_explosion, explode_signal, game_over, free_blks_signal;
   logic trigger_explosion_2, explode_signal_2, game_over_2, free_blks_signal_2;
 
   // Write enable mux (very basic, with more bombs this needs to be an arbiter)
-  assign we = (we_bomb || we_bomb_2 || we_free);
-  assign wr_addr = we_bomb ? wr_addr_bomb : ((we_bomb_2) ? we_bomb_2 : wr_addr_free);
-  assign write_data = we_bomb ? write_data_bomb : ((we_bomb_2) ? write_data_bomb_2 : write_data_free);
+  assign we = (we_bomb || we_bomb_2 || we_free || we_free_2);
+  assign wr_addr = we_bomb ? wr_addr_bomb : ((we_bomb_2) ? we_bomb_2 : ((we_free) ? wr_addr_free : wr_addr_free_2));
+  assign write_data = we_bomb ? write_data_bomb : ((we_bomb_2) ? write_data_bomb_2 : ((we_free) ? write_data_free: write_data_free_2));
 
 
   bomb_logic bomb_logic_i (
@@ -305,22 +305,21 @@ module game_top (
       .free_blks_signal(free_blks_signal_2)
   );
 
-
-  // ---- Exit / Win condition -- WIP
-//  logic last_blk, exit_present, game_win;
-//  logic [ADDR_WIDTH-1:0] exit_addr;
-//  exit_generator exit_generator_i (
-//      .clk(pixclk),
-//      .rst(rst),
-//      .free_blk_signal(free_blk_signal),
-//      .last_blk(last_blk),
-//      .explosion_addr(saved_explosion_addr),
-//      .player_x(player_x),
-//      .player_y(player_y),
-//      .exit_addr(exit_addr),
-//      .exit_present(exit_present),
-//      .game_win(game_win)
-//  );
+  // Free Blocks
+  free_blocks free_blocks_i (
+      .clk(pixclk),
+      .rst(rst),
+      .tick(tick),
+      .free_blks_signal(free_blks_signal_2),
+      .explosion_addr(saved_explosion_addr_2),
+      .map_mem_in(map_tile_state_obst),
+      .read_granted(read_granted[3]),
+      .read_req(read_req[3]),
+      .read_addr(read_addr_req[3]),
+      .write_addr(wr_addr_free_2),
+      .write_data(write_data_free_2),
+      .write_en(we_free_2)
+  );
 
   // --------------------------------- //
   // -------- Power-up Logic --------- //
