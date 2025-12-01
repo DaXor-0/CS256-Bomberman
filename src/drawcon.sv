@@ -68,7 +68,7 @@ module drawcon #(
     input  logic [MAP_ADDR_WIDTH-1:0] explosion_addr,
     explosion_addr_2,
     input  logic [MAP_ADDR_WIDTH-1:0] item_addr     [0:2],
-    input  logic                      item_active   [0:2],
+    input  logic                 [2:0]  item_active,
     // Upgrade levels: 0..3 for each item type
     input  logic [               1:0] p1_bomb_level,
     input  logic [               1:0] p1_range_level,
