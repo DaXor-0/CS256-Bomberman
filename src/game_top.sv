@@ -236,7 +236,7 @@ module game_top (
       .game_over(game_over),
       .player_x(map_player_x),
       .player_y(map_player_y),
-      .place_bomb(place_bomb), // ACTION button
+      .place_bomb(place_bomb && ~game_over), // ACTION button
       .write_addr(wr_addr_bomb),
       .write_data(write_data_bomb),
       .write_en(we_bomb),
