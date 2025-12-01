@@ -27,6 +27,7 @@ module item_generator #(
     input logic clk,
     rst,
     tick,
+    game_over,
     input logic we_in, // on free_blk, generate the exit with a 5% probability
     input logic [ADDR_WIDTH-1:0] write_addr_in,
     input logic [MAP_MEM_WIDTH-1:0] write_data_in,
@@ -66,7 +67,7 @@ module item_generator #(
     // -- state register --
     // ------------------------------
     always_ff @(posedge clk) begin
-        if (rst)
+        if (rst || game_over)
         st <= ITEM_STATE_IDLE;
         else
         st <= nst;
@@ -97,7 +98,7 @@ module item_generator #(
     // ------------------------------
     
     always_ff @(posedge clk)
-    if (rst)
+    if (rst || game_over)
     begin
       saved_addr <= 0;
       countdown  <= ITEM_TIME;

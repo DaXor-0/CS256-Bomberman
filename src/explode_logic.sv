@@ -27,6 +27,7 @@ module explode_logic #(
     input logic clk,
     rst,
     tick,
+    game_over,
     input logic trigger_explosion,
     input logic [ADDR_WIDTH-1:0] explosion_addr,
 
@@ -49,7 +50,7 @@ module explode_logic #(
 
   // next state ff block
   always_ff @(posedge clk)
-    if (rst) st <= EXP_STATE_IDLE;
+    if (rst || game_over) st <= EXP_STATE_IDLE;
     else st <= nst;
 
   // Next state logic
@@ -67,7 +68,7 @@ module explode_logic #(
   // -- Sequential elements (counters, registers) control per state
   // -----------------------------------------------------------------
   always_ff @(posedge clk)
-    if (rst) begin
+    if (rst || game_over) begin
       saved_explosion_addr <= 0;
       second_cnt <= 0;
     end else begin

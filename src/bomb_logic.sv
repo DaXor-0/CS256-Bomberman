@@ -28,6 +28,7 @@ module bomb_logic #(
     input logic clk,
     rst,
     tick,
+    game_over,
     input logic [10:0] player_x,  // map_player_x
     input logic [9:0] player_y,  // map_player_y
     // input logic add_bomb :: to be integrated with implementation of power-up
@@ -54,7 +55,7 @@ module bomb_logic #(
   // -- edge detection for bomb placement + success condition --
   // -----------------------------------------------------------------
   always_ff @(posedge clk)
-    if (rst) begin
+    if (rst || game_over) begin
       place_bomb_r <= 0;
       place_bomb_prev <= 0;
     end else begin
@@ -72,7 +73,7 @@ module bomb_logic #(
 
   // next state ff block
   always_ff @(posedge clk)
-    if (rst) st <= BOMB_LOGIC_IDLE;
+    if (rst || game_over) st <= BOMB_LOGIC_IDLE;
     else st <= nst;
 
   // Next state logic
@@ -91,7 +92,7 @@ module bomb_logic #(
   // -- Sequential elements (counters, registers) control per state
   // -----------------------------------------------------------------
   always_ff @(posedge clk)
-    if (rst) begin
+    if (rst || game_over) begin
       max_bombs  <= 1;
       countdown  <= BOMB_TIME;
       second_cnt <= 0;

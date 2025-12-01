@@ -22,6 +22,7 @@ module mem_multi_read_controller
 )(
     input  logic                   clk,
     input  logic                   rst,
+    input logic game_over,
     input  logic [7:0] read_req,
     input  logic [ADDR_WIDTH-1:0]  read_addr_req [0:7],
     output logic [ADDR_WIDTH-1:0]  read_addr,
@@ -38,7 +39,7 @@ module mem_multi_read_controller
 
     // next state ff block
     always_ff @(posedge clk)
-    if (rst) st <= IDLE;
+    if (rst || game_over) st <= IDLE;
     else st <= nst;
 
     // Next state logic
@@ -53,7 +54,7 @@ module mem_multi_read_controller
 
     // read_granted, giving permission to read is sequentially controlled based on state 
     always_ff @(posedge clk)
-    if (rst)
+    if (rst || game_over)
     begin
         read_granted <= 0;
     end 
@@ -83,7 +84,7 @@ module mem_multi_read_controller
     // round-robin between the two players (if both request at same time)
     
     always_ff @(posedge clk)
-    if (rst) idx <= 1'b0;
+    if (rst || game_over) idx <= 1'b0;
     else if ((read_granted[0]) && read_done) idx <= 1;
     else if ((read_granted[1]) && read_done) idx <= 0;
 

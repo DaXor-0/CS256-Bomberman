@@ -15,6 +15,7 @@ module drawcon_anim #(
     input  logic clk,
     input  logic rst,
     input  logic tick,
+    input logic game_over,
     input  dir_t player_1_dir,
     input  dir_t player_2_dir,
     input  logic explode_signal,
@@ -31,7 +32,7 @@ module drawcon_anim #(
   logic [7:0] bomb_frame_cnt;
 
   always_ff @(posedge clk) begin
-    if (rst) begin
+    if (rst || game_over) begin
       frame_cnt      <= 6'd0;
       walk_frame_1   <= 2'd0;
       walk_frame_2   <= 2'd0;

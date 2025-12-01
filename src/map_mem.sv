@@ -28,6 +28,7 @@ module map_mem #(
 )(
     input  logic                 clk,
     input  logic                 rst,
+    input logic game_over,
 
     input  logic [ADDR_WIDTH-1:0] rd_addr_1,
     output logic [DATA_WIDTH-1:0] rd_data_1,
@@ -81,7 +82,7 @@ module map_mem #(
       rom_val = init_rom[copy_idx];
 
     always_ff @(posedge clk) begin
-        if (rst) begin
+        if (rst || game_over) begin
             state     <= RESET_COPY;
             copy_idx  <= '0;
         end

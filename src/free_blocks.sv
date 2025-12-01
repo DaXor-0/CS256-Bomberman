@@ -27,6 +27,7 @@ module free_blocks #(
     input logic clk,
     rst,
     tick,
+    game_over,
     input logic free_blks_signal,
     input logic [ADDR_WIDTH-1:0] explosion_addr,
     input logic [MAP_MEM_WIDTH-1:0] map_mem_in,
@@ -46,7 +47,7 @@ module free_blocks #(
 
   // next state ff block
   always_ff @(posedge clk)
-    if (rst) st <= FREE_STATE_IDLE;
+    if (rst || game_over) st <= FREE_STATE_IDLE;
     else st <= nst;
 
   // Next state logic
@@ -70,7 +71,7 @@ module free_blocks #(
 
 
   always_ff @(posedge clk)
-    if (rst) begin
+    if (rst || game_over) begin
       saved_explosion_addr <= 0;
       dir_cnt <= 0;
       dir_a <= 0;

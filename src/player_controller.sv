@@ -38,6 +38,7 @@ module player_controller #(
     input logic                     clk,
     input logic                     rst,
     input logic                     tick,
+    input logic game_over,
     input dir_t                     move_dir,
     input logic [              5:0] player_speed,
     input logic [MAP_MEM_WIDTH-1:0] map_mem_in,
@@ -99,7 +100,7 @@ module player_controller #(
   logic [3:0] obstacles_r;
   logic [DIST_WIDTH-1:0] obstacle_dist_r[3:0];
   always_ff @(posedge clk) begin
-    if (rst) begin
+    if (rst || game_over) begin
       obstacles_r <= '0;
       obstacle_dist_r[UP]    <= '1;
       obstacle_dist_r[DOWN]  <= '1;
@@ -126,7 +127,7 @@ module player_controller #(
 
   // ---- Player position update (only when obstacles are valid) ----
   always_ff @(posedge clk) begin
-    if (rst) begin
+    if (rst || game_over) begin
       player_x <= 11'(INIT_X + HUD_SIDE_PX);
       player_y <= 10'(INIT_Y + HUD_TOP_PX);
     end else if (tick) begin

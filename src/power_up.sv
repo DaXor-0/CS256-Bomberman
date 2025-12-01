@@ -50,7 +50,7 @@ module power_up #(
     logic [1:0] idx;
     logic [2:0] we_in_internal;
     always_ff @(posedge clk) begin
-        if (rst) begin
+        if (rst || game_over) begin
             idx <= 2'd0;
         end else if (we_in) begin
             if (idx == 2'd2) idx <= 0; 
@@ -67,7 +67,7 @@ module power_up #(
     // -- power-up conditions --
     // ------------------------------
     always_ff @(posedge clk) begin
-        if (rst) begin
+        if (rst || game_over) begin
             max_bombs   <= 2'd1; // Initial max bombs
             player_speed <= 6'd4; // Initial speed
             bomb_range  <= 2'd1; // Initial bomb range
@@ -100,6 +100,7 @@ module power_up #(
         .clk(clk),
         .rst(rst),
         .tick(tick),
+        .game_over(game_over),
         .we_in(we_in),
         .write_addr_in(write_addr_in),
         .write_data_in(write_data_in),
@@ -115,6 +116,7 @@ module power_up #(
         .clk(clk),
         .rst(rst),
         .tick(tick),
+        .game_over(game_over),
         .we_in(1'b0),
         .write_addr_in(write_addr_in),
         .write_data_in(write_data_in),
@@ -130,6 +132,7 @@ module power_up #(
         .clk(clk),
         .rst(rst),
         .tick(tick),
+        .game_over(game_over),
         .we_in(1'b0),
         .write_addr_in(write_addr_in),
         .write_data_in(write_data_in),
