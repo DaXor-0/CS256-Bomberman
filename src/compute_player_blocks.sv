@@ -8,8 +8,7 @@ module compute_player_blocks #(
     parameter int MAP_MEM_WIDTH = 2,
     parameter int SPRITE_W      = 32,
     parameter int SPRITE_H      = 48,
-    // ---- Bomb Parameters ----
-    parameter int ITEM_TIME  = 6,
+
 
     localparam int DEPTH      = NUM_ROW * NUM_COL,
     localparam int ADDR_WIDTH = $clog2(DEPTH),

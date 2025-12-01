@@ -39,9 +39,9 @@ module power_up #(
     output logic [ADDR_WIDTH-1:0] item_addr [0:2], // Max 3 power-ups at a time
     output logic item_active [0:2],  // To be used by drawcon to draw the explosion
     output logic player_on_item [0:2],
-    output logic [3:0] max_bombs,
+    output logic [1:0] max_bombs,
     output logic [5:0] player_speed,
-    output logic [3:0] bomb_range 
+    output logic [1:0] bomb_range 
 );
 
     // ------------------------------
@@ -68,9 +68,9 @@ module power_up #(
     // ------------------------------
     always_ff @(posedge clk) begin
         if (rst) begin
-            max_bombs   <= 4'd1; // Initial max bombs
+            max_bombs   <= 2'd1; // Initial max bombs
             player_speed <= 6'd4; // Initial speed
-            bomb_range  <= 4'd1; // Initial bomb range
+            bomb_range  <= 2'd1; // Initial bomb range
         end else begin
             // Speed up power-up
             if (player_on_item[0]) begin

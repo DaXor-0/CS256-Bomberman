@@ -12,6 +12,7 @@ module game_top (
     input  logic       place_bomb,
     input  wire uart_rx,
     output logic [4:0] LED, // debug LEDs
+    output logic game_over,
     output logic [3:0] o_pix_r,
     o_pix_g,
     o_pix_b,
@@ -210,8 +211,9 @@ module game_top (
   // -------------------------------------------------------- //
   // ----------------- BOMBS AND EXPLOSIONS ----------------- //
   // -------------------------------------------------------- // 
-  logic [MAP_ADDR_WIDTH-1:0] wr_addr, wr_addr_bomb, wr_addr_free, saved_explosion_addr;
-  logic [MAP_ADDR_WIDTH-1:0] wr_addr_bomb_2, wr_addr_free_2, saved_explosion_addr_2;
+  logic [MAP_ADDR_WIDTH-1:0] wr_addr, wr_addr_bomb, wr_addr_free, 
+  logic [MAP_ADDR_WIDTH-1:0] saved_explosion_addr [0:2], saved_explosion_addr_2 [0:2];
+  logic [MAP_ADDR_WIDTH-1:0] wr_addr_bomb_2, wr_addr_free_2;
   logic [MAP_MEM_WIDTH-1:0] write_data, write_data_bomb, write_data_free, write_data_free_2;
   logic [MAP_MEM_WIDTH-1:0] write_data_bomb_2;
   logic we, we_bomb, we_bomb_2, we_free, we_free_2;
@@ -221,7 +223,7 @@ module game_top (
 
   // Write enable mux (very basic, with more bombs this needs to be an arbiter)
   assign we = (we_bomb || we_bomb_2 || we_free || we_free_2);
-  assign wr_addr = we_bomb ? wr_addr_bomb : ((we_bomb_2) ? we_bomb_2 : ((we_free) ? wr_addr_free : wr_addr_free_2));
+  assign wr_addr = we_bomb ? wr_addr_bomb : ((we_bomb_2) ? wr_addr_bomb_2 : ((we_free) ? wr_addr_free : wr_addr_free_2));
   assign write_data = we_bomb ? write_data_bomb : ((we_bomb_2) ? write_data_bomb_2 : ((we_free) ? write_data_free: write_data_free_2));
 
 
@@ -249,7 +251,7 @@ module game_top (
       .explosion_addr(wr_addr_bomb),
       .player_x(map_player_x),
       .player_y(map_player_y),
-      .saved_explosion_addr(saved_explosion_addr),
+      .saved_explosion_addr(saved_explosion_addr[0]),
       .explode_signal(explode_signal),
       .game_over(game_over),
       .free_blks_signal(free_blks_signal)
@@ -261,7 +263,7 @@ module game_top (
       .rst(rst),
       .tick(tick),
       .free_blks_signal(free_blks_signal),
-      .explosion_addr(saved_explosion_addr),
+      .explosion_addr(saved_explosion_addr[0]),
       .map_mem_in(map_tile_state_obst),
       .read_granted(read_granted[2]),
       .read_req(read_req[2]),
@@ -299,19 +301,19 @@ module game_top (
       .explosion_addr(wr_addr_bomb_2),
       .player_x(map_player_2_x),
       .player_y(map_player_2_y),
-      .saved_explosion_addr(saved_explosion_addr_2),
+      .saved_explosion_addr(saved_explosion_addr_2[0]),
       .explode_signal(explode_signal_2),
       .game_over(game_over_2),
       .free_blks_signal(free_blks_signal_2)
   );
 
   // Free Blocks
-  free_blocks free_blocks_i (
+  free_blocks free_blocks_2 (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
       .free_blks_signal(free_blks_signal_2),
-      .explosion_addr(saved_explosion_addr_2),
+      .explosion_addr(saved_explosion_addr_2[0]),
       .map_mem_in(map_tile_state_obst),
       .read_granted(read_granted[3]),
       .read_req(read_req[3]),
@@ -327,8 +329,8 @@ module game_top (
   logic [MAP_ADDR_WIDTH-1:0] item_addr [0:2];
   logic item_active [0:2];
   logic player_on_item [0:2];
-  logic [3:0] max_bombs;
-  logic [3:0] bomb_range; 
+  logic [1:0] max_bombs;
+  logic [1:0] bomb_range; 
   power_up power_up_i (
       .clk(pixclk),
       .rst(rst),
@@ -348,6 +350,26 @@ module game_top (
   );
 
 //  assign last_blk = 1'b0; // until implemented, disable
+
+  // ------------------------------------------------- //
+  // ----------- GAME OVER LOGIC ----------- //
+  // ------------------------------------------------- //
+  game_over game_over_i (
+    .clk(pixclk),
+    .rst(rst),
+    .explode_signal_1({2'b00, explode_signal}),
+    .explosion_addr_1({saved_explosion_addr[0], '0, '0}),
+    .explode_signal_2({2'b00, explode_signal_2}),
+    .explosion_addr_2({saved_explosion_addr_2[0], '0, '0}),
+    .exp_range_1(bomb_range),
+    .exp_range_2(bomb_range),
+    .player_1_x(map_player_x),
+    .player_1_y(map_player_y),
+    .player_2_x(map_player_2_x),
+    .player_2_y(map_player_2_y),
+    .start_over_button(place_bomb),
+    .game_over(game_over)
+  )
 
   // Map memory read controller (arbiter)
   // TBD: implement N readers.
