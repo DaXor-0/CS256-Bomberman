@@ -240,7 +240,7 @@ module game_top (
       .game_over(game_over),
       .player_x(map_player_1_x),
       .player_y(map_player_1_y),
-      .place_bomb(place_bomb && ~game_over), // ACTION button
+      .place_bomb(place_bomb), // ACTION button
       .write_addr(wr_addr_bomb),
       .write_data(write_data_bomb),
       .write_en(we_bomb),
@@ -386,7 +386,7 @@ module game_top (
     .player_1_y(map_player_1_y),
     .player_2_x(map_player_2_x),
     .player_2_y(map_player_2_y),
-    .start_over_button(place_bomb),
+    .start_over_button(down),
     .game_over(game_over)
   );
 
