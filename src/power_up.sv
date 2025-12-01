@@ -27,6 +27,7 @@ module power_up #(
     input logic clk,
     rst,
     tick,
+    game_over,
     input logic we_in, // on free_blk, generate the exit with a 5% probability
     input logic [ADDR_WIDTH-1:0] write_addr_in,
     input logic [MAP_MEM_WIDTH-1:0] write_data_in,

@@ -85,6 +85,7 @@ module player_controller #(
   ) check_obst_i (
       .clk            (clk),
       .rst            (rst),
+      .game_over      (game_over),
       .player_x       (map_player_x),
       .player_y       (map_player_y),
       .map_mem_in     (map_mem_in),

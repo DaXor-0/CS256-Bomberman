@@ -21,6 +21,7 @@ module check_obst #(
 ) (
     input logic clk,
     input logic rst,
+    input logic game_over,
 
     input logic [             10:0] player_x,   // pixel coords in logic map
     input logic [              9:0] player_y,
@@ -129,7 +130,7 @@ module check_obst #(
   assign read_req = (st == WAIT) || ((st == CHECK) && (dir_cnt != 2'b0));
 
   always_ff @(posedge clk) begin
-    if (rst) begin dir_cnt <= 2'd0; end
+    if (rst || game_over) begin dir_cnt <= 2'd0; end
     else 
     case (st)
       WAIT: 
@@ -150,7 +151,7 @@ module check_obst #(
   // ===========================================================================
   logic [1:0] dir_a;
   always_ff @(posedge clk) begin
-    if (rst) begin
+    if (rst || game_over) begin
       dir_a           <= 2'd0;
       obstacles_valid <= 1'b0;
     end else begin
@@ -178,7 +179,7 @@ module check_obst #(
   // ===========================================================================
   // Keep previous bits for directions not being updated this cycle.
   always_ff @(posedge clk) begin
-    if (rst) begin
+    if (rst || game_over) begin
       obstacles            <= '0;
       obstacle_dist[UP]    <= MAX_DIST;
       obstacle_dist[DOWN]  <= MAX_DIST;
