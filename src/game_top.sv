@@ -174,6 +174,7 @@ module game_top (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
+      .game_over(game_over),
       .move_dir(move_dir),
       .player_speed(player_speed),
       .map_mem_in(map_tile_state_obst),
@@ -193,6 +194,7 @@ module game_top (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
+      .game_over(game_over),
       .move_dir(move_dir2),
       .player_speed(player_2_speed),
       .map_mem_in(map_tile_state_obst),
@@ -231,6 +233,7 @@ module game_top (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
+      .game_over(game_over),
       .player_x(map_player_x),
       .player_y(map_player_y),
       .place_bomb(place_bomb), // ACTION button
@@ -247,13 +250,14 @@ module game_top (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
+      .game_over(game_over),
       .trigger_explosion(trigger_explosion),
       .explosion_addr(wr_addr_bomb),
       .player_x(map_player_x),
       .player_y(map_player_y),
       .saved_explosion_addr(saved_explosion_addr[0]),
       .explode_signal(explode_signal),
-      .game_over(game_over_fake),
+      .game_over_fake(game_over_fake), // will delete later 
       .free_blks_signal(free_blks_signal)
   );
 
@@ -262,6 +266,7 @@ module game_top (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
+      .game_over(game_over),
       .free_blks_signal(free_blks_signal),
       .explosion_addr(saved_explosion_addr[0]),
       .map_mem_in(map_tile_state_obst),
@@ -281,6 +286,7 @@ module game_top (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
+      .game_over(game_over),
       .player_x(map_player_2_x),
       .player_y(map_player_2_y),
       .place_bomb(buttons[4]), // ACTION button
@@ -297,13 +303,14 @@ module game_top (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
+      .game_over(game_over),
       .trigger_explosion(trigger_explosion_2),
       .explosion_addr(wr_addr_bomb_2),
       .player_x(map_player_2_x),
       .player_y(map_player_2_y),
       .saved_explosion_addr(saved_explosion_addr_2[0]),
       .explode_signal(explode_signal_2),
-      .game_over(game_over_2),
+      .game_over_fake(game_over_2),
       .free_blks_signal(free_blks_signal_2)
   );
 
@@ -312,6 +319,7 @@ module game_top (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
+      .game_over(game_over),
       .free_blks_signal(free_blks_signal_2),
       .explosion_addr(saved_explosion_addr_2[0]),
       .map_mem_in(map_tile_state_obst),
@@ -335,6 +343,7 @@ module game_top (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
+      .game_over(game_over),
       .we_in(we_free), // on free_blk, generate the exit with a 5% probability
       .write_addr_in(wr_addr_free),
       .write_data_in(write_data_free),
@@ -376,6 +385,7 @@ module game_top (
   mem_multi_read_controller r_arbiter (
       .clk(pixclk),
       .rst(rst),
+      .game_over(game_over),
       .read_req(read_req),
       .read_addr_req(read_addr_req),
       .read_addr(read_addr),
@@ -396,6 +406,7 @@ module game_top (
   ) mem_i (
       .clk(pixclk),
       .rst(rst),
+      .game_over(game_over),
       .rd_addr_1(read_addr),
       .rd_data_1(map_tile_state_obst),
       .rd_addr_2(map_addr_drawcon),
@@ -418,6 +429,7 @@ module game_top (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
+      .game_over(game_over),
       .map_tile_state(map_tile_state_drawcon),
       .draw_x(curr_x_d),
       .draw_y(curr_y_d),

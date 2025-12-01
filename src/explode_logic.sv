@@ -37,7 +37,7 @@ module explode_logic #(
 
     output logic [ADDR_WIDTH-1:0] saved_explosion_addr,
     output logic explode_signal,  // To be used by drawcon to draw the explosion
-    output logic game_over,
+    output logic game_over_fake,
     output logic free_blks_signal
 );
   // Internal state
@@ -125,7 +125,7 @@ module explode_logic #(
   endfunction
 
   // Game Over condition
-  assign game_over = (is_exploding(
+  assign game_over_fake = (is_exploding(
       blk1_addr, saved_explosion_addr
   ) || is_exploding(
       blk2_addr, saved_explosion_addr
