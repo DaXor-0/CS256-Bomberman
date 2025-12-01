@@ -65,26 +65,14 @@ module game_over #(
     // --- Compute player blocks ---
     logic [ADDR_WIDTH-1:0] player_1_blk1_addr, player_1_blk2_addr;
     logic [ADDR_WIDTH-1:0] player_2_blk1_addr, player_2_blk2_addr;
-    compute_player_blocks #(
-        .NUM_ROW(NUM_ROW),
-        .NUM_COL(NUM_COL),
-        .TILE_PX(TILE_PX),
-        .ADDR_WIDTH(ADDR_WIDTH),
-        .TILE_SHIFT(TILE_SHIFT)
-    ) compute_player_blocks_1 (
+    compute_player_blocks compute_player_blocks_1 (
         .player_x(player_1_x),
         .player_y(player_1_y),
         .blk1_addr(player_1_blk1_addr),
         .blk2_addr(player_1_blk2_addr)
     );
 
-    compute_player_blocks #(
-        .NUM_ROW(NUM_ROW),
-        .NUM_COL(NUM_COL),
-        .TILE_PX(TILE_PX),
-        .ADDR_WIDTH(ADDR_WIDTH),
-        .TILE_SHIFT(TILE_SHIFT)
-    ) compute_player_blocks_2 (
+    compute_player_blocks compute_player_blocks_2 (
         .player_x(player_2_x),
         .player_y(player_2_y),
         .blk1_addr(player_2_blk1_addr),

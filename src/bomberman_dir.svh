@@ -55,5 +55,9 @@ typedef enum logic [1:0] {
   ITEM_STATE_ACTIVE
 } item_state_t;
 
+typedef enum logic {
+  GAME_ACTIVE,
+  GAME_OVER
+} game_over_state_t;
 
 `endif

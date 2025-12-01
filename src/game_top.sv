@@ -211,14 +211,14 @@ module game_top (
   // -------------------------------------------------------- //
   // ----------------- BOMBS AND EXPLOSIONS ----------------- //
   // -------------------------------------------------------- // 
-  logic [MAP_ADDR_WIDTH-1:0] wr_addr, wr_addr_bomb, wr_addr_free, 
+  logic [MAP_ADDR_WIDTH-1:0] wr_addr, wr_addr_bomb, wr_addr_free;
   logic [MAP_ADDR_WIDTH-1:0] saved_explosion_addr [0:2], saved_explosion_addr_2 [0:2];
   logic [MAP_ADDR_WIDTH-1:0] wr_addr_bomb_2, wr_addr_free_2;
   logic [MAP_MEM_WIDTH-1:0] write_data, write_data_bomb, write_data_free, write_data_free_2;
   logic [MAP_MEM_WIDTH-1:0] write_data_bomb_2;
   logic we, we_bomb, we_bomb_2, we_free, we_free_2;
 
-  logic trigger_explosion, explode_signal, game_over, free_blks_signal;
+  logic trigger_explosion, explode_signal, free_blks_signal;
   logic trigger_explosion_2, explode_signal_2, game_over_2, free_blks_signal_2;
 
   // Write enable mux (very basic, with more bombs this needs to be an arbiter)
@@ -253,7 +253,7 @@ module game_top (
       .player_y(map_player_y),
       .saved_explosion_addr(saved_explosion_addr[0]),
       .explode_signal(explode_signal),
-      .game_over(game_over),
+      .game_over(game_over_fake),
       .free_blks_signal(free_blks_signal)
   );
 
@@ -369,7 +369,7 @@ module game_top (
     .player_2_y(map_player_2_y),
     .start_over_button(place_bomb),
     .game_over(game_over)
-  )
+  );
 
   // Map memory read controller (arbiter)
   // TBD: implement N readers.
@@ -429,8 +429,8 @@ module game_top (
       .player_2_dir(move_dir2),
       .explode_signal(explode_signal),
       .explode_signal_2(explode_signal_2),
-      .explosion_addr(saved_explosion_addr),
-      .explosion_addr_2(saved_explosion_addr_2),
+      .explosion_addr(saved_explosion_addr[0]),
+      .explosion_addr_2(saved_explosion_addr_2[0]),
       .p1_bomb_level(2'd0),
       .p1_range_level(2'd0),
       .p1_speed_level(2'd0),
