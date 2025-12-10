@@ -77,9 +77,11 @@ module game_top (
   // ---------------------------------------------------------------------------
   logic [3:0] dig0, dig4;
   logic [$clog2(BOMB_TIME)-1:0] countdown, countdown_2;
+  logic countdown_signal, countdown_signal_2;
 
-  assign dig0 = countdown && countdown_signal;
-  assign dig4 = countdown_2 && countdown_signal_2;
+  // Display active countdown value; blank the digit when not counting down.
+  assign dig0 = countdown_signal ? countdown : 4'd0;
+  assign dig4 = countdown_signal_2 ? countdown_2 : 4'd0;
 
   multidigit multidigit_i (
       .clk (CLK100MHZ),
@@ -227,7 +229,7 @@ module game_top (
   logic we, we_bomb, we_bomb_2, we_free, we_free_2;
 
   logic trigger_explosion, explode_signal, free_blks_signal;
-  logic trigger_explosion_2, explode_signal_2, game_over_2, free_blks_signal_2;
+  logic trigger_explosion_2, explode_signal_2, free_blks_signal_2;
 
   // Write enable mux (very basic, with more bombs this needs to be an arbiter)
   assign we = (we_bomb || we_bomb_2 || we_free || we_free_2);
@@ -259,11 +261,8 @@ module game_top (
       .game_over(game_over),
       .trigger_explosion(trigger_explosion),
       .explosion_addr(wr_addr_bomb),
-      .player_x(map_player_1_x),
-      .player_y(map_player_1_y),
       .saved_explosion_addr(saved_explosion_addr[0]),
       .explode_signal(explode_signal),
-      .game_over_fake(game_over_fake),  // will delete later 
       .free_blks_signal(free_blks_signal)
   );
 
@@ -311,11 +310,8 @@ module game_top (
       .game_over(game_over),
       .trigger_explosion(trigger_explosion_2),
       .explosion_addr(wr_addr_bomb_2),
-      .player_x(map_player_2_x),
-      .player_y(map_player_2_y),
       .saved_explosion_addr(saved_explosion_addr_2[0]),
       .explode_signal(explode_signal_2),
-      .game_over_fake(game_over_2),
       .free_blks_signal(free_blks_signal_2)
   );
 
@@ -378,8 +374,8 @@ module game_top (
       .explosion_addr_1({saved_explosion_addr[0], '0, '0}),
       .explode_signal_2({2'b00, explode_signal_2}),
       .explosion_addr_2({saved_explosion_addr_2[0], '0, '0}),
-      .exp_range_1(bomb_range),
-      .exp_range_2(bomb_range),
+      .exp_range_1(bomb_range_p1),
+      .exp_range_2(bomb_range_p2),
       .player_1_x(map_player_1_x),
       .player_1_y(map_player_1_y),
       .player_2_x(map_player_2_x),

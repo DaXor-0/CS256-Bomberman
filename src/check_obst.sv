@@ -105,6 +105,7 @@ module check_obst #(
   // Direction counter (iterates through UP/DOWN/LEFT/RIGHT)
   // ===========================================================================
   logic [1:0] dir_cnt;
+  logic read_done;
 
   // adding two states: WAIT, CHECK for read arbitering logic
   check_state_t st, nst;

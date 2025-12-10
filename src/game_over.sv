@@ -3,11 +3,9 @@
 `include "bomberman_dir.svh"
 
 /**
-* Module: game_over 
+* Module: game_over
 * Description: contains the logic that operates the explosion of the bombs.
-*
 **/
-
 module game_over #(
     // ---- Map and tile geometry ----
     parameter int NUM_ROW       = 11,
@@ -24,20 +22,20 @@ module game_over #(
     localparam int TILE_SHIFT = $clog2(TILE_PX)
 
 ) (
-    input logic clk,
-    input logic rst,
-    input logic [2:0] explode_signal_1,
-    explode_signal_2,
-    input logic [ADDR_WIDTH-1:0] explosion_addr_1[0:2],
-    explosion_addr_2[0:2],
-    input logic [1:0] exp_range_1,
-    exp_range_2,
+    input logic                  clk,
+    input logic                  rst,
+    input logic [           2:0] explode_signal_1,
+    input logic [           2:0] explode_signal_2,
+    input logic [ADDR_WIDTH-1:0] explosion_addr_1 [0:2],
+    input logic [ADDR_WIDTH-1:0] explosion_addr_2 [0:2],
+    input logic [           1:0] exp_range_1,
+    input logic [           1:0] exp_range_2,
     // input logic increase_explode_length :: to be integrated with implementation of power-up
-    input logic [10:0] player_1_x,  // map_player_x
-    input logic [9:0] player_1_y,  // map_player_y
-    input logic [10:0] player_2_x,  // map_player_x
-    input logic [9:0] player_2_y,  // map_player_y
-    input logic start_over_button,
+    input logic [          10:0] player_1_x,              // map_player_x
+    input logic [           9:0] player_1_y,              // map_player_y
+    input logic [          10:0] player_2_x,              // map_player_x
+    input logic [           9:0] player_2_y,              // map_player_y
+    input logic                  start_over_button,
 
     output logic game_over
 );

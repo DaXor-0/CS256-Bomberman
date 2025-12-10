@@ -67,6 +67,7 @@ module free_blocks #(
   logic [ADDR_WIDTH-1:0] saved_explosion_addr;
   logic [3:0] blk_status;
   logic [1:0] dir_cnt, dir_a;
+  logic check_done, free_done;
 
 
   always_ff @(posedge clk)
