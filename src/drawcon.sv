@@ -53,7 +53,7 @@ module drawcon #(
     input  logic                      clk,
     input  logic                      rst,
     input  logic                      tick,
-    input logic game_over,
+    input  logic                      game_over,
     input  logic [ MAP_MEM_WIDTH-1:0] map_tile_state,
     input  logic [              10:0] draw_x,
     input  logic [               9:0] draw_y,
@@ -65,11 +65,11 @@ module drawcon #(
     input  logic [               9:0] player_2_y,
     input  dir_t                      player_2_dir,
     input  logic                      explode_signal,
-    explode_signal_2,
+    input  logic                      explode_signal_2,
     input  logic [MAP_ADDR_WIDTH-1:0] explosion_addr,
-    explosion_addr_2,
-    input  logic [MAP_ADDR_WIDTH-1:0] item_addr     [0:2],
-    input  logic                 [2:0]  item_active,
+    input  logic [MAP_ADDR_WIDTH-1:0] explosion_addr_2,
+    input  logic [MAP_ADDR_WIDTH-1:0] item_addr       [0:2],
+    input  logic [               2:0] item_active,
     // Upgrade levels: 0..3 for each item type
     input  logic [               1:0] p1_bomb_level,
     input  logic [               1:0] p1_range_level,
@@ -78,8 +78,8 @@ module drawcon #(
     input  logic [               1:0] p2_range_level,
     input  logic [               1:0] p2_speed_level,
     output logic [               3:0] o_r,
-    o_g,
-    o_b,
+    output logic [               3:0] o_g,
+    output logic [               3:0] o_b,
     output logic [MAP_ADDR_WIDTH-1:0] map_addr
 );
 
@@ -138,19 +138,19 @@ module drawcon #(
       .BOMB_ANIM_TIME           (BOMB_ANIM_TIME),
       .P_UP_FRAME_TIME          (P_UP_FRAME_TIME)
   ) drawcon_anim_i (
-      .clk          (clk),
-      .rst          (rst),
-      .tick         (tick),
-      .game_over    (game_over),
-      .player_1_dir (player_1_dir),
-      .player_2_dir (player_2_dir),
-      .explode_signal(explode_signal),
+      .clk             (clk),
+      .rst             (rst),
+      .tick            (tick),
+      .game_over       (game_over),
+      .player_1_dir    (player_1_dir),
+      .player_2_dir    (player_2_dir),
+      .explode_signal  (explode_signal),
       .explode_signal_2(explode_signal_2),
-      .walk_frame_1 (walk_frame_1),
-      .walk_frame_2 (walk_frame_2),
-      .dest_frame   (dest_frame),
-      .bomb_frame   (bomb_frame),
-      .p_up_frame   (p_up_frame)
+      .walk_frame_1    (walk_frame_1),
+      .walk_frame_2    (walk_frame_2),
+      .dest_frame      (dest_frame),
+      .bomb_frame      (bomb_frame),
+      .p_up_frame      (p_up_frame)
   );
 
   // ---------------------------------------------------------------------------
@@ -158,7 +158,7 @@ module drawcon #(
   // ---------------------------------------------------------------------------
   logic player_1_sprite_q, player_2_sprite_q;
   logic [11:0] player_1_sprite_rgb_q, player_2_sprite_rgb_q;
-  logic [           MAP_ADDR_WIDTH-1:0] addr_next;
+  logic [MAP_ADDR_WIDTH-1:0] addr_next;
 
   drawcon_player_sprite #(
       .SPRITE_W           (SPRITE_W),
@@ -167,15 +167,15 @@ module drawcon #(
       .WALK_FRAMES_TOTAL  (WALK_FRAMES_TOTAL),
       .MEM_INIT_FILE      ("player_1.mem")
   ) player_1_sprite_i (
-      .clk      (clk),
-      .draw_x   (draw_x),
-      .draw_y   (draw_y),
-      .sprite_x (player_1_x),
-      .sprite_y (player_1_y),
-      .dir      (player_1_dir),
+      .clk       (clk),
+      .draw_x    (draw_x),
+      .draw_y    (draw_y),
+      .sprite_x  (player_1_x),
+      .sprite_y  (player_1_y),
+      .dir       (player_1_dir),
       .walk_frame(walk_frame_1),
-      .active_q (player_1_sprite_q),
-      .rgb_q    (player_1_sprite_rgb_q)
+      .active_q  (player_1_sprite_q),
+      .rgb_q     (player_1_sprite_rgb_q)
   );
 
   drawcon_player_sprite #(
@@ -185,15 +185,15 @@ module drawcon #(
       .WALK_FRAMES_TOTAL  (WALK_FRAMES_TOTAL),
       .MEM_INIT_FILE      ("player_2.mem")
   ) player_2_sprite_i (
-      .clk      (clk),
-      .draw_x   (draw_x),
-      .draw_y   (draw_y),
-      .sprite_x (player_2_x),
-      .sprite_y (player_2_y),
-      .dir      (player_2_dir),
+      .clk       (clk),
+      .draw_x    (draw_x),
+      .draw_y    (draw_y),
+      .sprite_x  (player_2_x),
+      .sprite_y  (player_2_y),
+      .dir       (player_2_dir),
       .walk_frame(walk_frame_2),
-      .active_q (player_2_sprite_q),
-      .rgb_q    (player_2_sprite_rgb_q)
+      .active_q  (player_2_sprite_q),
+      .rgb_q     (player_2_sprite_rgb_q)
   );
 
   // ---------------------------------------------------------------------------
@@ -219,7 +219,7 @@ module drawcon #(
   logic hud_p1_track_hit_q, hud_p2_track_hit_q;
   logic [11:0] hud_p1_icon_rgb_q, hud_p2_icon_rgb_q;
   logic [11:0] hud_bomb_rgb_q, hud_range_rgb_q, hud_speed_rgb_q;
-  logic [11:0] hud_track_rgb_q;
+  logic [                      11:0] hud_track_rgb_q;
 
   // Animation outputs also have a "_q" version to line up with the pipelined logic
   // that selects the correct block based on map state. Powerups are exceptions since
@@ -282,31 +282,31 @@ module drawcon #(
       .HUD_TOP (HUD_TOP),
       .HUD_BOT (HUD_BOT)
   ) drawcon_hud_i (
-      .clk             (clk),
-      .draw_x          (draw_x),
-      .draw_y          (draw_y),
-      .p1_bomb_level   (p1_bomb_level),
-      .p1_range_level  (p1_range_level),
-      .p1_speed_level  (p1_speed_level),
-      .p2_bomb_level   (p2_bomb_level),
-      .p2_range_level  (p2_range_level),
-      .p2_speed_level  (p2_speed_level),
-      .hud_p1_icon_q   (hud_p1_icon_q),
-      .hud_p2_icon_q   (hud_p2_icon_q),
-      .hud_bomb_p1_q   (hud_bomb_p1_q),
-      .hud_bomb_p2_q   (hud_bomb_p2_q),
-      .hud_range_p1_q  (hud_range_p1_q),
-      .hud_range_p2_q  (hud_range_p2_q),
-      .hud_speed_p1_q  (hud_speed_p1_q),
-      .hud_speed_p2_q  (hud_speed_p2_q),
+      .clk               (clk),
+      .draw_x            (draw_x),
+      .draw_y            (draw_y),
+      .p1_bomb_level     (p1_bomb_level),
+      .p1_range_level    (p1_range_level),
+      .p1_speed_level    (p1_speed_level),
+      .p2_bomb_level     (p2_bomb_level),
+      .p2_range_level    (p2_range_level),
+      .p2_speed_level    (p2_speed_level),
+      .hud_p1_icon_q     (hud_p1_icon_q),
+      .hud_p2_icon_q     (hud_p2_icon_q),
+      .hud_bomb_p1_q     (hud_bomb_p1_q),
+      .hud_bomb_p2_q     (hud_bomb_p2_q),
+      .hud_range_p1_q    (hud_range_p1_q),
+      .hud_range_p2_q    (hud_range_p2_q),
+      .hud_speed_p1_q    (hud_speed_p1_q),
+      .hud_speed_p2_q    (hud_speed_p2_q),
       .hud_p1_track_hit_q(hud_p1_track_hit_q),
       .hud_p2_track_hit_q(hud_p2_track_hit_q),
-      .hud_p1_icon_rgb_q(hud_p1_icon_rgb_q),
-      .hud_p2_icon_rgb_q(hud_p2_icon_rgb_q),
-      .hud_bomb_rgb_q  (hud_bomb_rgb_q),
-      .hud_range_rgb_q (hud_range_rgb_q),
-      .hud_speed_rgb_q (hud_speed_rgb_q),
-      .hud_track_rgb_q (hud_track_rgb_q)
+      .hud_p1_icon_rgb_q (hud_p1_icon_rgb_q),
+      .hud_p2_icon_rgb_q (hud_p2_icon_rgb_q),
+      .hud_bomb_rgb_q    (hud_bomb_rgb_q),
+      .hud_range_rgb_q   (hud_range_rgb_q),
+      .hud_speed_rgb_q   (hud_speed_rgb_q),
+      .hud_track_rgb_q   (hud_track_rgb_q)
   );
 
   // ---------------------------------------------------------------------------
@@ -369,25 +369,25 @@ module drawcon #(
   // ---------------------------------------------------------------------------
   // Everything is pipelined by 1 cycle to line up with the synchronous sprite ROM.
   always_ff @(posedge clk) begin
-    out_of_map_q          <= out_of_map;
-    st_q                  <= st;
-    perm_blk_local_x_q    <= perm_blk_local_x;
-    perm_blk_local_y_q    <= perm_blk_local_y;
-    dest_blk_local_x_q    <= dest_blk_local_x;
-    dest_blk_local_y_q    <= dest_blk_local_y;
-    p_up_bomb_local_y_q   <= p_up_bomb_local_y;
-    p_up_bomb_local_x_q   <= p_up_bomb_local_x;
-    p_up_range_local_x_q  <= p_up_range_local_x;
-    p_up_range_local_y_q  <= p_up_range_local_y;
-    p_up_speed_local_x_q  <= p_up_speed_local_x;
-    p_up_speed_local_y_q  <= p_up_speed_local_y;
-    dest_blk_anim_rgb_q   <= dest_blk_anim_rgb;
-    bomb_local_x_q        <= bomb_local_x;
-    bomb_local_y_q        <= bomb_local_y;
-    bomb_sprite_rgb_q     <= bomb_sprite_rgb;
-    explode_local_x_q     <= dest_blk_local_x;
-    explode_local_y_q     <= dest_blk_local_y;
-    explode_sprite_rgb_q  <= explode_sprite_rgb;
+    out_of_map_q         <= out_of_map;
+    st_q                 <= st;
+    perm_blk_local_x_q   <= perm_blk_local_x;
+    perm_blk_local_y_q   <= perm_blk_local_y;
+    dest_blk_local_x_q   <= dest_blk_local_x;
+    dest_blk_local_y_q   <= dest_blk_local_y;
+    p_up_bomb_local_y_q  <= p_up_bomb_local_y;
+    p_up_bomb_local_x_q  <= p_up_bomb_local_x;
+    p_up_range_local_x_q <= p_up_range_local_x;
+    p_up_range_local_y_q <= p_up_range_local_y;
+    p_up_speed_local_x_q <= p_up_speed_local_x;
+    p_up_speed_local_y_q <= p_up_speed_local_y;
+    dest_blk_anim_rgb_q  <= dest_blk_anim_rgb;
+    bomb_local_x_q       <= bomb_local_x;
+    bomb_local_y_q       <= bomb_local_y;
+    bomb_sprite_rgb_q    <= bomb_sprite_rgb;
+    explode_local_x_q    <= dest_blk_local_x;
+    explode_local_y_q    <= dest_blk_local_y;
+    explode_sprite_rgb_q <= explode_sprite_rgb;
   end
 
   always_comb begin

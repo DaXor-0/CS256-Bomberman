@@ -25,9 +25,8 @@ module free_blocks #(
 
 ) (
     input logic clk,
-    rst,
-    tick,
-    game_over,
+    input logic rst,
+    input logic game_over,
     input logic free_blks_signal,
     input logic [ADDR_WIDTH-1:0] explosion_addr,
     input logic [MAP_MEM_WIDTH-1:0] map_mem_in,

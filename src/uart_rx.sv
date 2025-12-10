@@ -1,13 +1,22 @@
-// UART receiver
-// CLKS_PER_BIT sets the number of clk cycles per UART bit (baud tick).
-// rx_dv pulses high for one clk when a full byte is received on rx_byte.
+`timescale 1ns / 1ps
+
+/**
+ * Module: uart_rx
+ * Description: UART Receiver Module
+ * Parameters:
+ * - CLKS_PER_BIT: Number of clock cycles per UART bit period.
+ *
+ * This module receives serial data on the 'rx' line, samples it according to
+ * the specified clock cycles per bit, and outputs the received byte along with
+ * a data valid signal.
+ */
 module uart_rx #(
     parameter int CLKS_PER_BIT = 868
 ) (
-    input  wire       clk,
-    input  wire       rx,
-    output reg        rx_dv,
-    output reg  [7:0] rx_byte
+    input  logic       clk,
+    input  logic       rx,
+    output logic       rx_dv,
+    output logic [7:0] rx_byte
 );
 
   typedef enum logic [2:0] {
@@ -33,14 +42,16 @@ module uart_rx #(
     rx_dv <= 1'b0;
 
     unique case (state)
-      S_IDLE: begin  // wait for start bit (line goes low)
+      // wait for start bit (line goes low)
+      S_IDLE: begin
         clk_cnt <= '0;
         bit_idx <= '0;
         if (rx_sync_2 == 1'b0)  // start bit
           state <= S_START;
       end
 
-      S_START: begin  // sample in middle of start bit to confirm low
+      // sample in middle of start bit to confirm low
+      S_START: begin
         if (clk_cnt == (CLKS_PER_BIT - 1) / 2) begin
           if (rx_sync_2 == 1'b0) begin
             clk_cnt <= '0;
@@ -53,7 +64,8 @@ module uart_rx #(
         end
       end
 
-      S_DATA: begin  // sample one data bit per CLKS_PER_BIT period, LSB first
+      // sample one data bit per CLKS_PER_BIT period, LSB first
+      S_DATA: begin
         if (clk_cnt < CLKS_PER_BIT - 1) begin
           clk_cnt <= clk_cnt + 1;
         end else begin
@@ -67,7 +79,8 @@ module uart_rx #(
         end
       end
 
-      S_STOP: begin  // wait one stop-bit period, then flag byte valid
+      // wait one stop-bit period, then flag byte valid
+      S_STOP: begin
         if (clk_cnt < CLKS_PER_BIT - 1) begin
           clk_cnt <= clk_cnt + 1;
         end else begin
@@ -82,3 +95,4 @@ module uart_rx #(
   end
 
 endmodule
+

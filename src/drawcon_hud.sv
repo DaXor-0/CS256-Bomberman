@@ -1,62 +1,81 @@
 `timescale 1ns / 1ps
 
+`include "bomberman_dir.svh"
+
+/**
+* Module: drawcon_hud
+* Description: module that renders the HUD elements (player icons, power-up icons, track icons)
+* based on the current draw coordinates and player power-up levels.
+*
+* HUD layout:
+* - Player 1 icon at (HUD_P1_ICON_X, HUD_P1_ICON_Y)
+* - Player 2 icon at (HUD_P2_ICON_X, HUD_P2_ICON_Y)
+* - Bomb icon next to player icon
+* - Range icon below bomb icon
+* - Speed icon below range icon
+* - Track icons to the right of power-up icons, up to 3 slots each
+* - Player 2 icons mirrored on the right side of the screen
+* - Each icon has a fixed size and position defined by parameters
+* - The module outputs active flags and RGB values for each HUD element based on draw_x and draw_y
+*/
 module drawcon_hud #(
-    parameter int             SCREEN_W = 1280,
-    parameter int             SCREEN_H = 800,
-    parameter int             HUD_H    = 32,
-    parameter int             HUD_TOP  = 96,
-    parameter int             HUD_BOT  = 0,
+    parameter int SCREEN_W = 1280,
+    parameter int SCREEN_H = 800,
+    parameter int HUD_H = 32,
+    parameter int HUD_TOP = 96,
+    parameter int HUD_BOT = 0,
     // HUD icon layout (positions are absolute screen coordinates)
     parameter int HUD_PLAYER_ICON_W = 64,
     parameter int HUD_PLAYER_ICON_H = 64,
-    parameter int HUD_SMALL_ICON_W  = 16,
-    parameter int HUD_SMALL_ICON_H  = 16,
-    parameter int HUD_TRACK_ICON_W  = 8,
-    parameter int HUD_TRACK_ICON_H  = 8,
+    parameter int HUD_SMALL_ICON_W = 16,
+    parameter int HUD_SMALL_ICON_H = 16,
+    parameter int HUD_TRACK_ICON_W = 8,
+    parameter int HUD_TRACK_ICON_H = 8,
     localparam int HUD_PLAYER_ICON_W_LOG2 = $clog2(HUD_PLAYER_ICON_W),
     localparam int HUD_PLAYER_ICON_H_LOG2 = $clog2(HUD_PLAYER_ICON_H),
-    localparam int HUD_SMALL_ICON_W_LOG2  = $clog2(HUD_SMALL_ICON_W),
-    localparam int HUD_SMALL_ICON_H_LOG2  = $clog2(HUD_SMALL_ICON_H),
-    localparam int HUD_TRACK_ICON_W_LOG2  = $clog2(HUD_TRACK_ICON_W),
-    localparam int HUD_TRACK_ICON_H_LOG2  = $clog2(HUD_TRACK_ICON_H),
+    localparam int HUD_SMALL_ICON_W_LOG2 = $clog2(HUD_SMALL_ICON_W),
+    localparam int HUD_SMALL_ICON_H_LOG2 = $clog2(HUD_SMALL_ICON_H),
+    localparam int HUD_TRACK_ICON_W_LOG2 = $clog2(HUD_TRACK_ICON_W),
+    localparam int HUD_TRACK_ICON_H_LOG2 = $clog2(HUD_TRACK_ICON_H),
     localparam int HUD_PLAYER_ICON_ADDR_WIDTH = $clog2(HUD_PLAYER_ICON_W * HUD_PLAYER_ICON_H),
-    localparam int HUD_SMALL_ICON_ADDR_WIDTH  = $clog2(HUD_SMALL_ICON_W * HUD_SMALL_ICON_H),
-    localparam int HUD_TRACK_TYPES            = 2,  // owned / not owned
-    localparam int HUD_TRACK_ICON_ADDR_WIDTH  = $clog2(HUD_TRACK_TYPES * HUD_TRACK_ICON_W * HUD_TRACK_ICON_H),
-    localparam int HUD_TRACK_FRAME_OFFSET     = HUD_TRACK_ICON_W * HUD_TRACK_ICON_H,  // 64 entries per frame
-
-    localparam int HUD_P1_ICON_X     = HUD_H,
-    localparam int HUD_P1_ICON_Y     = 14,
-    localparam int HUD_BOMB_P1_ICON_X   = HUD_P1_ICON_X + HUD_PLAYER_ICON_W + 8,
-    localparam int HUD_BOMB_P1_ICON_Y   = HUD_P1_ICON_Y,
-    localparam int HUD_RANGE_P1_ICON_X  = HUD_BOMB_P1_ICON_X,
-    localparam int HUD_RANGE_P1_ICON_Y  = HUD_BOMB_P1_ICON_Y + HUD_SMALL_ICON_H + 8,
-    localparam int HUD_SPEED_P1_ICON_X  = HUD_BOMB_P1_ICON_X,
-    localparam int HUD_SPEED_P1_ICON_Y  = HUD_RANGE_P1_ICON_Y + HUD_SMALL_ICON_H + 8,
+    localparam int HUD_SMALL_ICON_ADDR_WIDTH = $clog2(HUD_SMALL_ICON_W * HUD_SMALL_ICON_H),
+    localparam int HUD_TRACK_TYPES = 2,  // owned / not owned
+    localparam int HUD_TRACK_ICON_ADDR_WIDTH = $clog2(
+        HUD_TRACK_TYPES * HUD_TRACK_ICON_W * HUD_TRACK_ICON_H
+    ),
+    localparam int HUD_TRACK_FRAME_OFFSET = HUD_TRACK_ICON_W * HUD_TRACK_ICON_H,
+    localparam int HUD_P1_ICON_X = HUD_H,
+    localparam int HUD_P1_ICON_Y = 14,
+    localparam int HUD_BOMB_P1_ICON_X = HUD_P1_ICON_X + HUD_PLAYER_ICON_W + 8,
+    localparam int HUD_BOMB_P1_ICON_Y = HUD_P1_ICON_Y,
+    localparam int HUD_RANGE_P1_ICON_X = HUD_BOMB_P1_ICON_X,
+    localparam int HUD_RANGE_P1_ICON_Y = HUD_BOMB_P1_ICON_Y + HUD_SMALL_ICON_H + 8,
+    localparam int HUD_SPEED_P1_ICON_X = HUD_BOMB_P1_ICON_X,
+    localparam int HUD_SPEED_P1_ICON_Y = HUD_RANGE_P1_ICON_Y + HUD_SMALL_ICON_H + 8,
     localparam int HUD_P1_TRACK_X_START = HUD_BOMB_P1_ICON_X + HUD_SMALL_ICON_W + 8,
-    localparam int HUD_P1_TRACK_X_STEP  = HUD_TRACK_ICON_W,
-    localparam int HUD_P2_X_OFFSET      = 1088,
-    localparam int HUD_P2_ICON_X        = HUD_P1_ICON_X + HUD_P2_X_OFFSET,
-    localparam int HUD_P2_ICON_Y        = HUD_P1_ICON_Y,
-    localparam int HUD_BOMB_P2_ICON_X   = HUD_BOMB_P1_ICON_X + HUD_P2_X_OFFSET,
-    localparam int HUD_BOMB_P2_ICON_Y   = HUD_BOMB_P1_ICON_Y,
-    localparam int HUD_RANGE_P2_ICON_X  = HUD_RANGE_P1_ICON_X + HUD_P2_X_OFFSET,
-    localparam int HUD_RANGE_P2_ICON_Y  = HUD_RANGE_P1_ICON_Y,
-    localparam int HUD_SPEED_P2_ICON_X  = HUD_SPEED_P1_ICON_X + HUD_P2_X_OFFSET,
-    localparam int HUD_SPEED_P2_ICON_Y  = HUD_SPEED_P1_ICON_Y,
+    localparam int HUD_P1_TRACK_X_STEP = HUD_TRACK_ICON_W,
+    localparam int HUD_P2_X_OFFSET = 1088,
+    localparam int HUD_P2_ICON_X = HUD_P1_ICON_X + HUD_P2_X_OFFSET,
+    localparam int HUD_P2_ICON_Y = HUD_P1_ICON_Y,
+    localparam int HUD_BOMB_P2_ICON_X = HUD_BOMB_P1_ICON_X + HUD_P2_X_OFFSET,
+    localparam int HUD_BOMB_P2_ICON_Y = HUD_BOMB_P1_ICON_Y,
+    localparam int HUD_RANGE_P2_ICON_X = HUD_RANGE_P1_ICON_X + HUD_P2_X_OFFSET,
+    localparam int HUD_RANGE_P2_ICON_Y = HUD_RANGE_P1_ICON_Y,
+    localparam int HUD_SPEED_P2_ICON_X = HUD_SPEED_P1_ICON_X + HUD_P2_X_OFFSET,
+    localparam int HUD_SPEED_P2_ICON_Y = HUD_SPEED_P1_ICON_Y,
     localparam int HUD_P2_TRACK_X_START = HUD_P1_TRACK_X_START + HUD_P2_X_OFFSET,
-    localparam int HUD_P2_TRACK_X_STEP  = HUD_P1_TRACK_X_STEP,
+    localparam int HUD_P2_TRACK_X_STEP = HUD_P1_TRACK_X_STEP,
     localparam int HUD_P1_TRACK_Y_OFFSET = 4
 ) (
-    input  logic clk,
+    input  logic        clk,
     input  logic [10:0] draw_x,
-    input  logic [9:0]  draw_y,
-    input  logic [1:0]  p1_bomb_level,
-    input  logic [1:0]  p1_range_level,
-    input  logic [1:0]  p1_speed_level,
-    input  logic [1:0]  p2_bomb_level,
-    input  logic [1:0]  p2_range_level,
-    input  logic [1:0]  p2_speed_level,
+    input  logic [ 9:0] draw_y,
+    input  logic [ 1:0] p1_bomb_level,
+    input  logic [ 1:0] p1_range_level,
+    input  logic [ 1:0] p1_speed_level,
+    input  logic [ 1:0] p2_bomb_level,
+    input  logic [ 1:0] p2_range_level,
+    input  logic [ 1:0] p2_speed_level,
     output logic        hud_p1_icon_q,
     output logic        hud_p2_icon_q,
     output logic        hud_bomb_p1_q,
@@ -74,12 +93,6 @@ module drawcon_hud #(
     output logic [11:0] hud_speed_rgb_q,
     output logic [11:0] hud_track_rgb_q
 );
-
-  typedef enum int {
-    HUD_ITEM_BOMB  = 0,
-    HUD_ITEM_RANGE = 1,
-    HUD_ITEM_SPEED = 2
-  } hud_item_t;
 
   localparam int HUD_P1_TRACK_X[0:2] = '{
       HUD_P1_TRACK_X_START,
@@ -101,13 +114,6 @@ module drawcon_hud #(
       HUD_RANGE_P2_ICON_Y + HUD_P1_TRACK_Y_OFFSET,
       HUD_SPEED_P2_ICON_Y + HUD_P1_TRACK_Y_OFFSET
   };
-
-  // HUD hit helpers
-  `define HUD_HIT(name, X0, Y0, W, H)                    \
-  name = (draw_x >= (X0)) && (draw_x < (X0) + (W)) &&  \
-         (draw_y >= (Y0)) && (draw_y < (Y0) + (H));    \
-  name``_local_x = draw_x - (X0);                      \
-  name``_local_y = draw_y - (Y0);
 
   logic hud_p1_icon, hud_p2_icon, hud_bomb_p1, hud_bomb_p2, hud_range_p1, hud_range_p2;
   logic hud_speed_p1, hud_speed_p2;
@@ -140,6 +146,13 @@ module drawcon_hud #(
   logic [HUD_TRACK_ICON_ADDR_WIDTH-1:0] hud_p1_track_addr_mux, hud_p2_track_addr_mux;
   logic [HUD_TRACK_ICON_ADDR_WIDTH-1:0] hud_track_addr_mux;
   logic [11:0] hud_track_rgb;
+
+  // HUD hit helpers
+  `define HUD_HIT(name, X0, Y0, W, H)                    \
+  name = (draw_x >= (X0)) && (draw_x < (X0) + (W)) &&  \
+         (draw_y >= (Y0)) && (draw_y < (Y0) + (H));    \
+  name``_local_x = draw_x - (X0);                      \
+  name``_local_y = draw_y - (Y0);
 
   always_comb begin
     `HUD_HIT(hud_p1_icon, HUD_P1_ICON_X, HUD_P1_ICON_Y, HUD_PLAYER_ICON_W, HUD_PLAYER_ICON_H)
@@ -239,9 +252,9 @@ module drawcon_hud #(
     hud_speed_addr_mux = hud_speed_p1_addr;
     hud_track_addr_mux = hud_p1_track_addr_mux;
 
-    if (hud_bomb_p2) hud_bomb_addr_mux     = hud_bomb_p2_addr;
-    if (hud_range_p2) hud_range_addr_mux   = hud_range_p2_addr;
-    if (hud_speed_p2) hud_speed_addr_mux   = hud_speed_p2_addr;
+    if (hud_bomb_p2) hud_bomb_addr_mux = hud_bomb_p2_addr;
+    if (hud_range_p2) hud_range_addr_mux = hud_range_p2_addr;
+    if (hud_speed_p2) hud_speed_addr_mux = hud_speed_p2_addr;
     if (hud_p2_track_hit) hud_track_addr_mux = hud_p2_track_addr_mux;
   end
 
@@ -327,32 +340,32 @@ module drawcon_hud #(
   );
 
   always_ff @(posedge clk) begin
-    hud_p1_icon_q_int   <= hud_p1_icon;
-    hud_p2_icon_q_int   <= hud_p2_icon;
-    hud_bomb_p1_q_int   <= hud_bomb_p1;
-    hud_bomb_p2_q_int   <= hud_bomb_p2;
-    hud_range_p1_q_int  <= hud_range_p1;
-    hud_range_p2_q_int  <= hud_range_p2;
-    hud_speed_p1_q_int  <= hud_speed_p1;
-    hud_speed_p2_q_int  <= hud_speed_p2;
+    hud_p1_icon_q_int      <= hud_p1_icon;
+    hud_p2_icon_q_int      <= hud_p2_icon;
+    hud_bomb_p1_q_int      <= hud_bomb_p1;
+    hud_bomb_p2_q_int      <= hud_bomb_p2;
+    hud_range_p1_q_int     <= hud_range_p1;
+    hud_range_p2_q_int     <= hud_range_p2;
+    hud_speed_p1_q_int     <= hud_speed_p1;
+    hud_speed_p2_q_int     <= hud_speed_p2;
     hud_p1_track_hit_q_int <= hud_p1_track_hit;
     hud_p2_track_hit_q_int <= hud_p2_track_hit;
-    hud_p1_icon_rgb_q   <= hud_p1_icon_rgb;
-    hud_p2_icon_rgb_q   <= hud_p2_icon_rgb;
-    hud_bomb_rgb_q      <= hud_bomb_rgb;
-    hud_range_rgb_q     <= hud_range_rgb;
-    hud_speed_rgb_q     <= hud_speed_rgb;
-    hud_track_rgb_q     <= hud_track_rgb;
+    hud_p1_icon_rgb_q      <= hud_p1_icon_rgb;
+    hud_p2_icon_rgb_q      <= hud_p2_icon_rgb;
+    hud_bomb_rgb_q         <= hud_bomb_rgb;
+    hud_range_rgb_q        <= hud_range_rgb;
+    hud_speed_rgb_q        <= hud_speed_rgb;
+    hud_track_rgb_q        <= hud_track_rgb;
   end
 
-  assign hud_p1_icon_q     = hud_p1_icon_q_int;
-  assign hud_p2_icon_q     = hud_p2_icon_q_int;
-  assign hud_bomb_p1_q     = hud_bomb_p1_q_int;
-  assign hud_bomb_p2_q     = hud_bomb_p2_q_int;
-  assign hud_range_p1_q    = hud_range_p1_q_int;
-  assign hud_range_p2_q    = hud_range_p2_q_int;
-  assign hud_speed_p1_q    = hud_speed_p1_q_int;
-  assign hud_speed_p2_q    = hud_speed_p2_q_int;
+  assign hud_p1_icon_q      = hud_p1_icon_q_int;
+  assign hud_p2_icon_q      = hud_p2_icon_q_int;
+  assign hud_bomb_p1_q      = hud_bomb_p1_q_int;
+  assign hud_bomb_p2_q      = hud_bomb_p2_q_int;
+  assign hud_range_p1_q     = hud_range_p1_q_int;
+  assign hud_range_p2_q     = hud_range_p2_q_int;
+  assign hud_speed_p1_q     = hud_speed_p1_q_int;
+  assign hud_speed_p2_q     = hud_speed_p2_q_int;
   assign hud_p1_track_hit_q = hud_p1_track_hit_q_int;
   assign hud_p2_track_hit_q = hud_p2_track_hit_q_int;
 

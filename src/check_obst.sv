@@ -19,14 +19,13 @@ module check_obst #(
     localparam int DEPTH      = NUM_ROW * NUM_COL,
     localparam int ADDR_WIDTH = $clog2(DEPTH)
 ) (
-    input logic clk,
-    input logic rst,
-    input logic game_over,
-
-    input logic [             10:0] player_x,   // pixel coords in logic map
+    input logic                     clk,
+    input logic                     rst,
+    input logic                     game_over,
+    input logic [             10:0] player_x,     // pixel coords in logic map
     input logic [              9:0] player_y,
-    input logic [MAP_MEM_WIDTH-1:0] map_mem_in, // BRAM/ROM data (1-cycle after addr)
-    input logic read_granted,
+    input logic [MAP_MEM_WIDTH-1:0] map_mem_in,   // BRAM/ROM data (1-cycle after addr)
+    input logic                     read_granted,
 
     output logic read_req,
     output logic [3:0] obstacles,  // [0]=up,[1]=down,[2]=left,[3]=right
@@ -106,44 +105,40 @@ module check_obst #(
   // Direction counter (iterates through UP/DOWN/LEFT/RIGHT)
   // ===========================================================================
   logic [1:0] dir_cnt;
-  
-  // adding two states: WAIT, CHECK for read arbitering logic
-  typedef enum logic { WAIT, CHECK } check_state;
 
-  check_state st, nst;
+  // adding two states: WAIT, CHECK for read arbitering logic
+  check_state_t st, nst;
   // next state ff block
   always_ff @(posedge clk)
-  if (rst) st <= WAIT;
-  else st <= nst;
+    if (rst) st <= WAIT;
+    else st <= nst;
 
   // Next state logic
-  always_comb
-  begin
-    nst = st; // State remains unchanged if no condition triggered.
-    case (st)
-      WAIT: if (read_granted) nst = CHECK;
+  always_comb begin
+    nst = st;  // State remains unchanged if no condition triggered.
+    unique case (st)
+      WAIT:  if (read_granted) nst = CHECK;
       CHECK: if (read_done) nst = WAIT;
     endcase
   end
 
   assign read_done = (st == CHECK) && ~read_req;
-  assign read_req = (st == WAIT) || ((st == CHECK) && (dir_cnt != 2'b0));
+  assign read_req  = (st == WAIT) || ((st == CHECK) && (dir_cnt != 2'b0));
 
   always_ff @(posedge clk) begin
-    if (rst || game_over) begin dir_cnt <= 2'd0; end
-    else 
-    case (st)
-      WAIT: 
-      begin
-        if (read_granted) dir_cnt <= dir_cnt + 1;
-        else dir_cnt <= 2'd0;
-      end
-      CHECK: 
-      begin
-        dir_cnt <= dir_cnt + 2'd1;
-      end 
-    endcase 
-    end
+    if (rst || game_over) begin
+      dir_cnt <= 2'd0;
+    end else
+      unique case (st)
+        WAIT: begin
+          if (read_granted) dir_cnt <= dir_cnt + 1;
+          else dir_cnt <= 2'd0;
+        end
+        CHECK: begin
+          dir_cnt <= dir_cnt + 2'd1;
+        end
+      endcase
+  end
 
   // ===========================================================================
   // Stage A: compute address & capture context for the current direction
@@ -155,7 +150,7 @@ module check_obst #(
       dir_a           <= 2'd0;
       obstacles_valid <= 1'b0;
     end else begin
-      dir_a           <= dir_cnt;  // wait 1 cycle for correct map_mem_in to arrive from memory
+      dir_a <= dir_cnt;  // wait 1 cycle for correct map_mem_in to arrive from memory
       obstacles_valid <= ((dir_a == 2'b11) && (st == CHECK));  // equivalent to dir_a == 2'b11 (2 cycle delay).
     end
   end
@@ -163,14 +158,13 @@ module check_obst #(
   // Drive memory address (assumes 1-cycle synchronous read)
   // Default to 0 when out-of-bounds; only form address when valid.
   // NOTE: Multiplying by NUM_COL will synthesize a DSP multiplier, which may cause negative slack. In this case, we can change to shift-add arithmetic, and assume NUM_COL = 19 always.
-  always @* // using always @* since iverilog has issues with using UP,DOWN,LEFT,RIGHT in an always_comb
-  begin
-    map_addr = '0;  // default
+  always_comb begin
     case (dir_cnt)
-      2'b00: map_addr = edge_block[UP] ? '0 : ((blockpos_row - 1) * NUM_COL + blockpos_col);
-      2'b01: map_addr = edge_block[DOWN] ? '0 : ((blockpos_row + 1) * NUM_COL + blockpos_col);
-      2'b10: map_addr = edge_block[LEFT] ? '0 : (blockpos_row * NUM_COL + (blockpos_col - 1));
-      2'b11: map_addr = edge_block[RIGHT] ? '0 : (blockpos_row * NUM_COL + (blockpos_col + 1));
+      2'b00:   map_addr = edge_block[UP] ? '0 : ((blockpos_row - 1) * NUM_COL + blockpos_col);
+      2'b01:   map_addr = edge_block[DOWN] ? '0 : ((blockpos_row + 1) * NUM_COL + blockpos_col);
+      2'b10:   map_addr = edge_block[LEFT] ? '0 : (blockpos_row * NUM_COL + (blockpos_col - 1));
+      2'b11:   map_addr = edge_block[RIGHT] ? '0 : (blockpos_row * NUM_COL + (blockpos_col + 1));
+      default: map_addr = '0;
     endcase
   end
 
@@ -198,8 +192,6 @@ module check_obst #(
         RIGHT:
         obstacles[dir_a] <= eob[dir_a] & ( edge_block[dir_a] | (map_mem_in != 2'b00) | diagonal_down );
       endcase
-
-
       // Distance to obstacle: when blocked, clamp to remaining pixels in tile;
       // otherwise present a large value so the controller is unconstrained.
       obstacle_dist[dir_a] <= (edge_block[dir_a] | (map_mem_in != 2'b00)) ? dist_next[dir_a] : MAX_DIST;

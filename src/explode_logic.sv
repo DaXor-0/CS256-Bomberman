@@ -25,9 +25,9 @@ module explode_logic #(
 
 ) (
     input logic clk,
-    rst,
-    tick,
-    game_over,
+    input logic rst,
+    input logic tick,
+    input logic game_over,
     input logic trigger_explosion,
     input logic [ADDR_WIDTH-1:0] explosion_addr,
 
@@ -43,9 +43,9 @@ module explode_logic #(
   // Internal state
   logic [5:0] second_cnt;  // for EXPLODE state
 
-  // -----------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // -- FSM for the explosion logic, explosion_state --
-  // -----------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   bomb_explosion_state_t st, nst;
 
   // next state ff block
@@ -64,10 +64,10 @@ module explode_logic #(
     endcase
   end
 
-  // -----------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // -- Sequential elements (counters, registers) control per state
-  // -----------------------------------------------------------------
-  always_ff @(posedge clk)
+  // ---------------------------------------------------------------------------
+  always_ff @(posedge clk) begin
     if (rst || game_over) begin
       saved_explosion_addr <= 0;
       second_cnt <= 0;
@@ -75,22 +75,21 @@ module explode_logic #(
       case (st)
         EXP_STATE_IDLE: begin
           second_cnt <= 0;
-          if (trigger_explosion) begin
-            saved_explosion_addr <= explosion_addr;
-          end
+          if (trigger_explosion) saved_explosion_addr <= explosion_addr;
         end
         EXP_STATE_ACTIVE: begin
           if (tick) second_cnt <= second_cnt + 1;
         end
       endcase
     end
+  end
 
   assign explode_signal   = (st == EXP_STATE_ACTIVE);
   assign free_blks_signal = (st == EXP_STATE_FREE_BLOCKS);
 
-  // -----------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // Game Over condition: a player comes in contact with an explosion
-  // -----------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   logic [TILE_SHIFT:0] tile_offset_x;
   logic [TILE_SHIFT:0] tile_offset_y;
   logic [TILE_SHIFT:0] right_edge_offset;
@@ -101,18 +100,17 @@ module explode_logic #(
   assign bottom_edge_offset = tile_offset_y + (TILE_SHIFT + 1)'(SPRITE_H);
 
   // Player_x and Player_y in block (col, row)
-  logic [$clog2(NUM_ROW)-1:0] blockpos_row;
-  logic [$clog2(NUM_COL)-1:0] blockpos_col;
+  logic [$clog2(NUM_ROW)-1:0] blockpos_row, blockpos_row_2;
+  logic [$clog2(NUM_COL)-1:0] blockpos_col, blockpos_col_2;
   assign blockpos_row = (player_y >> TILE_SHIFT);  // truncates to ROW_W
   assign blockpos_col = (player_x >> TILE_SHIFT);  // truncates to COL_W
-  assign blockpos_row2 = (bottom_edge_offset > TILE_PX) ? blockpos_row + 1 : 0;  // Player between two blocks
-  assign blockpos_col2 = (right_edge_offset > TILE_PX) ? blockpos_col + 1 : 0;         // Player between two blocks
+  assign blockpos_row_2 = (bottom_edge_offset > TILE_PX) ? blockpos_row + 1 : 0;  // Player between two blocks
+  assign blockpos_col_2 = (right_edge_offset > TILE_PX) ? blockpos_col + 1 : 0;         // Player between two blocks
 
   // player blocks addresses
   logic [ADDR_WIDTH-1:0] blk1_addr, blk2_addr;
   assign blk1_addr = blockpos_row * NUM_COL + blockpos_col;
-  assign blk2_addr = blockpos_row2 * NUM_COL + blockpos_col2;
-
+  assign blk2_addr = blockpos_row_2 * NUM_COL + blockpos_col_2;
 
   // Function to check if the player's block is exploding
   function logic is_exploding(input logic [ADDR_WIDTH-1:0] blk_addr,

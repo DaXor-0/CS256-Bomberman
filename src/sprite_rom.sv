@@ -17,17 +17,16 @@ module sprite_rom #(
     parameter  int    NUM_FRAMES    = 9,
     parameter  int    DATA_WIDTH    = 12,
     parameter  string MEM_INIT_FILE = "player_1.mem",
-    localparam int    ADDR_WIDTH    = $clog2(SPRITE_W * SPRITE_H * NUM_FRAMES)
+    localparam int    ADDR_WIDTH    = $clog2(SPRITE_W * SPRITE_H * NUM_FRAMES),
+    localparam int    ROM_DEPTH     = SPRITE_W * SPRITE_H * NUM_FRAMES
 ) (
     input logic clk,
     input logic [ADDR_WIDTH-1:0] addr,
     output logic [DATA_WIDTH-1:0] data
 );
 
-  localparam int ROM_DEPTH = SPRITE_W * SPRITE_H * NUM_FRAMES;
-
   (* rom_style = "block" *)
-  logic [DATA_WIDTH-1:0] rom[0:ROM_DEPTH-1];
+  logic [DATA_WIDTH-1:0] rom[ROM_DEPTH];
 
   initial begin
     $readmemh(MEM_INIT_FILE, rom);

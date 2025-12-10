@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 
 /**
+* Module: drawcon_gameover
  * Draws the centered game-over overlay (960x512) using 64x64 border tiles.
  * Game-over art is 288x224 (matches the halved game_over.mem asset).
  * Produces a 1-cycle-latent color/active signal aligned to sprite_rom latency.
@@ -15,8 +16,8 @@ module drawcon_gameover #(
     parameter  int    SPRITE_H      = 224,
     parameter  string MEM_INIT_FILE = "border_tiles.mem",
     parameter  string SPRITE_MEM    = "game_over.mem",
-    localparam int    GO_TILES_X    = GO_W / GO_TILE,                 // 15
-    localparam int    GO_TILES_Y    = GO_H / GO_TILE,                 // 8
+    localparam int    GO_TILES_X    = GO_W / GO_TILE,
+    localparam int    GO_TILES_Y    = GO_H / GO_TILE,
     localparam int    GO_X          = (SCREEN_W - GO_W) / 2,
     localparam int    GO_Y          = (SCREEN_H - GO_H) / 2,
     localparam int    GO_ADDR_WIDTH = $clog2(GO_TILE * GO_TILE * 2),

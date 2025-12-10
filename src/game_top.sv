@@ -6,99 +6,105 @@ module game_top (
     input  logic       CLK100MHZ,
     input  logic       CPU_RESETN,
     input  logic       up,
-    down,
-    left,
-    right,  // movement control
+    input  logic       down,
+    input  logic       left,
+    input  logic       right,
     input  logic       place_bomb,
-    input  wire uart_rx,
-    output logic [4:0] LED, // debug LEDs
-    output logic game_over,
+    input  wire        uart_rx,
+    output logic [4:0] LED,         // debug LEDs
+    output logic       game_over,
     output logic [3:0] o_pix_r,
-    o_pix_g,
-    o_pix_b,
+    output logic [3:0] o_pix_g,
+    output logic [3:0] o_pix_b,
     output logic       o_hsync,
-    o_vsync,
-    output logic CA, CB, CC, CD, CE, CF, CG,
+    output logic       o_vsync,
+    output logic       CA,
+    output logic       CB,
+    output logic       CC,
+    output logic       CD,
+    output logic       CE,
+    output logic       CF,
+    output logic       CG,
     output logic [7:0] AN
 );
 
-
-  logic [MAP_ADDR_WIDTH-1:0] item_addr [0:2];
+  logic [MAP_ADDR_WIDTH-1:0] item_addr[0:2];
   logic [2:0] item_active;
-  logic [1:0] max_bombs_p1, bomb_range_p1, max_bombs_p2, bomb_range_p2; 
+  logic [1:0] max_bombs_p1, bomb_range_p1, max_bombs_p2, bomb_range_p2;
   logic [5:0] player_speed_p1, player_speed_p2;
-  logic [1:0] p1_bomb_level, p2_bomb_level, p1_speed_level, p2_speed_level, p1_range_level, p2_range_level; 
-  // -------------------------------------------------------- //
-  // --------------------- UART_RX -------------------- //
-  // -------------------------------------------------------- //
-  wire [7:0] rx_byte;
-  wire       rx_done;
+  logic [1:0] p1_bomb_level, p1_speed_level, p1_range_level;
+  logic [1:0] p2_bomb_level, p2_speed_level, p2_range_level;
 
-  // UART receiver at 115200 baud, 100 MHz clock
-    uart_rx #(
-        .CLKS_PER_BIT(868)   // 100_000_000 / 115200 ≈ 868
-    ) uart_rx_inst (
-        .clk   (CLK100MHZ),
-        .rx    (uart_rx),
-        .rx_dv (rx_done),
-        .rx_byte(rx_byte)
-    );
+  // ---------------------------------------------------------------------------
+  // UART Receiver for Player 2 Controls
+  // ---------------------------------------------------------------------------
+  wire  [7:0] rx_byte;
+  wire        rx_done;
+  logic [7:0] buttons = 8'd0;
 
-    // Latch last received byte
-    logic [7:0] buttons = 8'd0;
+  uart_rx #(  // UART receiver at 115200 baud, 100 MHz clock
+      .CLKS_PER_BIT(868)  // 100_000_000 / 115200 ≈ 868
+  ) uart_rx_inst (
+      .clk    (CLK100MHZ),
+      .rx     (uart_rx),
+      .rx_dv  (rx_done),
+      .rx_byte(rx_byte)
+  );
 
-    always_ff @(posedge CLK100MHZ) begin
-        if (rx_done) begin
-            buttons <= rx_byte;
-        end
+  always_ff @(posedge CLK100MHZ) begin
+    if (rx_done) begin
+      buttons <= rx_byte;
     end
+  end
 
-    // Map bits to LEDs: UP, DOWN, LEFT, RIGHT, ACTION
-    assign LED[0] = buttons[0];   // UP
-    assign LED[1] = buttons[1];   // DOWN
-    assign LED[2] = buttons[2];   // LEFT
-    assign LED[3] = buttons[3];   // RIGHT
-    assign LED[4] = buttons[4];   // ACTION (B button)
+  // Map bits to LEDs: UP, DOWN, LEFT, RIGHT, ACTION
+  assign LED[0] = buttons[0];  // UP
+  assign LED[1] = buttons[1];  // DOWN
+  assign LED[2] = buttons[2];  // LEFT
+  assign LED[3] = buttons[3];  // RIGHT
+  assign LED[4] = buttons[4];  // ACTION (B button)
 
-  wire pixclk, rst;
-  assign rst = ~CPU_RESETN;  // the reset button is reversed (lost too much time on that :( )
-
+  logic pixclk, rst, tick;
+  assign rst = ~CPU_RESETN;  // the reset button is active low
   clk_wiz_0 pixclk_i (  // Set pixclk to 83.456MHz
       .clk_in1 (CLK100MHZ),
       .clk_out1(pixclk)
   );
+  always_ff @(posedge pixclk) tick <= (curr_x == 0 && curr_y == 0);
 
-// -------------------------------------------------------- //
-// -------------------- 7-SEG DISPLAY -------------------- //
-// -------------------------------------------------------- //
-  logic [3:0] dig0;
+  // ---------------------------------------------------------------------------
+  // 7 Segment Display for Bomb Countdown
+  // ---------------------------------------------------------------------------
+  logic [3:0] dig0, dig4;
+  logic [$clog2(BOMB_TIME)-1:0] countdown, countdown_2;
+
+  assign dig0 = countdown && countdown_signal;
+  assign dig4 = countdown_2 && countdown_signal_2;
+
   multidigit multidigit_i (
-      .clk   (CLK100MHZ),
-      .rst   (rst),
-      .dig0  (dig0),
-      .dig1  (4'd0),
-      .dig2  (4'd0),
-      .dig3  (4'd0),
-      .dig4  (dig4),
-      .dig5  (4'd0),
-      .dig6  (4'd0),
-      .dig7  (4'd0),
-      .a     (CA),
-      .b     (CB),
-      .c     (CC),
-      .d     (CD),
-      .e     (CE),
-      .f     (CF),
-      .g     (CG),
-      .an    (AN)
+      .clk (CLK100MHZ),
+      .rst (rst),
+      .dig0(dig0),
+      .dig1(4'd0),
+      .dig2(4'd0),
+      .dig3(4'd0),
+      .dig4(dig4),
+      .dig5(4'd0),
+      .dig6(4'd0),
+      .dig7(4'd0),
+      .a   (CA),
+      .b   (CB),
+      .c   (CC),
+      .d   (CD),
+      .e   (CE),
+      .f   (CF),
+      .g   (CG),
+      .an  (AN)
   );
 
-  logic [$clog2(BOMB_TIME)-1:0] countdown, countdown_2;
-  assign dig0 = countdown && countdown_signal; // display the bomb countdown on the 7-seg
-  assign dig4 = countdown_2 && countdown_signal_2; // display the bomb countdown on the 7-seg
-// -------------------------------------------------------- //
-// ----------------------- VGA MODULE --------------------- //
-// -------------------------------------------------------- //
+  // ---------------------------------------------------------------------------
+  // VGA Output Module
+  // ---------------------------------------------------------------------------
   // Get the VGA timing signals
   logic [10:0] curr_x;
   logic [ 9:0] curr_y;
@@ -135,10 +141,6 @@ module game_top (
   logic [7:0] read_req, read_granted;
   logic [MAP_MEM_WIDTH-1:0] map_tile_state_obst, map_tile_state_drawcon;
   logic [5:0] player_speed, player_2_speed;
-
-  // one-cycle pulse, synchronous to pixclk
-  logic tick;
-  always_ff @(posedge pixclk) tick <= (curr_x == 0 && curr_y == 0);
 
   // Player 1 Movement
   dir_t move_dir;
@@ -214,11 +216,11 @@ module game_top (
   // TBD Functionalities
   assign player_2_speed = 4;
 
-  // -------------------------------------------------------- //
-  // ----------------- BOMBS AND EXPLOSIONS ----------------- //
-  // -------------------------------------------------------- // 
+  // ---------------------------------------------------------------------------
+  // Player 1 Bomb Logic
+  // ---------------------------------------------------------------------------
   logic [MAP_ADDR_WIDTH-1:0] wr_addr, wr_addr_bomb, wr_addr_free;
-  logic [MAP_ADDR_WIDTH-1:0] saved_explosion_addr [0:2], saved_explosion_addr_2 [0:2];
+  logic [MAP_ADDR_WIDTH-1:0] saved_explosion_addr[0:2], saved_explosion_addr_2[0:2];
   logic [MAP_ADDR_WIDTH-1:0] wr_addr_bomb_2, wr_addr_free_2;
   logic [MAP_MEM_WIDTH-1:0] write_data, write_data_bomb, write_data_free, write_data_free_2;
   logic [MAP_MEM_WIDTH-1:0] write_data_bomb_2;
@@ -240,7 +242,7 @@ module game_top (
       .game_over(game_over),
       .player_x(map_player_1_x),
       .player_y(map_player_1_y),
-      .place_bomb(place_bomb), // ACTION button
+      .place_bomb(place_bomb),  // ACTION button
       .write_addr(wr_addr_bomb),
       .write_data(write_data_bomb),
       .write_en(we_bomb),
@@ -261,7 +263,7 @@ module game_top (
       .player_y(map_player_1_y),
       .saved_explosion_addr(saved_explosion_addr[0]),
       .explode_signal(explode_signal),
-      .game_over_fake(game_over_fake), // will delete later 
+      .game_over_fake(game_over_fake),  // will delete later 
       .free_blks_signal(free_blks_signal)
   );
 
@@ -269,7 +271,6 @@ module game_top (
   free_blocks free_blocks_i (
       .clk(pixclk),
       .rst(rst),
-      .tick(tick),
       .game_over(game_over),
       .free_blks_signal(free_blks_signal),
       .explosion_addr(saved_explosion_addr[0]),
@@ -282,9 +283,9 @@ module game_top (
       .write_en(we_free)
   );
 
-  // ------------------------------------------------- //
-  // ----------- Player 2 Bomb Logic ----------- //
-  // ------------------------------------------------- //
+  // ---------------------------------------------------------------------------
+  // Player 2 Bomb Logic
+  // ---------------------------------------------------------------------------
 
   bomb_logic bomb_logic_2 (
       .clk(pixclk),
@@ -293,7 +294,7 @@ module game_top (
       .game_over(game_over),
       .player_x(map_player_2_x),
       .player_y(map_player_2_y),
-      .place_bomb(buttons[4]), // ACTION button
+      .place_bomb(buttons[4]),  // ACTION button
       .write_addr(wr_addr_bomb_2),
       .write_data(write_data_bomb_2),
       .write_en(we_bomb_2),
@@ -322,7 +323,6 @@ module game_top (
   free_blocks free_blocks_2 (
       .clk(pixclk),
       .rst(rst),
-      .tick(tick),
       .game_over(game_over),
       .free_blks_signal(free_blks_signal_2),
       .explosion_addr(saved_explosion_addr_2[0]),
@@ -335,23 +335,23 @@ module game_top (
       .write_en(we_free_2)
   );
 
-  // --------------------------------- //
-  // -------- Power-up Logic --------- //
-  // --------------------------------- //
- 
+  // ---------------------------------------------------------------------------
+  // Power Up Logic
+  // ---------------------------------------------------------------------------
+
   power_up power_up_i (
       .clk(pixclk),
       .rst(rst),
       .tick(tick),
       .game_over(game_over),
-      .we_in(we), // on free_blk, generate the exit with a 5% probability
+      .we_in(we),  // on free_blk, generate the exit with a 5% probability
       .write_addr_in(wr_addr),
       .write_data_in(write_data),
       .player_1_x(map_player_1_x),  // map_player_1_x
       .player_1_y(map_player_1_y),
       .player_2_x(map_player_2_x),  // map_player_2_x
       .player_2_y(map_player_2_y),
-      .probability(32'h33333333), // ~20% probability
+      .probability(32'h33333333),  // ~20% probability
       .item_addr(item_addr),
       .item_active(item_active),
       .max_bombs_p1(max_bombs_p1),
@@ -368,26 +368,24 @@ module game_top (
       .p2_range_level(p2_range_level)
   );
 
-//  assign last_blk = 1'b0; // until implemented, disable
-
-  // ------------------------------------------------- //
-  // ----------- GAME OVER LOGIC ----------- //
-  // ------------------------------------------------- //
+  // ---------------------------------------------------------------------------
+  // Game Over Logic
+  // ---------------------------------------------------------------------------
   game_over game_over_i (
-    .clk(pixclk),
-    .rst(rst),
-    .explode_signal_1({2'b00, explode_signal}),
-    .explosion_addr_1({saved_explosion_addr[0], '0, '0}),
-    .explode_signal_2({2'b00, explode_signal_2}),
-    .explosion_addr_2({saved_explosion_addr_2[0], '0, '0}),
-    .exp_range_1(bomb_range),
-    .exp_range_2(bomb_range),
-    .player_1_x(map_player_1_x),
-    .player_1_y(map_player_1_y),
-    .player_2_x(map_player_2_x),
-    .player_2_y(map_player_2_y),
-    .start_over_button(down),
-    .game_over(game_over)
+      .clk(pixclk),
+      .rst(rst),
+      .explode_signal_1({2'b00, explode_signal}),
+      .explosion_addr_1({saved_explosion_addr[0], '0, '0}),
+      .explode_signal_2({2'b00, explode_signal_2}),
+      .explosion_addr_2({saved_explosion_addr_2[0], '0, '0}),
+      .exp_range_1(bomb_range),
+      .exp_range_2(bomb_range),
+      .player_1_x(map_player_1_x),
+      .player_1_y(map_player_1_y),
+      .player_2_x(map_player_2_x),
+      .player_2_y(map_player_2_y),
+      .start_over_button(down),
+      .game_over(game_over)
   );
 
   // Map memory read controller (arbiter)

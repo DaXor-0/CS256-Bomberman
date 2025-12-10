@@ -1,4 +1,4 @@
-`timescale 1ns/1ps
+`timescale 1ns / 1ps
 
 /**
 * Module: vga_out
@@ -29,30 +29,36 @@
 * - o_pix_r, o_pix_g, o_pix_b: 4-bit per channel VGA color output
 * */
 module vga_out #(
-    parameter int H_TOTAL         = 1680,
-    parameter int V_TOTAL         = 828,
-    parameter int H_SYNC_END      = 135,
-    parameter int V_SYNC_END      = 2,
-    parameter int H_ACTIVE_START  = 336,   // first visible pixel column
-    parameter int H_ACTIVE_END    = 1615,  // last  visible pixel column
-    parameter int V_ACTIVE_START  = 27,    // first visible row
-    parameter int V_ACTIVE_END    = 826,   // last  visible row
+    parameter int         H_TOTAL        = 1680,
+    parameter int         V_TOTAL        = 828,
+    parameter int         H_SYNC_END     = 135,
+    parameter int         V_SYNC_END     = 2,
+    parameter int         H_ACTIVE_START = 336,   // first visible pixel column
+    parameter int         H_ACTIVE_END   = 1615,  // last  visible pixel column
+    parameter int         V_ACTIVE_START = 27,    // first visible row
+    parameter int         V_ACTIVE_END   = 826,   // last  visible row
     // Background color when not in active area
-    parameter logic [3:0] BG_R = 4'h0,
-    parameter logic [3:0] BG_G = 4'h0,
-    parameter logic [3:0] BG_B = 4'h0
-)(
-    input  logic        i_clk, i_rst,
-    input  logic [3:0]  i_r, i_g, i_b,
+    parameter logic [3:0] BG_R           = 4'h0,
+    parameter logic [3:0] BG_G           = 4'h0,
+    parameter logic [3:0] BG_B           = 4'h0
+) (
+    input logic       i_clk,
+    input logic       i_rst,
+    input logic [3:0] i_r,
+    input logic [3:0] i_g,
+    input logic [3:0] i_b,
 
-    output logic [3:0]  o_pix_r, o_pix_g, o_pix_b, // VGA color output
-    output logic        o_hsync, o_vsync,      // horizontal and vertical sync
-    output logic [10:0] o_curr_x,              // 0 .. (WIDTH-1)
-    output logic [9:0]  o_curr_y               // 0 .. (HEIGHT-1)
+    output logic [ 3:0] o_pix_r,
+    output logic [ 3:0] o_pix_g,
+    output logic [ 3:0] o_pix_b,
+    output logic        o_hsync,
+    output logic        o_vsync,
+    output logic [10:0] o_curr_x,  // 0 .. (WIDTH-1)
+    output logic [ 9:0] o_curr_y   // 0 .. (HEIGHT-1)
 );
 
   logic [10:0] hcount;
-  logic [9:0]  vcount;
+  logic [9:0] vcount;
   logic active_screen;
 
   always_ff @(posedge i_clk) begin
@@ -60,10 +66,10 @@ module vga_out #(
       hcount <= '0;
       vcount <= '0;
     end else begin
-      if (hcount == H_TOTAL-1) begin
+      if (hcount == H_TOTAL - 1) begin
         hcount <= '0;
-        if (vcount == V_TOTAL-1) vcount <= '0;
-        else                     vcount <= vcount + 1;
+        if (vcount == V_TOTAL - 1) vcount <= '0;
+        else vcount <= vcount + 1;
       end else begin
         hcount <= hcount + 1;
       end
@@ -77,10 +83,10 @@ module vga_out #(
                          (vcount >= V_ACTIVE_START && vcount <= V_ACTIVE_END);
 
   always_comb begin
-    o_curr_x <= hcount - H_ACTIVE_START;
-    o_curr_y <= vcount - V_ACTIVE_START;
+    o_curr_x = hcount - H_ACTIVE_START;
+    o_curr_y = vcount - V_ACTIVE_START;
   end
 
-  assign { o_pix_r, o_pix_g, o_pix_b } = active_screen ? { i_r, i_g, i_b } : { BG_R, BG_G, BG_B };
+  assign {o_pix_r, o_pix_g, o_pix_b} = active_screen ? {i_r, i_g, i_b} : {BG_R, BG_G, BG_B};
 
 endmodule

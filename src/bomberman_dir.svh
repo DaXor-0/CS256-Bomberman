@@ -10,7 +10,7 @@ localparam int RIGHT = 3;
 localparam int BOMB_TIME = 3;
 
 // Percentages
-localparam int ten_pct = 32'h1999999A; // 10%
+localparam int ten_pct = 32'h1999999A;  // 10%
 
 typedef enum logic [3:0] {
   DIR_NONE  = 4'b0000,
@@ -59,5 +59,38 @@ typedef enum logic {
   GAME_ACTIVE,
   GAME_OVER
 } game_over_state_t;
+
+
+typedef enum logic {
+  WAIT,
+  CHECK
+} check_state_t;
+
+typedef enum logic [6:0] {
+  SEG_0   = 7'b0000001,
+  SEG_1   = 7'b1001111,
+  SEG_2   = 7'b0010010,
+  SEG_3   = 7'b0000110,
+  SEG_4   = 7'b1001100,
+  SEG_5   = 7'b0100100,
+  SEG_6   = 7'b0100000,
+  SEG_7   = 7'b0001111,
+  SEG_8   = 7'b0000000,
+  SEG_9   = 7'b0000100,
+  SEG_A   = 7'b0001000,
+  SEG_B   = 7'b1100000,
+  SEG_C   = 7'b0110001,
+  SEG_D   = 7'b1000010,
+  SEG_E   = 7'b0110000,
+  SEG_F   = 7'b0111000,
+  SEG_OFF = 7'b1111111
+} seven_seg_t;
+
+
+typedef enum int {
+  HUD_ITEM_BOMB  = 0,
+  HUD_ITEM_RANGE = 1,
+  HUD_ITEM_SPEED = 2
+} hud_item_t;
 
 `endif
