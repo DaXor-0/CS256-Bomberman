@@ -4,6 +4,6 @@ CS256-Bomberman*
 *.vcd
 *.gtkw
 obj_dir
-
-# Local stubs for IP (kept out of commits)
-src/clk_wiz_0.v
+.DS_Store
+.rules.verible_lint
+.svlint.toml
