@@ -12,8 +12,8 @@
  * - MEM_INIT_FILE: Memory initialization file for sprite ROM.
  */
 module drawcon_player_sprite #(
-    parameter  int    SPRITE_W            = 32,
-    parameter  int    SPRITE_H            = 48,
+    parameter  int    SPRITE_W            = SPRITE_W_PX_DEF,
+    parameter  int    SPRITE_H            = SPRITE_H_PX_DEF,
     parameter  int    WALK_FRAMES_PER_DIR = 3,
     parameter  int    WALK_FRAMES_TOTAL   = 9,
     parameter  string MEM_INIT_FILE       = "player_1.mem",

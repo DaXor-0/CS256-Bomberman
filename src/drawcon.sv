@@ -20,18 +20,18 @@
  *  - BG_*          : Background color (4-bit each)
  */
 module drawcon #(
-    parameter             MAP_MEM_WIDTH = 2,     // this is $clog2(number of map states).
-    parameter             NUM_ROW       = 11,
-    parameter             NUM_COL       = 19,
+    parameter             MAP_MEM_WIDTH = MAP_MEM_WIDTH_DEF,  // this is $clog2(number of map states).
+    parameter             NUM_ROW       = MAP_NUM_ROW_DEF,
+    parameter             NUM_COL       = MAP_NUM_COL_DEF,
     parameter             SCREEN_W      = 1280,
     parameter             SCREEN_H      = 800,
     parameter             HUD_H         = 32,    // border thickness (left/right)
     parameter             HUD_TOP       = 96,
     parameter             HUD_BOT       = 0,
-    parameter             BLK_W         = 64,    // should be power of 2
-    parameter             BLK_H         = 64,    // should be power of 2
-    parameter             SPRITE_W      = 32,
-    parameter             SPRITE_H      = 48,
+    parameter             BLK_W         = MAP_TILE_PX_DEF,    // should be power of 2
+    parameter             BLK_H         = MAP_TILE_PX_DEF,    // should be power of 2
+    parameter             SPRITE_W      = SPRITE_W_PX_DEF,
+    parameter             SPRITE_H      = SPRITE_H_PX_DEF,
     parameter logic [3:0] HUD_R         = 4'h0,
                           HUD_G         = 4'h0,
                           HUD_B         = 4'h0,

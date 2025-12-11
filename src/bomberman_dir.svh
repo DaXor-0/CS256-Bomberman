@@ -9,6 +9,14 @@ localparam int LEFT = 2;
 localparam int RIGHT = 3;
 localparam int BOMB_TIME = 3;
 
+// Global map/sprite geometry defaults (single source of truth)
+localparam int MAP_NUM_ROW_DEF = 11;
+localparam int MAP_NUM_COL_DEF = 19;
+localparam int MAP_TILE_PX_DEF = 64;
+localparam int MAP_MEM_WIDTH_DEF = 2;
+localparam int SPRITE_W_PX_DEF = 32;
+localparam int SPRITE_H_PX_DEF = 48;
+
 // Percentages
 localparam int ten_pct = 32'h1999999A;  // 10%
 
@@ -65,6 +73,12 @@ typedef enum logic {
   WAIT,
   CHECK
 } check_state_t;
+
+
+typedef enum logic {
+  READ_IDLE,
+  READ_BUSY
+} read_state_t;
 
 typedef enum logic [6:0] {
   SEG_0   = 7'b0000001,

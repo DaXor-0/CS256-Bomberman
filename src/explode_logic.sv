@@ -10,9 +10,9 @@
 
 module explode_logic #(
     // ---- Map and tile geometry ----
-    parameter int NUM_ROW       = 11,
-    parameter int NUM_COL       = 19,
-    parameter int TILE_PX       = 64,
+    parameter int NUM_ROW       = MAP_NUM_ROW_DEF,
+    parameter int NUM_COL       = MAP_NUM_COL_DEF,
+    parameter int TILE_PX       = MAP_TILE_PX_DEF,
     // ---- Bomb Parameters ----
     parameter int EXPLODE_TIME  = 1,
 

@@ -76,6 +76,7 @@ module game_top (
   // 7 Segment Display for Bomb Countdown
   // ---------------------------------------------------------------------------
   logic [3:0] dig0, dig4;
+  // Bomb timer width follows global BOMB_TIME so it stays in sync with bomb_logic.
   logic [$clog2(BOMB_TIME)-1:0] countdown, countdown_2;
   logic countdown_signal, countdown_signal_2;
 
@@ -128,11 +129,11 @@ module game_top (
 
   localparam int SCREEN_W = 1280;
   localparam int SCREEN_H = 800;
-  localparam int MAP_NUM_ROW = 11;
-  localparam int MAP_NUM_COL = 19;
+  localparam int MAP_NUM_ROW = MAP_NUM_ROW_DEF;
+  localparam int MAP_NUM_COL = MAP_NUM_COL_DEF;
   localparam int MAP_DEPTH = MAP_NUM_ROW * MAP_NUM_COL;
   localparam int MAP_ADDR_WIDTH = $clog2(MAP_DEPTH);
-  localparam int MAP_MEM_WIDTH = 2;
+  localparam int MAP_MEM_WIDTH = MAP_MEM_WIDTH_DEF;
 
   // Logic for positioning rectangle control.
   logic [10:0] player_1_x, map_player_1_x, player_2_x, map_player_2_x;

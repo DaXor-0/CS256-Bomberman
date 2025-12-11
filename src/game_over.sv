@@ -8,12 +8,12 @@
 **/
 module game_over #(
     // ---- Map and tile geometry ----
-    parameter int NUM_ROW       = 11,
-    parameter int NUM_COL       = 19,
-    parameter int TILE_PX       = 64,
-    parameter int MAP_MEM_WIDTH = 2,
-    parameter int SPRITE_W      = 32,
-    parameter int SPRITE_H      = 48,
+    parameter int NUM_ROW       = MAP_NUM_ROW_DEF,
+    parameter int NUM_COL       = MAP_NUM_COL_DEF,
+    parameter int TILE_PX       = MAP_TILE_PX_DEF,
+    parameter int MAP_MEM_WIDTH = MAP_MEM_WIDTH_DEF,
+    parameter int SPRITE_W      = SPRITE_W_PX_DEF,
+    parameter int SPRITE_H      = SPRITE_H_PX_DEF,
     // ---- Bomb Parameters ----
     parameter int EXPLODE_TIME  = 1,
 
@@ -118,4 +118,3 @@ module game_over #(
   );
 
 endmodule
-

@@ -19,9 +19,9 @@
 * bomb            = 2'd3
 */
 module map_mem #(
-    parameter int NUM_ROW = 11,
-    parameter int NUM_COL = 19,
-    parameter int DATA_WIDTH = 2,
+    parameter int NUM_ROW = MAP_NUM_ROW_DEF,
+    parameter int NUM_COL = MAP_NUM_COL_DEF,
+    parameter int DATA_WIDTH = MAP_MEM_WIDTH_DEF,
     parameter string MEM_INIT_FILE = "maps/basic_map.mem",
     localparam int DEPTH = NUM_ROW * NUM_COL,
     localparam int ADDR_WIDTH = $clog2(DEPTH)

@@ -9,7 +9,7 @@ module tb_bomb_logic;
   parameter int MAP_MEM_WIDTH = 2;
   parameter int SPRITE_W = 32;
   parameter int SPRITE_H = 64;
-  parameter int BOMB_TIME = 3;
+  parameter int BOMB_TIME_CYCLES = 3;
 
   localparam int DEPTH = NUM_ROW * NUM_COL;
   localparam int ADDR_WIDTH = $clog2(DEPTH);
@@ -28,7 +28,7 @@ module tb_bomb_logic;
   wire [MAP_MEM_WIDTH-1:0] write_data;
   wire write_en;
   wire trigger_explosion;
-  wire [$clog2(BOMB_TIME)-1:0] countdown;
+  wire [$clog2(BOMB_TIME_CYCLES)-1:0] countdown;
 
   // CLOCK GENERATION
   initial clk = 0;
@@ -55,7 +55,7 @@ module tb_bomb_logic;
     .MAP_MEM_WIDTH(MAP_MEM_WIDTH),
     .SPRITE_W(SPRITE_W),
     .SPRITE_H(SPRITE_H),
-    .BOMB_TIME(BOMB_TIME)
+    .BOMB_TIME_CYCLES(BOMB_TIME_CYCLES)
   ) dut (
     .clk(clk),
     .rst(rst),

@@ -8,12 +8,12 @@
 * Updated: Added obstacles_valid signal for 4-cycle round-robin completion
 * */
 module check_obst #(
-    parameter int NUM_ROW = 11,
-    parameter int NUM_COL = 19,
-    parameter int TILE_PX = 64,
-    parameter int SPRITE_W = 32,
-    parameter int SPRITE_H = 48,
-    parameter int MAP_MEM_WIDTH = 2,
+    parameter int NUM_ROW = MAP_NUM_ROW_DEF,
+    parameter int NUM_COL = MAP_NUM_COL_DEF,
+    parameter int TILE_PX = MAP_TILE_PX_DEF,
+    parameter int SPRITE_W = SPRITE_W_PX_DEF,
+    parameter int SPRITE_H = SPRITE_H_PX_DEF,
+    parameter int MAP_MEM_WIDTH = MAP_MEM_WIDTH_DEF,
 
     localparam int TILE_SHIFT = $clog2(TILE_PX),
     localparam int DEPTH      = NUM_ROW * NUM_COL,
