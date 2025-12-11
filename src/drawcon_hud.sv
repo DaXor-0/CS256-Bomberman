@@ -3,21 +3,31 @@
 `include "bomberman_dir.svh"
 
 /**
-* Module: drawcon_hud
-* Description: module that renders the HUD elements (player icons, power-up icons, track icons)
-* based on the current draw coordinates and player power-up levels.
-*
-* HUD layout:
-* - Player 1 icon at (HUD_P1_ICON_X, HUD_P1_ICON_Y)
-* - Player 2 icon at (HUD_P2_ICON_X, HUD_P2_ICON_Y)
-* - Bomb icon next to player icon
-* - Range icon below bomb icon
-* - Speed icon below range icon
-* - Track icons to the right of power-up icons, up to 3 slots each
-* - Player 2 icons mirrored on the right side of the screen
-* - Each icon has a fixed size and position defined by parameters
-* - The module outputs active flags and RGB values for each HUD element based on draw_x and draw_y
-*/
+ * Module: drawcon_hud
+ * Description: Generates HUD hit flags and RGB samples for player icons, power-up icons and
+ *              upgrade track pips using the current draw coordinate and power-up levels.
+ *
+ * Responsibilities:
+ *  - Assert *_q when draw_x/draw_y falls inside a HUD element bounding box.
+ *  - Drive sprite_rom addresses for each element and mux player 1/2 reads for shared icons.
+ *  - Render up to three track pips per upgrade; inputs above 3 are saturated.
+ *
+ * Parameters (geometry/layout):
+ *  - SCREEN_W/H           : Screen size and HUD strip dimensions.
+ *  - HUD_*                : HUD thickness/offsets; icon origins are absolute screen coordinates.
+ *  - *_ICON_*             : Sprite dimensions for player icons, power-up icons and track pips.
+ *  - HUD_TRACK_TYPES      : Frames per track sprite (owned/unowned frame offset).
+ *
+ * Ports:
+ *  - draw_x/draw_y        : Current pixel from the draw pipeline.
+ *  - p?_bomb/range/speed_level : Upgrade counts 0..3 per player (clamped internally).
+ *  - *_q / track_hit_q    : High when the previous cycle's draw_x/draw_y was inside the region.
+ *  - *_rgb_q              : 12-bit RGB from sprite ROM for the last asserted element.
+ *
+ * Notes:
+ *  - Layout mirrors P1 icons to the right for P2; track pips sit to the right of each item row.
+ *  - sprite_rom is synchronous, so outputs are registered to align with the drawcon pipeline.
+ */
 module drawcon_hud #(
     parameter int SCREEN_W = 1280,
     parameter int SCREEN_H = 800,
@@ -148,6 +158,7 @@ module drawcon_hud #(
   logic [11:0] hud_track_rgb;
 
   // HUD hit helpers
+  // Calculates whether draw_x/draw_y is inside a HUD element; also emits local coords for ROM addr.
   `define HUD_HIT(name, X0, Y0, W, H)                    \
   name = (draw_x >= (X0)) && (draw_x < (X0) + (W)) &&  \
          (draw_y >= (Y0)) && (draw_y < (Y0) + (H));    \
@@ -197,6 +208,7 @@ module drawcon_hud #(
       if (level_p2 > 3) level_p2 = 3;
 
       for (int slot = 0; slot < 3; slot++) begin
+        // slot < level_* selects the "owned" frame (offset into sprite_rom)
         hud_p1_track_offset[item][slot] = (slot < level_p1) ? HUD_TRACK_FRAME_OFFSET : '0;
         hud_p2_track_offset[item][slot] = (slot < level_p2) ? HUD_TRACK_FRAME_OFFSET : '0;
       end
@@ -222,6 +234,7 @@ module drawcon_hud #(
 
         if (hud_p1_track_active[item][slot]) begin
           hud_p1_track_hit      = 1'b1;
+          // Only one icon can be active per pixel; last match wins but is deterministic.
           hud_p1_track_addr_mux = hud_p1_track_addr[item][slot];
         end
       end
@@ -242,6 +255,7 @@ module drawcon_hud #(
 
         if (hud_p2_track_active[item][slot]) begin
           hud_p2_track_hit      = 1'b1;
+          // Mirrors P1 logic for right-side HUD.
           hud_p2_track_addr_mux = hud_p2_track_addr[item][slot];
         end
       end
@@ -340,6 +354,7 @@ module drawcon_hud #(
   );
 
   always_ff @(posedge clk) begin
+    // Register hit flags and sampled RGB to align with synchronous sprite_rom outputs.
     hud_p1_icon_q_int      <= hud_p1_icon;
     hud_p2_icon_q_int      <= hud_p2_icon;
     hud_bomb_p1_q_int      <= hud_bomb_p1;
