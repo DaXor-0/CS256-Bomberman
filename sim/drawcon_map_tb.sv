@@ -1,96 +1,106 @@
 `timescale 1ns / 1ps
 
-module drawcon_map_tb ();
-  logic clk, rst;
-  logic [ 3:0] map_mem_in;
-  logic [10:0] blkpos_x;
-  logic [ 9:0] blkpos_y;
-  logic [10:0] draw_x;
-  logic [ 9:0] draw_y;
-  logic [3:0] i_r, i_g, i_b;
-  logic [3:0] o_r, o_g, o_b;
-  logic obstacle_right, obstacle_left, obstacle_down, obstacle_up;
-  logic [7:0] blk_addr;
+`include "bomberman_dir.svh"
 
-  drawcon uut (
+module drawcon_map_tb;
+  localparam CLK_PERIOD = 10;
+  localparam int NUM_ROW = MAP_NUM_ROW_DEF;
+  localparam int NUM_COL = MAP_NUM_COL_DEF;
+  localparam int DEPTH   = NUM_ROW * NUM_COL;
+  localparam int ADDR_WIDTH = $clog2(DEPTH);
+
+  logic clk = 0;
+  logic rst = 1;
+  logic tick;
+  logic game_over = 0;
+  logic game_over_screen = 0;
+  logic [MAP_MEM_WIDTH_DEF-1:0] map_tile_state;
+  logic [10:0] draw_x;
+  logic [9:0]  draw_y;
+  logic [3:0] o_r, o_g, o_b;
+  logic [10:0] player_1_x = 11'd64, player_2_x = 11'd1088;
+  logic [9:0]  player_1_y = 10'd64, player_2_y = 10'd576;
+  dir_t player_1_dir = DIR_DOWN, player_2_dir = DIR_UP;
+  logic explode_signal = 0, explode_signal_2 = 0;
+  logic [ADDR_WIDTH-1:0] explosion_addr = '0, explosion_addr_2 = '0;
+  logic [ADDR_WIDTH-1:0] item_addr[0:2];
+  logic [2:0] item_active = '0;
+  logic [1:0] p1_bomb_level = '0, p1_range_level = '0, p1_speed_level = '0;
+  logic [1:0] p2_bomb_level = '0, p2_range_level = '0, p2_speed_level = '0;
+  logic [ADDR_WIDTH-1:0] map_addr;
+  logic [MAP_MEM_WIDTH_DEF-1:0] map_mem [0:DEPTH-1];
+
+  // DUT
+  drawcon dut (
       .clk(clk),
       .rst(rst),
-      .map_mem_in(map_mem_in),
-      .blkpos_x(blkpos_x),
-      .blkpos_y(blkpos_y),
+      .tick(tick),
+      .game_over(game_over),
+      .map_tile_state(map_tile_state),
       .draw_x(draw_x),
       .draw_y(draw_y),
-      .i_r(i_r),
-      .i_g(i_g),
-      .i_b(i_b),
+      .game_over_screen(game_over_screen),
+      .player_1_x(player_1_x),
+      .player_1_y(player_1_y),
+      .player_2_x(player_2_x),
+      .player_2_y(player_2_y),
+      .player_1_dir(player_1_dir),
+      .player_2_dir(player_2_dir),
+      .explode_signal(explode_signal),
+      .explode_signal_2(explode_signal_2),
+      .explosion_addr(explosion_addr),
+      .explosion_addr_2(explosion_addr_2),
+      .p1_bomb_level(p1_bomb_level),
+      .p1_range_level(p1_range_level),
+      .p1_speed_level(p1_speed_level),
+      .p2_bomb_level(p2_bomb_level),
+      .p2_range_level(p2_range_level),
+      .p2_speed_level(p2_speed_level),
+      .item_active(item_active),
+      .item_addr(item_addr),
       .o_r(o_r),
       .o_g(o_g),
       .o_b(o_b),
-      .obstacle_left(obstacle_left),
-      .obstacle_right(obstacle_right),
-      .obstacle_up(obstacle_up),
-      .obstacle_down(obstacle_down),
-      .blk_addr(blk_addr)
+      .map_addr(map_addr)
   );
 
-  assign {i_r, i_g, i_b} = 12'hF2F;
-
-  // Dump waveform for debugging
-  initial begin
-    $dumpfile("drawcon_map_tb.vcd");
-    $dumpvars(0, drawcon_map_tb);
-  end
-
-  // counters for draw_x and draw_y
-  always_ff @(posedge clk)
+  // Simple tick pulse (once per 1280*800 pixels)
+  always_ff @(posedge clk) begin
     if (rst) begin
       draw_x <= 0;
       draw_y <= 0;
-    end else if (draw_x == 1280) begin
-      draw_x <= 0;
-      if (draw_y == 800) draw_y <= 0;
-      else draw_y <= draw_y + 1;
-    end else draw_x <= draw_x + 1;
-
-  always #5 clk = ~clk;
-
-  initial begin
-    clk = 0;
-    rst = 1;
-    #15 rst = 0;
-    // ends at end of screen
-    #10240000 $finish;
+    end else begin
+      if (draw_x == 1279) begin
+        draw_x <= 0;
+        if (draw_y == 799) draw_y <= 0;
+        else draw_y <= draw_y + 1;
+      end else draw_x <= draw_x + 1;
+    end
   end
 
-  // Test memory with random states
-  logic [3:0] map[0:208];
-  initial $readmemh("../maps/basic_map.mem", map);
+  assign tick = (draw_x == 0 && draw_y == 0);
 
-  assign map_mem_in = map[blk_addr];
+  // Map BRAM model: synchronous 1-cycle
+  always_ff @(posedge clk) begin
+    map_tile_state <= map_mem[map_addr];
+  end
 
-  //   // test counter
-  //   logic [7:0] test_cnt;
-  //   always_ff @(posedge clk)
-  //   if (rst) test_cnt <= 0;
-  //   else if (draw_x > 32 && draw_y > 96)
-  //   begin 
+  initial begin
+    $dumpfile("drawcon_map_tb.vcd");
+    $dumpvars(0, drawcon_map_tb);
+    $readmemh("maps/basic_map.mem", map_mem);
+    item_addr[0] = '0;
+    item_addr[1] = '0;
+    item_addr[2] = '0;
 
-  //   end
+    repeat (5) @(posedge clk);
+    rst = 0;
 
-  always @(posedge clk)
-    if (!rst && draw_y < 5 && draw_x < 20)
-      $strobe(
-          "[%0t] (x=%0d, y=%0d) -> addr=%0d, state=%0h, color=%0h%0h%0h",
-          $time,
-          draw_x,
-          draw_y,
-          blk_addr,
-          map_mem_in,
-          o_r,
-          o_g,
-          o_b
-      );
+    // run enough cycles for a handful of frames
+    repeat (200000) @(posedge clk);
+    $finish;
+  end
 
-
+  always #(CLK_PERIOD/2) clk = ~clk;
 
 endmodule

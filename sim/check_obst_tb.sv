@@ -9,7 +9,7 @@ module check_obst_tb;
   localparam int TILE_PX = 64;
   localparam int SPRITE_W = 32;
   localparam int SPRITE_H = 48;
-  localparam string MAP_FILE = "basic_map.mem";
+  localparam string MAP_FILE = "maps/basic_map.mem";
 
   localparam int TILE_SHIFT = $clog2(TILE_PX);
   localparam int DEPTH = NUM_ROW * NUM_COL;

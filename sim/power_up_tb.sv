@@ -21,20 +21,21 @@ module power_up_tb;
     // ------------------------------------------------------------
     // DUT I/O
     // ------------------------------------------------------------
-    logic clk, rst, tick;
+    logic clk, rst, tick, game_over;
     logic we_in;
     logic [ADDR_WIDTH-1:0] write_addr_in;
     logic [MAP_MEM_WIDTH-1:0] write_data_in;
 
-    logic [10:0] player_x;
-    logic [9:0]  player_y;
+    logic [10:0] player_1_x, player_2_x;
+    logic [9:0]  player_1_y, player_2_y;
 
     logic [ADDR_WIDTH-1:0] item_addr [0:2];
-    logic item_active [0:2];
-    logic player_on_item [0:2];
-    logic [3:0] max_bombs;
-    logic [5:0] player_speed;
-    logic [3:0] bomb_range;
+    logic [2:0] item_active;
+    logic [1:0] max_bombs_p1, max_bombs_p2;
+    logic [5:0] player_speed_p1, player_speed_p2;
+    logic [1:0] bomb_range_p1, bomb_range_p2;
+    logic [1:0] p1_bomb_level, p1_speed_level, p1_range_level;
+    logic [1:0] p2_bomb_level, p2_speed_level, p2_range_level;
 
     // ------------------------------------------------------------
     // DUT Instantiation
@@ -49,20 +50,31 @@ module power_up_tb;
         .clk(clk),
         .rst(rst),
         .tick(tick),
+        .game_over(game_over),
         .we_in(we_in),
         .write_addr_in(write_addr_in),
         .write_data_in(write_data_in),
 
-        .player_x(player_x),
-        .player_y(player_y),
+        .player_1_x(player_1_x),
+        .player_1_y(player_1_y),
+        .player_2_x(player_2_x),
+        .player_2_y(player_2_y),
         .probability(32'hFFFFFFFF), // Always generate for testing
 
         .item_addr(item_addr),
         .item_active(item_active),
-        .player_on_item(player_on_item),
-        .max_bombs(max_bombs),
-        .player_speed(player_speed),
-        .bomb_range(bomb_range)
+        .max_bombs_p1(max_bombs_p1),
+        .player_speed_p1(player_speed_p1),
+        .bomb_range_p1(bomb_range_p1),
+        .max_bombs_p2(max_bombs_p2),
+        .player_speed_p2(player_speed_p2),
+        .bomb_range_p2(bomb_range_p2),
+        .p1_bomb_level(p1_bomb_level),
+        .p2_bomb_level(p2_bomb_level),
+        .p1_speed_level(p1_speed_level),
+        .p2_speed_level(p2_speed_level),
+        .p1_range_level(p1_range_level),
+        .p2_range_level(p2_range_level)
     );
 
     // ------------------------------------------------------------
@@ -88,11 +100,14 @@ module power_up_tb;
         // Reset
         // ------------------------------
         rst = 1;
+        game_over = 0;
         we_in = 0;
         write_addr_in = 0;
         write_data_in = 0;
-        player_x = 64;
-        player_y = 64;
+        player_1_x = 64;
+        player_1_y = 64;
+        player_2_x = 0;
+        player_2_y = 0;
         repeat(5) @(posedge clk);
         @(negedge clk);
         rst = 0;
@@ -108,12 +123,12 @@ module power_up_tb;
         we_in = 0;
 
         // Move player to pick up the item
-        player_x = 64;
-        player_y = 64;
+        player_1_x = 64;
+        player_1_y = 64;
         repeat(5) @(posedge clk);
 
-        if (player_on_item[0])
-            $display("PASS: Player picked up speed power-up");
+        if (p1_speed_level > 0)
+            $display("PASS: Player picked up speed power-up (level=%0d, speed=%0d)", p1_speed_level, player_speed_p1);
         else
             $display("FAIL: Player did not pick up speed power-up");
 
@@ -127,12 +142,12 @@ module power_up_tb;
         repeat (2) @(negedge clk);
         we_in = 0;
 
-        player_x = 128; // Move player to new block
-        player_y = 64;
+        player_1_x = 128; // Move player to new block
+        player_1_y = 64;
         repeat(5) @(posedge clk);
 
-        if (player_on_item[1] && max_bombs > 1)
-            $display("PASS: Player picked up extra bomb, max_bombs = %0d", max_bombs);
+        if (p1_bomb_level > 0)
+            $display("PASS: Player picked up extra bomb, max_bombs_p1 = %0d", max_bombs_p1);
         else
             $display("FAIL: Player did not pick up extra bomb");
 
@@ -146,12 +161,12 @@ module power_up_tb;
         repeat (2) @(negedge clk);
         we_in = 0;
 
-        player_x = 64;
-        player_y = 128;
+        player_1_x = 64;
+        player_1_y = 128;
         repeat(5) @(posedge clk);
 
-        if (player_on_item[2] && bomb_range > 1)
-            $display("PASS: Player picked up bomb range power-up, bomb_range = %0d", bomb_range);
+        if (p1_range_level > 0)
+            $display("PASS: Player picked up bomb range power-up, bomb_range_p1 = %0d", bomb_range_p1);
         else
             $display("FAIL: Player did not pick up bomb range");
 
@@ -160,11 +175,11 @@ module power_up_tb;
         // ------------------------------
         $display("Scenario 4: Multiple pickups sequentially");
         write_addr_in = 40; write_data_in = 0; we_in = 1; @(negedge clk); we_in = 0;
-        player_x = 64; player_y = 64; repeat(5) @(posedge clk);
-        player_x = 128; player_y = 64; repeat(5) @(posedge clk);
-        player_x = 64; player_y = 128; repeat(5) @(posedge clk);
+        player_1_x = 64; player_1_y = 64; repeat(5) @(posedge clk);
+        player_1_x = 128; player_1_y = 64; repeat(5) @(posedge clk);
+        player_1_x = 64; player_1_y = 128; repeat(5) @(posedge clk);
 
-        $display("Player_speed = %0d, max_bombs = %0d, bomb_range = %0d", player_speed, max_bombs, bomb_range);
+        $display("Player_speed_p1 = %0d, max_bombs_p1 = %0d, bomb_range_p1 = %0d", player_speed_p1, max_bombs_p1, bomb_range_p1);
 
         $display("All scenarios done");
         $stop;

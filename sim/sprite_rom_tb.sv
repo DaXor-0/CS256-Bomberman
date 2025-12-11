@@ -9,17 +9,21 @@ module psprite_rom_tb;
   parameter int    SPRITE_H      = 48;
   parameter int    NUM_FRAMES    = 9;
   parameter int    DATA_WIDTH    = 12;
-  parameter string MEM_INIT_FILE = "player_1.mem";
+  parameter string MEM_INIT_FILE = "sprites/walk/mem/player_1.mem";
 
   localparam int ROM_DEPTH  = SPRITE_W * SPRITE_H * NUM_FRAMES;
   localparam int ADDR_WIDTH = $clog2(ROM_DEPTH);
 
   // ---------------- DUT Signals ----------------
+  logic clk = 0;
   logic [ADDR_WIDTH-1:0] addr;
   logic [DATA_WIDTH-1:0] data;
   int errors;
   // Instantiate DUT
-  sprite_rom dut (
+  sprite_rom #(
+      .MEM_INIT_FILE("sprites/walk/mem/player_1.mem")
+  ) dut (
+      .clk(clk),
       .addr(addr),
       .data(data)
   );
@@ -37,7 +41,6 @@ module psprite_rom_tb;
   initial begin
     errors = 0;
     
-
     $dumpfile("sprite_rom_tb.vcd");
     $dumpvars(0, psprite_rom_tb);
 
@@ -54,7 +57,8 @@ module psprite_rom_tb;
     // Loop through all ROM entries
     for (int i = 0; i < ROM_DEPTH; i++) begin
       addr = i;
-      #1;
+      @(posedge clk);  // present address
+      @(posedge clk);  // capture data (1-cycle latency)
 
       if (data !== ref_mem[i]) begin
         $fwrite(fd,
@@ -77,5 +81,7 @@ module psprite_rom_tb;
 
     #10 $finish;
   end
+  
+  always #5 clk = ~clk;
 
 endmodule

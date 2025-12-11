@@ -8,7 +8,7 @@ module tb_bomb_logic;
   parameter int TILE_PX = 64;
   parameter int MAP_MEM_WIDTH = 2;
   parameter int SPRITE_W = 32;
-  parameter int SPRITE_H = 64;
+  parameter int SPRITE_H = 48;
   parameter int BOMB_TIME_CYCLES = 3;
 
   localparam int DEPTH = NUM_ROW * NUM_COL;
@@ -22,13 +22,14 @@ module tb_bomb_logic;
   logic [10:0] player_x;
   logic [9:0] player_y;
   logic place_bomb;
+  logic game_over;
 
-  wire [1:0] state_probe;
-  wire [ADDR_WIDTH-1:0] write_addr, saved_addr_probe;
+  wire [ADDR_WIDTH-1:0] write_addr;
   wire [MAP_MEM_WIDTH-1:0] write_data;
   wire write_en;
   wire trigger_explosion;
   wire [$clog2(BOMB_TIME_CYCLES)-1:0] countdown;
+  wire countdown_signal;
 
   // CLOCK GENERATION
   initial clk = 0;
@@ -60,6 +61,7 @@ module tb_bomb_logic;
     .clk(clk),
     .rst(rst),
     .tick(tick),
+    .game_over(game_over),
     .player_x(player_x),
     .player_y(player_y),
     .place_bomb(place_bomb),
@@ -67,7 +69,8 @@ module tb_bomb_logic;
     .write_data(write_data),
     .write_en(write_en),
     .trigger_explosion(trigger_explosion),
-    .countdown(countdown)
+    .countdown(countdown),
+    .countdown_signal(countdown_signal)
   );
 
   // WAVEFORM DUMPING
@@ -81,6 +84,7 @@ module tb_bomb_logic;
     // Initialization
     rst        = 1;
     place_bomb = 0;
+    game_over  = 0;
     player_x   = 96;   // inside tile (0,0)
     player_y   = 70;
 
@@ -100,8 +104,8 @@ module tb_bomb_logic;
     // Check placement result
     @(posedge clk);
     player_x = 128; player_y = 64;
-    $display("[%0t] write_en=%0b write_addr=%0d, saved_addr=%0d, write_data=%0d, current_state=%0d, should be == 1",
-             $time, write_en, write_addr, saved_addr_probe, write_data, state_probe); // next state, should be in PLACE
+    $display("[%0t] write_en=%0b write_addr=%0d, write_data=%0d (placement)",
+             $time, write_en, write_addr, write_data); // next state, should be in PLACE
 
 
 
@@ -110,8 +114,8 @@ module tb_bomb_logic;
     // wait(tick == 1)
     repeat (1200) @(posedge clk);
     //wait(trigger_explosion == 1);
-    $display("[%0t] EXPLOSION! write_en=%0b free_addr=%0d, saved_addr=%0d, current_state=%0d, should be == 3",
-             $time, write_en, write_addr, saved_addr_probe, state_probe);
+    $display("[%0t] EXPLOSION! write_en=%0b free_addr=%0d",
+             $time, write_en, write_addr);
 
     // Finish a few cycles later
     repeat (10) @(posedge clk);

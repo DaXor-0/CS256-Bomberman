@@ -19,12 +19,15 @@ module mem_multi_read_controller_tb;
     logic [NUM_READERS-1:0] read_granted;
     logic [MAP_MEM_WIDTH-1:0] map_mem_in;
     logic [MAP_MEM_WIDTH-1:0] map_mem [0:DEPTH-1];
+    logic game_over;
+    logic obstacles_valid1, obstacles_valid2;
 
 
     // Instantiate DUT
     mem_multi_read_controller dut (
         .clk(clk),
         .rst(rst),
+        .game_over(game_over),
         .read_req(read_req),
         .read_addr_req(read_addr_req),
         .read_addr(read_addr),
@@ -65,7 +68,7 @@ module mem_multi_read_controller_tb;
 
     // Load map
     initial begin
-      $readmemh("basic_map.mem", map_mem);
+      $readmemh("maps/basic_map.mem", map_mem);
     end
 
     always_ff @(posedge clk) begin
@@ -89,6 +92,7 @@ module mem_multi_read_controller_tb;
         // Initial conditions
         clk = 0;
         rst = 1;
+        game_over = 0;
         read_req = '0;
 
         // Initialize read addresses

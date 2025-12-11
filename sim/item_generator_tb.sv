@@ -19,17 +19,17 @@ module item_generator_tb;
     // ------------------------------------------------------------
     // DUT I/O
     // ------------------------------------------------------------
-    logic clk, rst, tick;
+    logic clk, rst, tick, game_over;
     logic we_in;
     logic [ADDR_WIDTH-1:0] write_addr_in;
     logic [MAP_MEM_WIDTH-1:0] write_data_in;
 
-    logic [10:0] player_x;
-    logic [9:0]  player_y;
+    logic [10:0] player_1_x, player_2_x;
+    logic [9:0]  player_1_y, player_2_y;
 
     logic [ADDR_WIDTH-1:0] item_addr;
     logic item_active;
-    logic player_on_item;   // If your version has game_win, replace it in DUT instance
+    logic player_1_on_item, player_2_on_item;
 
     // ------------------------------------------------------------
     // DUT Instantiation
@@ -44,17 +44,21 @@ module item_generator_tb;
         .clk(clk),
         .rst(rst),
         .tick(tick),
+        .game_over(game_over),
         .we_in(we_in),
         .write_addr_in(write_addr_in),
         .write_data_in(write_data_in),
 
-        .player_x(player_x),
-        .player_y(player_y),
+        .player_1_x(player_1_x),
+        .player_1_y(player_1_y),
+        .player_2_x(player_2_x),
+        .player_2_y(player_2_y),
         .probability(32'h7FFFFFFF),
 
         .item_addr(item_addr),
         .item_active(item_active),
-        .player_on_item(player_on_item)
+        .player_1_on_item(player_1_on_item),
+        .player_2_on_item(player_2_on_item)
     );
 
     // ------------------------------------------------------------
@@ -77,11 +81,14 @@ module item_generator_tb;
     // ------------------------------------------------------------
     initial begin
         rst = 1;
+        game_over = 0;
         we_in = 0;
         write_addr_in = 0;
         write_data_in = 0;
-        player_x = 64;
-        player_y = 64;
+        player_1_x = 64;
+        player_1_y = 64;
+        player_2_x = 0;
+        player_2_y = 0;
 
         repeat (5) @(posedge clk);
         rst = 0;
@@ -149,7 +156,7 @@ module item_generator_tb;
 
         repeat (5) @(negedge clk);
 
-        if (player_on_item)
+        if (player_1_on_item)
             $display("PASS: Player detected on item.");
         else
             $fatal("ERROR: Player should have been detected on item!");

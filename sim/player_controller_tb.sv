@@ -6,7 +6,6 @@ module player_controller_tb;
   localparam int TILE_PX    = 64;
   localparam int SPRITE_W   = 32;
   localparam int SPRITE_H   = 48;
-  localparam int STEP_SIZE  = 32;
   localparam int SCREEN_W   = 1280;
   localparam int SCREEN_H   = 800;
   localparam int INIT_X     = 64;
@@ -25,12 +24,20 @@ module player_controller_tb;
   
   logic clk  = 0;
   logic rst  = 1;
+  logic game_over = 0;
   logic tick;
   logic [3:0] move_dir = 4'b0;
   logic [1:0] map_mem_in = '0;
   logic [10:0] player_x;
   logic [9:0]  player_y;
+  logic [10:0] map_player_x;
+  logic [9:0]  map_player_y;
   logic [ADDR_WIDTH-1:0] map_addr;
+  logic [5:0] player_speed = 6'd4;
+  logic [1:0] read_req;
+  logic [1:0] read_granted;
+  logic [ADDR_WIDTH-1:0] read_addr_req[0:1];
+  logic [ADDR_WIDTH-1:0] read_addr;
   logic [1:0] map_mem [0:DEPTH-1];
   
   player_controller #(
@@ -39,7 +46,6 @@ module player_controller_tb;
       .TILE_PX (TILE_PX),
       .SPRITE_W(SPRITE_W),
       .SPRITE_H(SPRITE_H),
-      .STEP_SIZE(STEP_SIZE),
       .SCREEN_W(SCREEN_W),
       .SCREEN_H(SCREEN_H),
       .INIT_X  (INIT_X),
@@ -49,10 +55,36 @@ module player_controller_tb;
       .rst(rst),
       .tick(tick),
       .move_dir(move_dir),
+      .player_speed(player_speed),
       .map_mem_in(map_mem_in),
+      .read_granted(read_granted[0]),
+      .read_req(read_req[0]),
       .player_x(player_x),
       .player_y(player_y),
+      .map_player_x(map_player_x),
+      .map_player_y(map_player_y),
       .map_addr(map_addr)
+  );
+
+  // Simple two-port read arbiter (one reader used)
+  assign read_addr_req[0] = map_addr;
+  assign read_addr_req[1] = '0;
+  assign read_req[1] = 1'b0;
+
+  mem_read_controller #(
+      .NUM_ROW(NUM_ROW),
+      .NUM_COL(NUM_COL),
+      .TILE_PX(TILE_PX),
+      .MAP_MEM_WIDTH(MAP_MEM_WIDTH),
+      .SPRITE_W(SPRITE_W),
+      .SPRITE_H(SPRITE_H)
+  ) read_arb (
+      .clk(clk),
+      .rst(rst),
+      .read_req(read_req),
+      .read_addr_req(read_addr_req),
+      .read_addr(read_addr),
+      .read_granted(read_granted)
   );
   
   always #(CLK_PERIOD / 2) clk = ~clk;
@@ -73,7 +105,7 @@ module player_controller_tb;
     if (rst) begin
       map_mem_in <= '0;
     end else begin
-      map_mem_in <= map_mem[map_addr];
+      map_mem_in <= map_mem[read_addr];
     end
   end
 
