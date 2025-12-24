@@ -13,6 +13,13 @@ Hardware remake of Bomberman that runs entirely on a Digilent Nexys A7-100T. It 
 - Test benches for movement, memory arbitration, draw pipeline, and top-level smoke test.
 - Asset/scripts: sprite and map `.mem` files plus Python helpers to convert PNG ↔ mem/COE.
 
+## To Run a fast Simulation
+If you have Verilator and SFLM, you can run a fast simulation with:
+- `make -C sim/verilator`
+- `./sim/verilator/obj_dir/game_top`
+
+Credits to [Flinner](https://ammar.engineer/posts/2024/12/04/pacman-on-an-fpga-in-systemverilog/) for the idea.
+
 ## Repository layout
 - `src/` – SystemVerilog RTL (top: `game_top`). Includes rendering (`drawcon*`, `sprite_rom`, `vga_out`), gameplay (`player_controller`, `bomb_logic`, `explode_logic`, `free_blocks`, `power_up`), map storage (`map_mem`, `mem_multi_read_controller`), I/O (`uart_rx`, `multidigit`), and shared constants (`bomberman_dir.svh`).
 - `sim/` – Test benches (`*_tb.sv`) and sample VVP/VCD outputs.

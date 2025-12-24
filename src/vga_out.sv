@@ -55,6 +55,10 @@ module vga_out #(
     output logic        o_vsync,
     output logic [10:0] o_curr_x,  // 0 .. (WIDTH-1)
     output logic [ 9:0] o_curr_y   // 0 .. (HEIGHT-1)
+`ifdef VERILATOR
+    ,
+    output logic        o_active
+`endif
 );
 
   logic [10:0] hcount;
@@ -88,5 +92,9 @@ module vga_out #(
   end
 
   assign {o_pix_r, o_pix_g, o_pix_b} = active_screen ? {i_r, i_g, i_b} : {BG_R, BG_G, BG_B};
+
+`ifdef VERILATOR
+  assign o_active = active_screen;
+`endif
 
 endmodule

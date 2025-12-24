@@ -26,6 +26,13 @@ module game_top (
     output logic       CF,
     output logic       CG,
     output logic [7:0] AN
+`ifdef VERILATOR
+    ,
+    output logic [10:0] sx,
+    output logic [ 9:0] sy,
+    output logic        display_enabled,
+    output logic        pix_clk
+`endif
 );
 
   logic [MAP_ADDR_WIDTH-1:0] item_addr[0:2];
@@ -77,6 +84,9 @@ module game_top (
       .clk_out1(pixclk)
   );
   always_ff @(posedge pixclk) tick <= (curr_x == 0 && curr_y == 0);
+`ifdef VERILATOR
+  assign pix_clk = pixclk;
+`endif
 
   // ---------------------------------------------------------------------------
   // 7 Segment Display for Bomb Countdown
@@ -118,6 +128,7 @@ module game_top (
   logic [10:0] curr_x;
   logic [ 9:0] curr_y;
   logic [3:0] drawcon_o_r, drawcon_o_g, drawcon_o_b;
+  logic       active_video;
   vga_out vga_out_u (
       .i_clk   (pixclk),
       .i_rst   (rst),
@@ -131,7 +142,16 @@ module game_top (
       .o_vsync (o_vsync),      // horizontal and vertical sync
       .o_curr_x(curr_x),
       .o_curr_y(curr_y)        // what pixel are we on
+`ifdef VERILATOR
+      ,
+      .o_active(active_video)
+`endif
   );
+`ifdef VERILATOR
+  assign sx = curr_x;
+  assign sy = curr_y;
+  assign display_enabled = active_video;
+`endif
 
   localparam int SCREEN_W = 1280;
   localparam int SCREEN_H = 800;
