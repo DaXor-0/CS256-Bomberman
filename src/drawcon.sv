@@ -123,6 +123,30 @@ module drawcon #(
   localparam int P_UP_FRAME_TIME = 30;  // switch frame every 30 ticks
   localparam int P_UP_BORDER_SIZE = 4;  // pixels
 
+`ifdef SYNTHESIS
+  localparam string PLAYER_1_MEM_FILE = "player_1.mem";
+  localparam string PLAYER_2_MEM_FILE = "player_2.mem";
+  localparam string DEST_BLK_ANIM_MEM_FILE = "dest_blk_anim.mem";
+  localparam string EXPLOSION_MEM_FILE = "explosion.mem";
+  localparam string PERM_BLK_MEM_FILE = "perm_blk.mem";
+  localparam string DEST_BLK_MEM_FILE = "dest_blk.mem";
+  localparam string BOMB_MEM_FILE = "bomb.mem";
+  localparam string P_UP_SPEED_MEM_FILE = "p_up_speed.mem";
+  localparam string P_UP_BOMB_MEM_FILE = "p_up_bomb.mem";
+  localparam string P_UP_RANGE_MEM_FILE = "p_up_range.mem";
+`else
+  localparam string PLAYER_1_MEM_FILE = "sprites/walk/mem/player_1.mem";
+  localparam string PLAYER_2_MEM_FILE = "sprites/walk/mem/player_2.mem";
+  localparam string DEST_BLK_ANIM_MEM_FILE = "sprites/w1/mem/dest_blk_anim.mem";
+  localparam string EXPLOSION_MEM_FILE = "sprites/w1/mem/explosion.mem";
+  localparam string PERM_BLK_MEM_FILE = "sprites/w1/mem/perm_blk.mem";
+  localparam string DEST_BLK_MEM_FILE = "sprites/w1/mem/dest_blk.mem";
+  localparam string BOMB_MEM_FILE = "sprites/w1/mem/bomb.mem";
+  localparam string P_UP_SPEED_MEM_FILE = "sprites/w1/mem/p_up_speed.mem";
+  localparam string P_UP_BOMB_MEM_FILE = "sprites/w1/mem/p_up_bomb.mem";
+  localparam string P_UP_RANGE_MEM_FILE = "sprites/w1/mem/p_up_range.mem";
+`endif
+
   logic [1:0] walk_frame_1;  // ranges 0,1,2
   logic [1:0] walk_frame_2;  // ranges 0,1,2
   logic [2:0] dest_frame;  // ranges 0..5
@@ -165,7 +189,7 @@ module drawcon #(
       .SPRITE_H           (SPRITE_H),
       .WALK_FRAMES_PER_DIR(WALK_FRAMES_PER_DIR),
       .WALK_FRAMES_TOTAL  (WALK_FRAMES_TOTAL),
-      .MEM_INIT_FILE      ("player_1.mem")
+      .MEM_INIT_FILE      (PLAYER_1_MEM_FILE)
   ) player_1_sprite_i (
       .clk       (clk),
       .draw_x    (draw_x),
@@ -183,7 +207,7 @@ module drawcon #(
       .SPRITE_H           (SPRITE_H),
       .WALK_FRAMES_PER_DIR(WALK_FRAMES_PER_DIR),
       .WALK_FRAMES_TOTAL  (WALK_FRAMES_TOTAL),
-      .MEM_INIT_FILE      ("player_2.mem")
+      .MEM_INIT_FILE      (PLAYER_2_MEM_FILE)
   ) player_2_sprite_i (
       .clk       (clk),
       .draw_x    (draw_x),
@@ -256,7 +280,7 @@ module drawcon #(
       .SPRITE_H     (BLK_H),
       .NUM_FRAMES   (DEST_FRAMES),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("dest_blk_anim.mem")
+      .MEM_INIT_FILE(DEST_BLK_ANIM_MEM_FILE)
   ) dest_blk_anim_i (
       .clk (clk),
       .addr(dest_blk_anim_addr),
@@ -268,7 +292,7 @@ module drawcon #(
       .SPRITE_H     (BLK_H),
       .NUM_FRAMES   (EXPL_FRAMES),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("explosion.mem")
+      .MEM_INIT_FILE(EXPLOSION_MEM_FILE)
   ) explosion_sprite_i (
       .clk (clk),
       .addr(explode_sprite_addr),
@@ -504,7 +528,7 @@ module drawcon #(
       .SPRITE_H     (BLK_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("perm_blk.mem")
+      .MEM_INIT_FILE(PERM_BLK_MEM_FILE)
   ) perm_blk_sprite_i (
       .clk (clk),
       .addr(perm_blk_addr),
@@ -520,7 +544,7 @@ module drawcon #(
       .SPRITE_H     (BLK_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("dest_blk.mem")
+      .MEM_INIT_FILE(DEST_BLK_MEM_FILE)
   ) dest_blk_sprite_i (
       .clk (clk),
       .addr(dest_blk_addr),
@@ -536,7 +560,7 @@ module drawcon #(
       .SPRITE_H     (BLK_H),
       .NUM_FRAMES   (BOMB_SPRITE_TOTAL),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("bomb.mem")
+      .MEM_INIT_FILE(BOMB_MEM_FILE)
   ) bomb_sprite_i (
       .clk (clk),
       .addr(bomb_sprite_addr),
@@ -553,7 +577,7 @@ module drawcon #(
       .SPRITE_H     (BLK_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("p_up_speed.mem")
+      .MEM_INIT_FILE(P_UP_SPEED_MEM_FILE)
   ) p_up_speed_sprite_i (
       .clk (clk),
       .addr(p_up_speed_sprite_addr),
@@ -569,7 +593,7 @@ module drawcon #(
       .SPRITE_H     (BLK_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("p_up_bomb.mem")
+      .MEM_INIT_FILE(P_UP_BOMB_MEM_FILE)
   ) p_up_bomb_sprite_i (
       .clk (clk),
       .addr(p_up_bomb_sprite_addr),
@@ -585,7 +609,7 @@ module drawcon #(
       .SPRITE_H     (BLK_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("p_up_range.mem")
+      .MEM_INIT_FILE(P_UP_RANGE_MEM_FILE)
   ) p_up_range_sprite_i (
       .clk (clk),
       .addr(p_up_range_sprite_addr),

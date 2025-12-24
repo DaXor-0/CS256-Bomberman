@@ -35,6 +35,12 @@ module game_top (
   logic [1:0] p1_bomb_level, p1_speed_level, p1_range_level;
   logic [1:0] p2_bomb_level, p2_speed_level, p2_range_level;
 
+`ifdef SYNTHESIS
+  localparam string MAP_MEM_FILE = "basic_map.mem";
+`else
+  localparam string MAP_MEM_FILE = "maps/basic_map.mem";
+`endif
+
   // ---------------------------------------------------------------------------
   // UART Receiver for Player 2 Controls
   // ---------------------------------------------------------------------------
@@ -407,7 +413,7 @@ module game_top (
       .NUM_ROW(MAP_NUM_ROW),
       .NUM_COL(MAP_NUM_COL),
       .DATA_WIDTH(2),
-      .MEM_INIT_FILE("basic_map.mem")
+      .MEM_INIT_FILE(MAP_MEM_FILE)
   ) mem_i (
       .clk(pixclk),
       .rst(rst),

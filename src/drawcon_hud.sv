@@ -125,6 +125,22 @@ module drawcon_hud #(
       HUD_SPEED_P2_ICON_Y + HUD_P1_TRACK_Y_OFFSET
   };
 
+`ifdef SYNTHESIS
+  localparam string HUD_P1_ICON_MEM_FILE = "player_1_icon.mem";
+  localparam string HUD_P2_ICON_MEM_FILE = "player_2_icon.mem";
+  localparam string HUD_BOMB_ICON_MEM_FILE = "bomb_icon.mem";
+  localparam string HUD_RANGE_ICON_MEM_FILE = "range_icon.mem";
+  localparam string HUD_SPEED_ICON_MEM_FILE = "speed_icon.mem";
+  localparam string HUD_TRACK_MEM_FILE = "track.mem";
+`else
+  localparam string HUD_P1_ICON_MEM_FILE = "sprites/hud/mem/player_1_icon.mem";
+  localparam string HUD_P2_ICON_MEM_FILE = "sprites/hud/mem/player_2_icon.mem";
+  localparam string HUD_BOMB_ICON_MEM_FILE = "sprites/hud/mem/bomb_icon.mem";
+  localparam string HUD_RANGE_ICON_MEM_FILE = "sprites/hud/mem/range_icon.mem";
+  localparam string HUD_SPEED_ICON_MEM_FILE = "sprites/hud/mem/speed_icon.mem";
+  localparam string HUD_TRACK_MEM_FILE = "sprites/hud/mem/track.mem";
+`endif
+
   logic hud_p1_icon, hud_p2_icon, hud_bomb_p1, hud_bomb_p2, hud_range_p1, hud_range_p2;
   logic hud_speed_p1, hud_speed_p2;
   logic hud_p1_icon_q_int, hud_p2_icon_q_int, hud_bomb_p1_q_int, hud_bomb_p2_q_int;
@@ -286,7 +302,7 @@ module drawcon_hud #(
       .SPRITE_H     (HUD_PLAYER_ICON_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("player_1_icon.mem")
+      .MEM_INIT_FILE(HUD_P1_ICON_MEM_FILE)
   ) hud_p1_icon_i (
       .clk (clk),
       .addr(hud_p1_icon_addr),
@@ -298,7 +314,7 @@ module drawcon_hud #(
       .SPRITE_H     (HUD_PLAYER_ICON_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("player_2_icon.mem")
+      .MEM_INIT_FILE(HUD_P2_ICON_MEM_FILE)
   ) hud_p2_icon_i (
       .clk (clk),
       .addr(hud_p2_icon_addr),
@@ -310,7 +326,7 @@ module drawcon_hud #(
       .SPRITE_H     (HUD_SMALL_ICON_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("bomb_icon.mem")
+      .MEM_INIT_FILE(HUD_BOMB_ICON_MEM_FILE)
   ) hud_bomb_icon_i (
       .clk (clk),
       .addr(hud_bomb_addr_mux),
@@ -322,7 +338,7 @@ module drawcon_hud #(
       .SPRITE_H     (HUD_SMALL_ICON_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("range_icon.mem")
+      .MEM_INIT_FILE(HUD_RANGE_ICON_MEM_FILE)
   ) hud_range_icon_i (
       .clk (clk),
       .addr(hud_range_addr_mux),
@@ -334,7 +350,7 @@ module drawcon_hud #(
       .SPRITE_H     (HUD_SMALL_ICON_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("speed_icon.mem")
+      .MEM_INIT_FILE(HUD_SPEED_ICON_MEM_FILE)
   ) hud_speed_icon_i (
       .clk (clk),
       .addr(hud_speed_addr_mux),
@@ -346,7 +362,7 @@ module drawcon_hud #(
       .SPRITE_H     (HUD_TRACK_ICON_H),
       .NUM_FRAMES   (HUD_TRACK_TYPES),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE("track.mem")
+      .MEM_INIT_FILE(HUD_TRACK_MEM_FILE)
   ) hud_track_i (
       .clk (clk),
       .addr(hud_track_addr_mux),

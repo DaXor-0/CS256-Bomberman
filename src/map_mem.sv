@@ -22,7 +22,11 @@ module map_mem #(
     parameter int NUM_ROW = MAP_NUM_ROW_DEF,
     parameter int NUM_COL = MAP_NUM_COL_DEF,
     parameter int DATA_WIDTH = MAP_MEM_WIDTH_DEF,
+`ifdef SYNTHESIS
+    parameter string MEM_INIT_FILE = "basic_map.mem",
+`else
     parameter string MEM_INIT_FILE = "maps/basic_map.mem",
+`endif
     localparam int DEPTH = NUM_ROW * NUM_COL,
     localparam int ADDR_WIDTH = $clog2(DEPTH)
 )(

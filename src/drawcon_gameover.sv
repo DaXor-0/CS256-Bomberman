@@ -55,13 +55,21 @@ module drawcon_gameover #(
   logic [SPRITE_ADDR_W-1:0] sprite_addr;
   logic [11:0] sprite_rgb, sprite_rgb_q;
 
+`ifdef SYNTHESIS
+  localparam string GO_BORDER_MEM_FILE = MEM_INIT_FILE;
+  localparam string GO_SPRITE_MEM_FILE = SPRITE_MEM;
+`else
+  localparam string GO_BORDER_MEM_FILE = "sprites/game-over/mem/border_tiles.mem";
+  localparam string GO_SPRITE_MEM_FILE = "sprites/game-over/mem/game_over.mem";
+`endif
+
   // Border tile ROM: frame 0 = corner, frame 1 = horizontal pipe
   sprite_rom #(
       .SPRITE_W     (GO_TILE),
       .SPRITE_H     (GO_TILE),
       .NUM_FRAMES   (2),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE(MEM_INIT_FILE)
+      .MEM_INIT_FILE(GO_BORDER_MEM_FILE)
   ) game_over_border_i (
       .clk (clk),
       .addr(go_border_addr),
@@ -73,7 +81,7 @@ module drawcon_gameover #(
       .SPRITE_H     (SPRITE_H),
       .NUM_FRAMES   (1),
       .DATA_WIDTH   (12),
-      .MEM_INIT_FILE(SPRITE_MEM)
+      .MEM_INIT_FILE(GO_SPRITE_MEM_FILE)
   ) game_over_sprite_i (
       .clk (clk),
       .addr(sprite_addr),
